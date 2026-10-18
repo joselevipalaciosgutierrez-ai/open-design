@@ -4,6 +4,9 @@ import { getResolvedDeviceId } from '../analytics/client';
 import { amrHandoffDeviceId, attributedAmrUrl, recordAmrEntry } from '../analytics/amr-attribution';
 import { useAnalytics } from '../analytics/provider';
 import { useT } from '../i18n';
+import { CliPickerMenu } from './agents/CliPickerMenu';
+import { getAgentsCopyForDocument } from './agents/agents-copy';
+import { useLongPress } from './agents/use-long-press';
 import { AgentIcon } from './AgentIcon';
 import { modelProviderIconSrc } from './modelProviderIcon';
 import { RemixIcon } from './RemixIcon';
@@ -94,6 +97,7 @@ interface Props {
 export function AvatarMenu({
   config,
   agents,
+  onModeChange,
   onAgentChange,
   onAgentModelChange,
   onApiModelChange,
@@ -521,9 +525,10 @@ export function AvatarMenu({
     config.mode === 'api'
       ? apiModelLabel
       : config.mode === 'daemon'
-        ? currentModelId
+        ? currentModelId && currentModelId !== 'default'
           ? modelVersionLabel(currentModelId, currentModelLabel ?? currentModelId)
-          : currentModelLabel ?? null
+          // Same wording as Home's chip: the CLI's own pick, not a named model.
+          : t('inlineSwitcher.modelDefault')
         : null;
   // Model id backing the readout — used to resolve the provider brand mark that
   // replaces the model-name text in the composer trigger.
@@ -545,6 +550,22 @@ export function AvatarMenu({
         (currentAgent.reasoningOptions && currentAgent.reasoningOptions.length > 0)),
   );
 
+  // Same chip as Home's compact model switcher: a connection dot, the model's
+  // brand mark (or the CLI's), and the model name. Hold it, or right-click, to
+  // pick another CLI; a plain click still opens the model popover.
+  const connected = config.mode === 'daemon' ? currentAgent?.available === true : true;
+  const [cliMenuOpen, setCliMenuOpen] = useState(false);
+  const cliHoldHint = getAgentsCopyForDocument().cliHoldHint;
+  const openCliMenu = () => {
+    setOpen(false);
+    setCliMenuOpen(true);
+  };
+  const longPress = useLongPress(openCliMenu);
+  const selectCli = (agentId: string) => {
+    if (config.mode !== 'daemon') onModeChange('daemon');
+    if (agentId !== config.agentId) onAgentChange(agentId);
+  };
+
   return (
     <div className={`avatar-menu avatar-menu--${placement}`} ref={wrapRef}>
       <button
@@ -552,35 +573,52 @@ export function AvatarMenu({
         type="button"
         className="avatar-agent-trigger"
         data-testid="avatar-agent-trigger"
-        onClick={toggleOpen}
+        onClick={() => {
+          if (longPress.consumeClick()) return;
+          toggleOpen();
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          openCliMenu();
+        }}
+        {...longPress.handlers}
         aria-haspopup="menu"
         aria-expanded={open}
-        data-tooltip={t('avatar.title')}
-        title={t('avatar.title')}
+        data-tooltip={cliHoldHint}
+        title={cliHoldHint}
         aria-label={t('avatar.title')}
       >
-        {config.mode === 'daemon' && currentAgent ? (
-          <AgentIcon id={currentAgent.id} size={20} />
+        <span
+          className="inline-switcher__chip-conn"
+          data-connected={connected ? 'true' : 'false'}
+          aria-hidden="true"
+        />
+        {triggerModelIconSrc ? (
+          <img
+            className="avatar-agent-trigger__model-logo"
+            src={triggerModelIconSrc}
+            alt=""
+            width={18}
+            height={18}
+          />
+        ) : config.mode === 'daemon' && currentAgent ? (
+          <AgentIcon id={currentAgent.id} size={18} />
         ) : (
-          <RemixIcon name="link" size={20} />
+          <RemixIcon name="link" size={18} />
         )}
         {triggerModelLabel ? (
-          <span className="avatar-agent-trigger__model">
-            {triggerModelIconSrc ? (
-              <img
-                className="avatar-agent-trigger__model-logo"
-                src={triggerModelIconSrc}
-                alt={triggerModelLabel}
-                width={18}
-                height={18}
-              />
-            ) : (
-              triggerModelLabel
-            )}
-          </span>
+          <span className="avatar-agent-trigger__model">{triggerModelLabel}</span>
         ) : null}
-        <RemixIcon name="arrow-down-s-line" size={14} />
       </button>
+      {cliMenuOpen ? (
+        <CliPickerMenu
+          anchor={triggerRef.current}
+          agents={agents}
+          currentAgentId={config.mode === 'daemon' ? config.agentId : null}
+          onSelect={selectCli}
+          onClose={() => setCliMenuOpen(false)}
+        />
+      ) : null}
       {open && popoverStyle ? createPortal(
         <div
           ref={popoverRef}

@@ -381,6 +381,87 @@ describe('AvatarMenu', () => {
     });
   });
 
+  describe('switching the CLI from the model chip', () => {
+    const cursorAgent: AgentInfo = {
+      id: 'cursor',
+      name: 'Cursor Agent',
+      bin: 'cursor-agent',
+      available: true,
+    } as AgentInfo;
+    const notInstalled: AgentInfo = {
+      id: 'aider',
+      name: 'Aider',
+      bin: 'aider',
+      available: false,
+    } as AgentInfo;
+
+    afterEach(() => vi.useRealTimers());
+
+    function holdChip() {
+      vi.useFakeTimers();
+      const chip = screen.getByTestId('avatar-agent-trigger');
+      fireEvent.pointerDown(chip, { button: 0 });
+      act(() => {
+        vi.advanceTimersByTime(700);
+      });
+      fireEvent.pointerUp(chip);
+      fireEvent.click(chip);
+      vi.useRealTimers();
+    }
+
+    it('opens the CLI list on a long press instead of the model popover', () => {
+      const { onAgentChange } = renderMenu({
+        config: { ...baseConfig, agentId: 'claude' },
+        agents: [codexAgent, claudeAgent, cursorAgent, notInstalled],
+      });
+
+      holdChip();
+
+      expect(screen.queryByRole('dialog', { name: 'avatar.title' })).toBeNull();
+      expect(screen.getByTestId('cli-picker-option-claude').getAttribute('aria-checked')).toBe('true');
+      // Only installed CLIs are offered.
+      expect(screen.queryByTestId('cli-picker-option-aider')).toBeNull();
+
+      fireEvent.click(screen.getByTestId('cli-picker-option-cursor'));
+      expect(onAgentChange).toHaveBeenCalledWith('cursor');
+      expect(screen.queryByTestId('cli-picker-menu')).toBeNull();
+    });
+
+    it('also opens the CLI list on right-click', () => {
+      renderMenu({
+        config: { ...baseConfig, agentId: 'claude' },
+        agents: [codexAgent, claudeAgent],
+      });
+
+      fireEvent.contextMenu(screen.getByTestId('avatar-agent-trigger'));
+
+      expect(screen.getByTestId('cli-picker-menu')).toBeTruthy();
+    });
+
+    it('leaves a plain click on the model popover', () => {
+      renderMenu({
+        config: { ...baseConfig, agentId: 'claude' },
+        agents: [codexAgent, claudeAgent],
+      });
+
+      openMenu();
+
+      expect(screen.queryByTestId('cli-picker-menu')).toBeNull();
+    });
+
+    it('does not pick the same CLI again', () => {
+      const { onAgentChange } = renderMenu({
+        config: { ...baseConfig, agentId: 'claude' },
+        agents: [codexAgent, claudeAgent],
+      });
+      fireEvent.contextMenu(screen.getByTestId('avatar-agent-trigger'));
+
+      fireEvent.click(screen.getByTestId('cli-picker-option-claude'));
+
+      expect(onAgentChange).not.toHaveBeenCalled();
+    });
+  });
+
   it('selects a model from the inline list and dismisses the popover', () => {
     const { onAgentModelChange } = renderMenu({
       config: { ...baseConfig, agentId: 'claude' },

@@ -21,6 +21,9 @@ import {
 import type { AmrWalletSnapshot } from '@open-design/contracts';
 import { VisuallyHidden } from '@open-design/components';
 import { useT } from '../i18n';
+import { CliPickerMenu } from './agents/CliPickerMenu';
+import { getAgentsCopyForDocument } from './agents/agents-copy';
+import { useLongPress } from './agents/use-long-press';
 import {
   agentIdToTracking,
   byokProtocolToTracking,
@@ -1127,7 +1130,26 @@ export function InlineModelSwitcher({
         : t('inlineSwitcher.chipTitle')
       : apiProtocolLabel(apiProtocol);
 
+  // Holding the chip (or right-clicking it) opens the CLI list. A plain click
+  // keeps opening the model popover; the click that ends a long press is
+  // swallowed so the two never fire together.
+  const [cliMenuOpen, setCliMenuOpen] = useState(false);
+  const cliHoldHint = getAgentsCopyForDocument().cliHoldHint;
+  const openCliMenu = useCallback(() => {
+    setOpen(false);
+    setCliMenuOpen(true);
+  }, []);
+  const longPress = useLongPress(openCliMenu);
+  const selectCli = useCallback(
+    (agentId: string) => {
+      if (config.mode !== 'daemon') onModeChange?.('daemon');
+      if (agentId !== config.agentId) onAgentChange?.(agentId);
+    },
+    [config.mode, config.agentId, onModeChange, onAgentChange],
+  );
+
   const handleChipClick = useCallback(() => {
+    if (longPress.consumeClick()) return;
     const nextOpen = !open;
     if (nextOpen && showAmrReminder) {
       setShowAmrReminderInPopover(true);
@@ -1137,7 +1159,7 @@ export function InlineModelSwitcher({
       setShowAmrReminderInPopover(false);
     }
     setOpen(nextOpen);
-  }, [open, showAmrReminder]);
+  }, [open, showAmrReminder, longPress.consumeClick]);
 
   useEffect(() => {
     if (!open || config.mode !== 'daemon' || config.agentId === 'amr') {
@@ -1159,7 +1181,13 @@ export function InlineModelSwitcher({
           (compact ? ' inline-switcher__chip--icon' : '')
         }
         data-testid="inline-model-switcher-chip"
+        title={cliHoldHint}
         onClick={handleChipClick}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          openCliMenu();
+        }}
+        {...longPress.handlers}
         aria-haspopup="menu"
         aria-expanded={open}
         // No hover bubble: the chip already prints the model it would name,
@@ -1237,6 +1265,16 @@ export function InlineModelSwitcher({
           </>
         )}
       </button>
+
+      {cliMenuOpen ? (
+        <CliPickerMenu
+          anchor={chipRef.current}
+          agents={agents}
+          currentAgentId={config.mode === 'daemon' ? config.agentId : null}
+          onSelect={selectCli}
+          onClose={() => setCliMenuOpen(false)}
+        />
+      ) : null}
 
       {open ? (
         <div
