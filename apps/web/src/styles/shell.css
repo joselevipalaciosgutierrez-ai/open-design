@@ -2426,26 +2426,36 @@ a.avatar-item:visited {
   margin-top: 0;
 }
 
-/* Ask-mode composer: same look as the Home composer (home-hero.css) — a soft
+/* Project chat composer: same look as the Home composer (home-hero.css) — a soft
    gray tray (`--bg-subtle`, 20px) holding a white card (16px, no stroke until
-   focus). The composer is portaled into `.chat-composer-fixed-layer`, outside
-   `.split`, so it keys on the layer's `data-session-mode`. The class is repeated
-   on purpose: it must beat the dark-theme `.chat-composer-fixed-layer .composer`
-   rule in routines.css regardless of stylesheet order. */
-.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer {
+   focus). It applies in every session mode so the chat reads like Home instead
+   of a bare bordered box. The composer is portaled into
+   `.chat-composer-fixed-layer`, outside `.split`, so it keys on that layer. The
+   class is repeated on purpose: it must beat the dark-theme
+   `.chat-composer-fixed-layer .composer` rule in routines.css regardless of
+   stylesheet order. */
+.chat-composer-fixed-layer.chat-composer-fixed-layer .composer {
   gap: 0;
-  padding: 4px 4px 8px;
+  padding: 6px 6px 8px;
   background: var(--bg-subtle);
   border-radius: 20px;
 }
-.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer-shell {
+.chat-composer-fixed-layer.chat-composer-fixed-layer .composer-shell {
   padding: 12px 14px 10px;
   border-color: transparent;
   border-radius: 16px;
   background: var(--bg-app);
 }
-.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer-shell:focus-within {
+.chat-composer-fixed-layer.chat-composer-fixed-layer .composer-shell:focus-within {
   border-color: var(--border-soft);
+}
+
+/* Soft edge between the chat and the workspace: the chat column casts its
+   shadow onto the design panel instead of a hard divider line. Skipped in the
+   chat-only layout, where there is no workspace beside it. */
+.split:not(.split-chat-only) > .split-chat-slot {
+  z-index: 2;
+  box-shadow: var(--shadow-lg);
 }
 
 .split-chat-slot {
