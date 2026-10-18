@@ -1,0 +1,46 @@
+.root {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  /* Last in the dock, after the project dropdown, history and collapse. */
+  order: 3;
+  margin-inline: auto 8px;
+  padding: 2px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bg-subtle);
+}
+
+.segment {
+  appearance: none;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.segment:hover:not(.active) {
+  color: var(--text);
+}
+
+.active {
+  background: var(--bg-app);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-xs);
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

@@ -334,6 +334,7 @@ import { persistCommentAnchors } from '../collab/comment-anchor-client';
 import type { AnchorWriteBack } from '../comments';
 import { PluginDetailsModal } from './PluginDetailsModal';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
+import { ChatDesignToggle } from './ChatDesignToggle';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
 import { trailingMessageIgnoringHostCards } from '../runtime/chat/host-authored-message';
 import historyDockStyles from './chat/ConversationHistoryDock.module.css';
@@ -13901,6 +13902,10 @@ export function ProjectView({
               >
                 <Icon name="panel-left" size={16} />
               </button>
+              <ChatDesignToggle
+                mode={activeSessionMode}
+                onModeChange={handleActiveConversationSessionModeChange}
+              />
             </div>
           ) : null}
           {activeConversationId || conversationLoadError || emptyConversationReadOnlySettled ? (

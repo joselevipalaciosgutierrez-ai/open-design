@@ -2,7 +2,15 @@
    always carries its name ("Agentes", or the chosen agent), so its trigger is the
    same capsule the mode picker switches to once selected. Repeating `.root`
    outranks the Home composer's circular override regardless of sheet order. */
+/* The composer row can run out of room. This picker must not be the one that
+   gives: a trigger squeezed below its text lets the label spill over the next
+   chip. The model chip beside it already ellipsizes, so it absorbs the squeeze. */
+.root.root {
+  flex: 0 0 auto;
+}
+
 .root.root :global(.composer-mode__trigger) {
+  flex: 0 0 auto;
   width: auto;
   min-width: 0;
   height: 34px;
