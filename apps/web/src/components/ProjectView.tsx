@@ -13824,11 +13824,12 @@ export function ProjectView({
     () =>
       buildStatusPanelState({
         messages,
+        locale,
         delegates: statusDelegates,
         files: projectFiles,
         since: activeConversation?.createdAt ?? 0,
       }),
-    [messages, statusDelegates, projectFiles, activeConversation?.createdAt],
+    [messages, locale, statusDelegates, projectFiles, activeConversation?.createdAt],
   );
   const chatOnlyLayout = isChatOnlyLayout({
     sessionMode: layoutSessionMode,

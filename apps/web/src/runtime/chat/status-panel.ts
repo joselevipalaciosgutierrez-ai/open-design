@@ -1,6 +1,7 @@
 import type { ProjectFile, RunDelegate } from '@open-design/contracts';
 import type { AgentEvent } from '../../types';
 import { latestTodoWriteInputFromMessages, parseTodoWriteInput } from '../todos';
+import { buildActivitySteps } from './activity-steps';
 
 /**
  * What the Ask conversation's status panel shows, as plain data. Three sections,
@@ -60,7 +61,9 @@ function isUserVisibleChange(file: ProjectFile): boolean {
 
 export function buildStatusPanelState(input: {
   /** The conversation's messages, for the assistant's latest plan. */
-  messages: ReadonlyArray<{ events?: AgentEvent[] | undefined }> | undefined;
+  messages: ReadonlyArray<{ role: string; events?: AgentEvent[] | undefined; runStatus?: string | undefined }> | undefined;
+  /** App locale, for the wording of steps derived from tool calls. */
+  locale?: string;
   /** Runs the orchestrator started from this conversation's turns. */
   delegates: readonly RunDelegate[];
   files: readonly ProjectFile[];
@@ -68,14 +71,13 @@ export function buildStatusPanelState(input: {
   since: number;
 }): StatusPanelState {
   const todos = parseTodoWriteInput(latestTodoWriteInputFromMessages(input.messages));
+  const planned: StatusTask[] = todos.map((todo) => ({ content: todo.content, mark: markOf(todo.status) }));
+  // An agent that writes no plan still shows what it did, one step per tool call.
+  const steps = planned.length > 0 ? planned : buildActivitySteps({ messages: input.messages, locale: input.locale ?? 'en' });
   const tasks =
-    todos.length === 0
+    steps.length === 0
       ? null
-      : {
-          items: todos.map((todo) => ({ content: todo.content, mark: markOf(todo.status) })),
-          completed: todos.filter((todo) => todo.status === 'completed').length,
-          total: todos.length,
-        };
+      : { items: steps, completed: steps.filter((task) => task.mark === 'done').length, total: steps.length };
 
   const items: StatusBackgroundItem[] = [...input.delegates]
     .sort((a, b) => a.createdAt - b.createdAt)
