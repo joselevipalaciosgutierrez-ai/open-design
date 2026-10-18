@@ -741,6 +741,12 @@ export interface ChatRunStatusResponse {
    * proves the user explicitly stopped this run; older daemons may omit it.
    */
   cancelOrigin?: RunCancelOrigin | null;
+  /**
+   * Set when this Run was started by another Run (an orchestrator delegating).
+   * Always daemon-derived from the parent: `depth` is 1 for a Run started by the
+   * user's own Run, 2 for one started by that Run. Null for the user's own Runs.
+   */
+  delegation?: RunDelegationInfo | null;
   /** Structured lifecycle or watchdog mechanism that forced termination. */
   terminalTrigger?: RunTerminalTrigger | null;
   /** Metadata-only terminal persistence and delivery state. */
@@ -1497,4 +1503,12 @@ export interface ChatTaskExecutionAnalytics {
   taskRunIndex: number;
   recoveryActionType?: TrackingRunRecoveryActionType;
   recoveryActionInstanceId?: string;
+}
+
+/** Where a delegated Run sits in its delegation tree. */
+export interface RunDelegationInfo {
+  parentRunId: string;
+  /** The user's own Run at the top of the tree. */
+  rootRunId: string;
+  depth: number;
 }

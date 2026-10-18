@@ -563,6 +563,16 @@ function atomicWriteJson(filePath, value) {
   }
 }
 
+/** Keep only a well-formed delegation position; anything else is not one. */
+function normalizeRunDelegation(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const { parentRunId, rootRunId, depth } = value;
+  if (typeof parentRunId !== 'string' || !parentRunId) return null;
+  if (typeof rootRunId !== 'string' || !rootRunId) return null;
+  if (!Number.isInteger(depth) || depth < 1) return null;
+  return { parentRunId, rootRunId, depth };
+}
+
 function durableRunState(run) {
   return {
     schemaVersion: RUN_STATE_SCHEMA_VERSION,
@@ -579,6 +589,7 @@ function durableRunState(run) {
       ? { strategyRolloutDecision: run.strategyRolloutDecision }
       : {}),
     agentId: run.agentId,
+    ...(run.delegation ? { delegation: run.delegation } : {}),
     ...(Array.isArray(run.diagnosticIncidentIds) ? { diagnosticIncidentIds: run.diagnosticIncidentIds } : {}),
     ...(run.appVersionInfo ? { appVersionInfo: run.appVersionInfo } : {}),
     status: run.status,
@@ -1000,6 +1011,9 @@ export function createChatRunService({
         meta.sessionMode === 'chat' || meta.sessionMode === 'design' || meta.sessionMode === 'plan'
           ? meta.sessionMode
           : null,
+      // Where this run sits in a delegation tree (see ../delegation.ts). The
+      // route derives it from the parent run; anything else is dropped here.
+      delegation: normalizeRunDelegation(meta.delegation),
       context:
         meta.context && typeof meta.context === 'object' && !Array.isArray(meta.context)
           ? meta.context
@@ -1539,6 +1553,7 @@ export function createChatRunService({
         : null,
     pluginId: run.pluginId ?? null,
     strategyRolloutDecision: run.strategyRolloutDecision ?? null,
+    delegation: run.delegation ?? null,
     status: run.status,
     createdAt: run.createdAt,
     updatedAt: run.updatedAt,
@@ -2477,6 +2492,15 @@ export function createChatRunService({
     run.cancelRequested = true;
     run.cancelOrigin = origin;
     run.updatedAt = Date.now();
+    // Stopping a run stops the runs it started: an orchestrator that is
+    // cancelled must not leave its delegates working. Each child cancels its own
+    // children in turn, so the whole subtree goes. Not awaited, so the parent's
+    // own termination is not held up by its children's grace periods.
+    for (const delegated of runs.values()) {
+      if (delegated.delegation?.parentRunId !== run.id) continue;
+      if (TERMINAL_RUN_STATUSES.has(delegated.status) || delegated.cancelRequested) continue;
+      void cancel(delegated, origin).catch(() => undefined);
+    }
     if (origin === 'user_stop') observeDiagnosticLifecycle(run, 'user_cancel', run.updatedAt);
     clearPendingRetryRestart(run);
     if (!run.child) {

@@ -46,6 +46,7 @@ import {
   readCodexRolloutFirstCall,
 } from '../codex-rollout-usage.js';
 import { applyAgentProfileToRunBody } from '../agent-profile-run.js';
+import { evaluateDelegation, readRequestedParentRunId } from '../delegation.js';
 import type { ConnectorService } from '../connectors/service.js';
 import {
   conversationTurnIndexForRun,
@@ -1450,6 +1451,46 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
       );
       if (!authorization.ok) return;
       authorizedBoundMutation = authorization.authorizedBoundMutation;
+    }
+    // A run started from inside another run (an orchestrator delegating) names
+    // its parent and nothing else. Where it sits in the tree is derived from the
+    // parent the daemon holds, and the limits are enforced here, before any run
+    // exists. Whatever `delegation` the request carried is replaced, never kept.
+    const requestedParentRunId = readRequestedParentRunId(requestBody.delegation);
+    delete requestBody.delegation;
+    if (requestedParentRunId === 'invalid') {
+      return sendApiError(res, 400, 'BAD_REQUEST', 'delegation must be { parentRunId: string }');
+    }
+    if (requestedParentRunId) {
+      const requestProjectId =
+        typeof requestBody.projectId === 'string' && requestBody.projectId ? requestBody.projectId : null;
+      const requestClientId =
+        typeof requestBody.clientRequestId === 'string' ? requestBody.clientRequestId : '';
+      const projectRuns = requestProjectId ? design.runs.list({ projectId: requestProjectId }) : [];
+      // A retry of a request that already created its run is not a new delegation.
+      const isRetryOfExistingRun =
+        requestClientId !== '' && projectRuns.some((run) => run.clientRequestId === requestClientId);
+      const profileOfConversation = (conversationId: unknown): string | null =>
+        typeof conversationId === 'string' && conversationId
+          ? (getConversation(db, conversationId)?.agentProfileId ?? null)
+          : null;
+      if (!isRetryOfExistingRun) {
+        const decision = evaluateDelegation({
+          parentRunId: requestedParentRunId,
+          projectId: requestProjectId,
+          targetAgentProfileId: profileOfConversation(requestBody.conversationId),
+          getRun: (id) => design.runs.get(id),
+          allRuns: () => projectRuns,
+          isTerminal: (status) => design.runs.isTerminal(status as ChatRunStatus),
+          profileOf: (run) => profileOfConversation(run.conversationId),
+        });
+        if (!decision.ok) {
+          return sendApiError(res, decision.status, decision.code, decision.message, {
+            details: { kind: 'delegation_refused', retryable: decision.retryable },
+          });
+        }
+        requestBody.delegation = decision.delegation;
+      }
     }
     // Keep enrichment's specific recovery response ahead of generic task handoff.
     // Same-request retries still reach the idempotent claim below.

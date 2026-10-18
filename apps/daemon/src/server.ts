@@ -1912,12 +1912,15 @@ export function createOpenDesignToolEnv({
   hyperFramesBin = resolveHyperFramesCliPath(),
   projectDir,
   projectId,
+  runId,
   workspaceScope,
 }: {
   daemonUrl: string;
   hyperFramesBin?: string;
   projectDir?: string | null;
   projectId?: string | null;
+  /** This run's id, so a run that starts further runs can name its parent. */
+  runId?: string | null;
   workspaceScope?: RunWorkspaceScope | null;
 }): NodeJS.ProcessEnv {
   const scope = workspaceScope?.projectId === projectId ? workspaceScope : null;
@@ -1932,6 +1935,9 @@ export function createOpenDesignToolEnv({
     // rejects the incomplete pair rather than silently reading another library.
     OD_WORKSPACE_ID: scope?.workspaceId ?? '',
     OD_WORKSPACE_MEMBER_ID: scope?.workspaceId ? scope.workspaceMemberId ?? '' : '',
+    // Always overwrite, like the identities above: an ambient OD_RUN_ID from the
+    // shell that started the daemon must never become a run's parent.
+    OD_RUN_ID: typeof runId === 'string' ? runId : '',
     ...(typeof projectId === 'string' && projectId && projectDir
       ? {
           OD_PROJECT_ID: projectId,
@@ -14366,6 +14372,7 @@ export async function startServer({
       daemonUrl,
       projectDir: cwd,
       projectId: typeof projectId === 'string' ? projectId : null,
+      runId: run.id,
       workspaceScope: run.workspaceScope,
     });
     if (run.cancelRequested || design.runs.isTerminal(run.status)) {

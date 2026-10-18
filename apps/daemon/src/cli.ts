@@ -7956,10 +7956,14 @@ async function runRun(args) {
                [--skill <id>[,<id>]] [--plugin <id>] [--inputs <json>] [--grant-caps a,b]
                [--agent claude|codex|opencode] [--model <id>] [--service-tier <id>]
                [--workspace <id> --workspace-member <id>] [--follow] [--json]
+               Run from inside another run (OD_RUN_ID set), this delegates: the
+               daemon limits depth, total runs and runs at once, and refuses
+               with DELEGATION_* when a limit is hit.
   od run redesign [--path <folder>] [--message "<text>" | --prompt-file <path|->]
                [--agent claude] [--model <id>] [--service-tier <id>] [--follow] [--json]
   od run watch  <runId>                     ND-JSON event stream on stdout.
-  od run cancel <runId>                     Request cancellation.
+  od run cancel <runId>                     Request cancellation. Stops the runs it
+                                            started, too.
   od run steer  <runId> [--message "<text>" | --prompt-file <path|->] [--json]
                                             Push a message into the turn that is
                                             STILL RUNNING (「引导对话」) instead of
@@ -8257,6 +8261,10 @@ Common options:
       if (flags['snapshot-id']) body.appliedPluginSnapshotId = flags['snapshot-id'];
       if (flags['task-execution']) body.taskExecutionId = flags['task-execution'];
       if (flags['client-request-id']) body.clientRequestId = flags['client-request-id'];
+      // Started from inside a run (the daemon sets OD_RUN_ID in an agent's
+      // environment): this is a delegation. Only the parent is named; the daemon
+      // derives the rest and enforces the limits.
+      if (process.env.OD_RUN_ID) body.delegation = { parentRunId: process.env.OD_RUN_ID };
       const resp = await fetch(`${base}/api/runs`, {
         method:  'POST',
         headers: { 'content-type': 'application/json', ...workspaceHeaders },
@@ -8277,6 +8285,11 @@ Common options:
             message: data.error.message,
             data:    data.error.data,
           });
+        }
+        if (typeof data?.error?.code === 'string' && data.error.code.startsWith('DELEGATION_')) {
+          // A limit, not a failure: say what happened and what to do, plainly.
+          console.error(`[run] delegation refused (${data.error.code}): ${data.error.message}`);
+          process.exit(1);
         }
         console.error(`POST /api/runs failed: ${resp.status} ${JSON.stringify(data)}`);
         process.exit(1);
