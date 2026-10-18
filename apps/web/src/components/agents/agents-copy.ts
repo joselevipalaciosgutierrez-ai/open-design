@@ -61,6 +61,13 @@ export interface AgentsCopy {
   skillRemove: (name: string) => string;
   skillsSuggested: string;
   skillsNone: string;
+  delegatedTitle: string;
+  delegateRunning: string;
+  delegateDone: string;
+  delegateFailed: string;
+  delegateCanceled: string;
+  delegateOpen: string;
+  delegateWorker: string;
   needName: string;
   needRuntime: string;
   saveError: string;
@@ -139,6 +146,13 @@ const es: AgentsCopy = {
   skillRemove: (name) => `Quitar ${name}`,
   skillsSuggested: 'Tus skills',
   skillsNone: 'No tienes skills propias todavía. Sube un SKILL.md para añadir una.',
+  delegatedTitle: 'El orquestador delegó',
+  delegateRunning: 'Trabajando',
+  delegateDone: 'Terminó',
+  delegateFailed: 'Falló',
+  delegateCanceled: 'Cancelado',
+  delegateOpen: 'Abrir conversación',
+  delegateWorker: 'Ayudante',
   needName: 'Escribe un nombre.',
   needRuntime: 'Elige una CLI.',
   saveError: 'No se pudo guardar el agente.',
@@ -208,6 +222,13 @@ const en: AgentsCopy = {
   skillRemove: (name) => `Remove ${name}`,
   skillsSuggested: 'Your skills',
   skillsNone: "You don't have any skills of your own yet. Upload a SKILL.md to add one.",
+  delegatedTitle: 'The orchestrator delegated',
+  delegateRunning: 'Working',
+  delegateDone: 'Done',
+  delegateFailed: 'Failed',
+  delegateCanceled: 'Canceled',
+  delegateOpen: 'Open conversation',
+  delegateWorker: 'Helper',
   needName: 'Enter a name.',
   needRuntime: 'Pick a CLI.',
   saveError: 'Could not save the agent.',

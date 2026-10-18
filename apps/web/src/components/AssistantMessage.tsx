@@ -1,3 +1,4 @@
+import { DelegationCards } from './agents/DelegationCards';
 import { Fragment, memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCharReveal } from "./chat/useCharReveal";
 import { ExecutionShell } from "./chat/ExecutionShell";
@@ -1406,6 +1407,11 @@ function AssistantMessageImpl({
             artifactRefs={messageArtifactRefs(message)}
           />
         ) : null}
+        <DelegationCards
+          projectId={projectId}
+          runId={message.runId}
+          live={streaming || turnRunStatus === 'running'}
+        />
         {showCompletionRow ? (
           <div className="assistant-completion-row">
             {showFeedback ? (

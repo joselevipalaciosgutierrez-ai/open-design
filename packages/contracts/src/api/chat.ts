@@ -1512,3 +1512,22 @@ export interface RunDelegationInfo {
   rootRunId: string;
   depth: number;
 }
+
+/** One run an orchestrator started, as the chat shows it. */
+export interface RunDelegate {
+  runId: string;
+  status: ChatRunStatus;
+  createdAt: number;
+  terminalAt: number | null;
+  /** The conversation the delegate works in; opening it shows its own chat. */
+  conversationId: string | null;
+  /** 1 for a run the user's own run started, 2 for one that run started. */
+  depth: number;
+  /** The agent profile it ran as; null for an unassigned worker. */
+  agent: { id: string; name: string; emoji: string | null } | null;
+}
+
+/** Delegates grouped by the run that started them. */
+export interface RunDelegatesResponse {
+  delegates: Record<string, RunDelegate[]>;
+}

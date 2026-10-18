@@ -168,6 +168,10 @@ export interface ChatRun {
   status: ChatRunStatus;
   createdAt: number;
   updatedAt: number;
+  /** The instant the run entered its terminal status, when it has. */
+  terminalAt?: number | null;
+  /** Set when another run started this one; always daemon-derived (`delegation.ts`). */
+  delegation?: { parentRunId: string; rootRunId: string; depth: number } | null;
   cancelRequested?: boolean;
   cancelOrigin?: ChatRunStatusResponse['cancelOrigin'];
   terminalTrigger?: ChatRunStatusResponse['terminalTrigger'];

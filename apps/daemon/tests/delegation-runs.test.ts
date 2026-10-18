@@ -81,8 +81,12 @@ describe('delegation between runs', () => {
     await rm(agentHome, { recursive: true, force: true });
   });
 
-  async function startRun(projectId: string, extra: Record<string, unknown> = {}) {
-    const conversationId = await createConversation(started.url, projectId);
+  async function startRun(
+    projectId: string,
+    extra: Record<string, unknown> = {},
+    agentProfileId?: string,
+  ) {
+    const conversationId = await createConversation(started.url, projectId, agentProfileId);
     const response = await fetch(`${started.url}/api/runs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -191,6 +195,52 @@ describe('delegation between runs', () => {
     expect(['queued', 'running']).toContain((await status(rootB.runId)).status);
   });
 
+  it('lists what an orchestrator started, with the agent each ran as, grouped by parent', async () => {
+    const profile = await fetch(`${started.url}/api/agent-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Diseño', emoji: '🎨', runtimeId: 'opencode' }),
+    });
+    const agentId = ((await profile.json()) as { profile: { id: string } }).profile.id;
+    const { projectId } = await createProject(started.url);
+    const other = await createProject(started.url);
+    const root = await startRun(projectId);
+    const quiet = await startRun(projectId);
+    const withAgent = await startRun(projectId, { delegation: { parentRunId: root.runId } }, agentId);
+    const unassigned = await startRun(projectId, { delegation: { parentRunId: root.runId } });
+    const nested = await startRun(projectId, { delegation: { parentRunId: withAgent.runId } });
+
+    const ask = async (project: string, parents: string[]) =>
+      (await (
+        await fetch(
+          `${started.url}/api/projects/${encodeURIComponent(project)}/run-delegates?parentRunIds=${parents.join(',')}`,
+        )
+      ).json()) as {
+        delegates: Record<
+          string,
+          Array<{ runId: string; depth: number; agent: { name: string; emoji: string | null } | null }>
+        >;
+      };
+
+    const result = await ask(projectId, [root.runId, quiet.runId, withAgent.runId]);
+
+    expect(result.delegates[root.runId]?.map((d) => d.runId)).toEqual([withAgent.runId, unassigned.runId]);
+    expect(result.delegates[root.runId]?.[0]).toMatchObject({
+      depth: 1,
+      agent: { name: 'Diseño', emoji: '🎨' },
+    });
+    expect(result.delegates[root.runId]?.[1]?.agent).toBeNull();
+    // Direct children only: the nested run shows under its own parent, not the root.
+    expect(result.delegates[withAgent.runId]?.map((d) => d.runId)).toEqual([nested.runId]);
+    expect(result.delegates[withAgent.runId]?.[0]?.depth).toBe(2);
+    // A run that delegated nothing has no entry at all.
+    expect(result.delegates).not.toHaveProperty(quiet.runId);
+    // Another project cannot read this tree.
+    expect((await ask(other.projectId, [root.runId])).delegates).toEqual({});
+    // No ids asked for, nothing returned.
+    expect((await ask(projectId, [])).delegates).toEqual({});
+  });
+
   it('stops everything an orchestrator started when it is cancelled', async () => {
     const { projectId } = await createProject(started.url);
     const root = await startRun(projectId);
@@ -227,11 +277,15 @@ async function createProject(url: string): Promise<{ projectId: string }> {
   return { projectId };
 }
 
-async function createConversation(url: string, projectId: string): Promise<string> {
+async function createConversation(
+  url: string,
+  projectId: string,
+  agentProfileId?: string,
+): Promise<string> {
   const response = await fetch(`${url}/api/projects/${encodeURIComponent(projectId)}/conversations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'delegate' }),
+    body: JSON.stringify({ title: 'delegate', ...(agentProfileId ? { agentProfileId } : {}) }),
   });
   expect(response.status).toBe(200);
   const body = (await response.json()) as { conversation: { id: string } };

@@ -12,6 +12,8 @@ import {
   type ByokChatProviderConfig,
   type ChatRunStatus,
   type ChatRunStatusResponse,
+  type RunDelegate,
+  type RunDelegatesResponse,
   type InstalledPluginRecord,
   type ProjectMetadata as ContractProjectMetadata,
   type RunResultPackageResponse,
@@ -3011,6 +3013,49 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
     const activeRunCount = design.runs.list({ status: 'active' }).length;
     res.setHeader('Cache-Control', 'no-store');
     res.json({ activeRunCount });
+  });
+
+  // The runs an orchestrator started, for the chat to show under the turn that
+  // started them. Batched by parent run so a long conversation costs one
+  // request, not one per message. Direct children only: a delegate's own
+  // helpers show under that delegate's conversation.
+  app.get('/api/projects/:id/run-delegates', async (req: ApiRequest, res: ApiResponse) => {
+    const projectId = routeParamId(req);
+    if (!projectId) return sendApiError(res, 400, 'BAD_REQUEST', 'project id missing');
+    if (ctx.authorizeProjectRequest) {
+      if (!await ctx.authorizeProjectRequest(req, res, projectId, { mode: 'read' })) return;
+    }
+    const raw = typeof req.query?.parentRunIds === 'string' ? req.query.parentRunIds : '';
+    const parentRunIds = Array.from(
+      new Set(raw.split(',').map((id) => id.trim()).filter(Boolean)),
+    ).slice(0, 100);
+    const delegates: Record<string, RunDelegate[]> = {};
+    if (parentRunIds.length > 0) {
+      const wanted = new Set(parentRunIds);
+      for (const run of design.runs.list({ projectId })) {
+        const parentId = run.delegation?.parentRunId;
+        if (!parentId || !wanted.has(parentId)) continue;
+        const profileId = run.conversationId
+          ? (getConversation(db, run.conversationId)?.agentProfileId ?? null)
+          : null;
+        const profile = profileId ? getAgentProfile(db, profileId) : null;
+        (delegates[parentId] ??= []).push({
+          runId: run.id,
+          status: run.status as ChatRunStatus,
+          createdAt: run.createdAt,
+          terminalAt: run.terminalAt ?? null,
+          conversationId: run.conversationId ?? null,
+          depth: run.delegation?.depth ?? 1,
+          agent: profile
+            ? { id: profile.id, name: profile.name, emoji: profile.emoji ?? null }
+            : null,
+        });
+      }
+      for (const list of Object.values(delegates)) list.sort((a, b) => a.createdAt - b.createdAt);
+    }
+    const body: RunDelegatesResponse = { delegates };
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(body);
   });
 
   app.get('/api/runs', async (req: ApiRequest, res: ApiResponse) => {
