@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { I18nProvider } from '../src/i18n';
 import { AnalyticsProvider } from '../src/analytics/provider';
+import { DevStyleGuard } from '../src/dev/DevStyleGuard';
 import '@excalidraw/excalidraw/index.css';
 import '../src/index.css';
 import '../src/styles/home/index.css';
@@ -48,6 +49,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body suppressHydrationWarning>
+        {/* Dev only: reloads when the hot reload drops a stylesheet chunk. */}
+        <DevStyleGuard />
         <I18nProvider>
           <AnalyticsProvider>{children}</AnalyticsProvider>
         </I18nProvider>
