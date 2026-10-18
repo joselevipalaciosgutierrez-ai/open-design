@@ -2398,6 +2398,16 @@ a.avatar-item:visited {
 .split.split-chat-only {
   grid-template-columns: minmax(0, 1fr);
 }
+/* A chat page of its own, not a card floating on the app wash. The wash is
+   transparent by design, and in the desktop app (macOS) that lets the window's
+   vibrancy through as gray; a solid ground keeps the conversation white.
+   `.app .split` in routines.css paints the veil token, so this matches its
+   specificity and relies on coming from a later rule of higher weight. */
+.app .split.split-chat-only {
+  background: var(--bg-app);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .split.split-chat-only > .workspace,
 .split.split-chat-only > .split-resize-handle,
 .split.split-chat-only .split-chat-collapse {
