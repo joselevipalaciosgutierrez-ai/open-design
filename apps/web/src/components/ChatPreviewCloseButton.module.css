@@ -1,0 +1,25 @@
+.root {
+  appearance: none;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  /* Sits just before the Ask/Design toggle, which owns the push to the right. */
+  order: 3;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bg-app);
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.root:hover {
+  color: var(--text-strong);
+  background: var(--bg-subtle);
+}

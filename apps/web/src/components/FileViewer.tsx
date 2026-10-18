@@ -1,3 +1,4 @@
+import { PdfViewer } from './PdfViewer';
 import { useExperienceError } from '../observability/use-experience-error';
 import { daemonErrorCodeProp, failureDetailProps } from '../analytics/failure-detail';
 import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
@@ -1990,8 +1991,10 @@ export const FileViewer = memo(function FileViewer({
   if (file.kind === 'text' || file.kind === 'code') {
     return <TextViewer projectId={projectId} file={file} />;
   }
+  if (file.kind === 'pdf') {
+    return <PdfFileViewer projectId={projectId} file={file} />;
+  }
   if (
-    file.kind === 'pdf' ||
     file.kind === 'document' ||
     file.kind === 'presentation' ||
     file.kind === 'spreadsheet'
@@ -7241,6 +7244,20 @@ function BinaryViewer({
         </div>
       </div>
     </div>
+  );
+}
+
+function PdfFileViewer({ projectId, file }: { projectId: string; file: ProjectFile }) {
+  const t = useT();
+  const { workspaceContext } = useProjectCollabContext();
+  return (
+    <PdfViewer
+      src={projectRawUrl(projectId, file.name, workspaceContext)}
+      title={file.name}
+      version={file.mtime}
+      meta={t('fileViewer.pdfMeta', { size: humanSize(file.size) })}
+      actions={<FileActions projectId={projectId} file={file} />}
+    />
   );
 }
 

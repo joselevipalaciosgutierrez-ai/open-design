@@ -335,6 +335,8 @@ import type { AnchorWriteBack } from '../comments';
 import { PluginDetailsModal } from './PluginDetailsModal';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { ChatDesignToggle } from './ChatDesignToggle';
+import { ChatPreviewCloseButton } from './ChatPreviewCloseButton';
+import { isChatOnlyLayout, shouldOpenPreviewForFile } from '../runtime/chat/chat-layout';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
 import { trailingMessageIgnoringHostCards } from '../runtime/chat/host-authored-message';
 import historyDockStyles from './chat/ConversationHistoryDock.module.css';
@@ -4892,6 +4894,28 @@ export function ProjectView({
     setOpenRequest({ name, nonce: Date.now() });
   }, []);
 
+  // A file the user opens from an Ask conversation (a PDF they attached, a file
+  // card, a deep link) is shown beside the chat, without leaving Ask. Auto-opens
+  // of produced artifacts keep calling `requestOpenFile` and never pop it in.
+  const [chatPreviewOpen, setChatPreviewOpen] = useState(false);
+  // The files this preview opened, so closing it closes exactly those tabs.
+  const chatPreviewFilesRef = useRef<Set<string>>(new Set());
+  const requestOpenFileFromChat = useCallback(
+    (name: string) => {
+      requestOpenFile(name);
+      if (name && shouldOpenPreviewForFile(layoutSessionMode)) {
+        chatPreviewFilesRef.current.add(name);
+        setChatPreviewOpen(true);
+      }
+    },
+    [requestOpenFile, layoutSessionMode],
+  );
+  useEffect(() => {
+    // Leaving Ask (to Design or Plan) ends the preview; the workspace is
+    // there anyway, and the flag must not come back with the next Ask.
+    if (layoutSessionMode !== 'chat') setChatPreviewOpen(false);
+  }, [layoutSessionMode]);
+
   /**
    * Open a finished turn's artifacts together, with `focused` selected.
    *
@@ -5483,8 +5507,8 @@ export function ProjectView({
   // (the parsed segment) so back/forward navigation triggers the same path.
   useEffect(() => {
     if (!routeFileName) return;
-    requestOpenFile(routeFileName);
-  }, [routeFileName, requestOpenFile]);
+    requestOpenFileFromChat(routeFileName);
+  }, [routeFileName, requestOpenFileFromChat]);
 
   // Sync the URL when the active tab changes, so reload + share-link both
   // land back on the same view. Replace (not push) on tab activation so the
@@ -13778,6 +13802,12 @@ export function ProjectView({
 
   // CLI / agent selector lives below the chat conversation (composer footer),
   // not in the top-right header.
+  const chatOnlyLayout = isChatOnlyLayout({
+    sessionMode: layoutSessionMode,
+    workspaceFocused,
+    previewOpen: chatPreviewOpen,
+  });
+
   const executionControls = (
     <>
       <AvatarMenu
@@ -13861,7 +13891,7 @@ export function ProjectView({
         className={[
           projectSplitClassName(workspaceFocused),
           resizingChatPanel && !workspaceFocused ? 'is-resizing-chat' : '',
-          layoutSessionMode === 'chat' && !workspaceFocused ? 'split-chat-only' : '',
+          chatOnlyLayout ? 'split-chat-only' : '',
         ].filter(Boolean).join(' ')}
         style={projectSplitStyle(workspaceFocused, splitLeftPanelWidth, workspacePanelTrack)}
       >
@@ -13902,6 +13932,35 @@ export function ProjectView({
               >
                 <Icon name="panel-left" size={16} />
               </button>
+              {chatPreviewOpen ? (
+                <ChatPreviewCloseButton
+                  onClose={() => {
+                    setChatPreviewOpen(false);
+                    // Its tabs close with it: a tab left open would put the file
+                    // back in the URL, and the next load would open it again.
+                    const previewed = chatPreviewFilesRef.current;
+                    chatPreviewFilesRef.current = new Set();
+                    if (previewed.size > 0) {
+                      persistTabsState({
+                        ...openTabsState,
+                        tabs: openTabsState.tabs.filter((tab) => !previewed.has(tab)),
+                        active:
+                          openTabsState.active && previewed.has(openTabsState.active)
+                            ? null
+                            : openTabsState.active,
+                      });
+                    }
+                    if (activeConversationId) {
+                      navigate({
+                        kind: 'project',
+                        projectId: project.id,
+                        conversationId: activeConversationId,
+                        fileName: null,
+                      });
+                    }
+                  }}
+                />
+              ) : null}
               <ChatDesignToggle
                 mode={activeSessionMode}
                 onModeChange={handleActiveConversationSessionModeChange}
@@ -14003,7 +14062,7 @@ export function ProjectView({
               onUpdateQueuedSend={updateQueuedChatSend}
               onReorderQueuedSends={reorderCurrentConversationQueuedChatSends}
               onSendQueuedNow={sendQueuedChatSendNow}
-              onRequestOpenFile={requestOpenFile}
+              onRequestOpenFile={requestOpenFileFromChat}
               onRequestPluginDetails={handleOpenContextPluginDetails}
               onRequestDesignSystemDetails={handleOpenContextDesignSystemDetails}
               onRequestPluginFolderAgentAction={handlePluginFolderAgentAction}

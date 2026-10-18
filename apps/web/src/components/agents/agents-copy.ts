@@ -68,6 +68,7 @@ export interface AgentsCopy {
   delegateCanceled: string;
   delegateOpen: string;
   delegateWorker: string;
+  previewClose: string;
   needName: string;
   needRuntime: string;
   saveError: string;
@@ -153,6 +154,7 @@ const es: AgentsCopy = {
   delegateCanceled: 'Cancelado',
   delegateOpen: 'Abrir conversación',
   delegateWorker: 'Ayudante',
+  previewClose: 'Cerrar vista previa',
   needName: 'Escribe un nombre.',
   needRuntime: 'Elige una CLI.',
   saveError: 'No se pudo guardar el agente.',
@@ -229,6 +231,7 @@ const en: AgentsCopy = {
   delegateCanceled: 'Canceled',
   delegateOpen: 'Open conversation',
   delegateWorker: 'Helper',
+  previewClose: 'Close preview',
   needName: 'Enter a name.',
   needRuntime: 'Pick a CLI.',
   saveError: 'Could not save the agent.',
