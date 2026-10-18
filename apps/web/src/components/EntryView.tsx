@@ -59,6 +59,7 @@ type EntryCreateProjectInput = Omit<CreateInput, 'metadata'> & {
   pluginInputs?: Record<string, unknown>;
   automaticStrategyTaskProfile?: import('@open-design/contracts').ProjectScenarioTaskProfile;
   conversationMode?: ChatSessionMode;
+  agentProfileId?: string | null;
   autoSendFirstMessage?: boolean;
   requestId?: string;
   pendingFiles?: File[];

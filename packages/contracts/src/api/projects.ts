@@ -467,6 +467,8 @@ export interface CreateProjectRequest {
   exampleReference?: CreateProjectExampleReference;
   /** Session mode for the default conversation seeded with the project. */
   conversationMode?: ChatSessionMode;
+  /** Bind the first conversation to this agent profile. */
+  agentProfileId?: string | null;
   customInstructions?: string;
   /** Persisted to metadata.skipDiscoveryBrief for automated project runs. */
   skipDiscoveryBrief?: boolean;

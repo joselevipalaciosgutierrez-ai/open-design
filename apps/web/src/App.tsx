@@ -286,6 +286,7 @@ type AppCreateProjectInput = Omit<CreateInput, 'metadata'> & {
   exampleReference?: CreateProjectExampleReference;
   initialRunContext?: RunContextSelection | null;
   conversationMode?: ChatSessionMode;
+  agentProfileId?: string | null;
   autoSendFirstMessage?: boolean;
   /** Exact workspace/member authority checked by the Home AMR preflight. */
   amrGatePrecheckWitness?: AmrBalanceGateScope;
@@ -3259,6 +3260,7 @@ function AppInner() {
           pendingPrompt: derivedPendingPrompt,
           metadata,
           ...(input.conversationMode ? { conversationMode: input.conversationMode } : {}),
+          ...(input.agentProfileId ? { agentProfileId: input.agentProfileId } : {}),
           ...(input.pluginId ? { pluginId: input.pluginId } : {}),
           ...(input.pluginSource ? { pluginSource: input.pluginSource } : {}),
           ...(input.appliedPluginSnapshotId

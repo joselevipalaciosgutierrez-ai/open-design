@@ -105,6 +105,7 @@ import { listSkills } from '../../skills.js';
 import { isSafeId } from '../../projects.js';
 import {
   ensureTeamProjectCommentConversations,
+  getAgentProfile,
   getFirstProjectConversation,
   SYNC_KEEPS_UPDATED_AT,
 } from '../../db.js';
@@ -4124,6 +4125,24 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
       const initialSessionMode = normalizeChatSessionMode(
         req.body?.conversationMode ?? req.body?.sessionMode,
       );
+      // The first conversation can start bound to an agent profile (Home's
+      // agent picker). A bad value is a 4xx rather than a silent drop: the run
+      // would otherwise answer as the wrong agent without saying so.
+      const rawInitialAgentProfileId = req.body?.agentProfileId;
+      if (
+        rawInitialAgentProfileId !== undefined
+        && rawInitialAgentProfileId !== null
+        && typeof rawInitialAgentProfileId !== 'string'
+      ) {
+        return sendApiError(res, 400, 'BAD_REQUEST', 'agentProfileId must be a string');
+      }
+      const initialAgentProfileId =
+        typeof rawInitialAgentProfileId === 'string' && rawInitialAgentProfileId
+          ? rawInitialAgentProfileId
+          : null;
+      if (initialAgentProfileId && !getAgentProfile(db, initialAgentProfileId)) {
+        return sendApiError(res, 404, 'NOT_FOUND', 'agent profile not found');
+      }
       const requestedAutomaticStrategyTaskProfile =
         req.body?.automaticStrategyTaskProfile === 'prototype'
         || req.body?.automaticStrategyTaskProfile === 'ppt'
@@ -4407,6 +4426,7 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
             projectId: id,
             title: null,
             sessionMode: initialSessionMode,
+            agentProfileId: initialAgentProfileId,
             createdAt: now,
             updatedAt: now,
           });

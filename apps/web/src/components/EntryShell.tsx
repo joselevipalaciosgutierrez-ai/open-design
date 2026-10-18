@@ -354,6 +354,7 @@ type EntryCreateProjectInput = Omit<CreateInput, 'metadata'> & {
   exampleReference?: CreateProjectExampleReference;
   initialRunContext?: RunContextSelection | null;
   conversationMode?: ChatSessionMode;
+  agentProfileId?: string | null;
   autoSendFirstMessage?: boolean;
   /** Exact workspace/member authority checked by the Home AMR preflight. */
   amrGatePrecheckWitness?: AmrBalanceGateScope;
@@ -1741,6 +1742,7 @@ export function EntryShell({
         : {}),
       ...(payload.initialRunContext ? { initialRunContext: payload.initialRunContext } : {}),
       ...(payload.conversationMode ? { conversationMode: payload.conversationMode } : {}),
+      ...(payload.agentProfileId ? { agentProfileId: payload.agentProfileId } : {}),
       ...(payload.attachments && payload.attachments.length > 0
         ? { pendingFiles: payload.attachments }
         : {}),

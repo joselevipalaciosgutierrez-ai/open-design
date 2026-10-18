@@ -44,7 +44,13 @@ export interface AgentsCopy {
   skillsLabel: string;
   skillsHint: string;
   skillsLoading: string;
+  cliMenuTitle: string;
+  cliNoneInstalled: string;
+  cliHoldHint: string;
+  switcherLabel: string;
   switcherTitle: string;
+  switcherClear: string;
+  switcherEmpty: string;
   switcherNone: string;
   switcherAll: string;
   skillsSearch: string;
@@ -116,7 +122,13 @@ const es: AgentsCopy = {
   skillsLabel: 'Skills',
   skillsHint: 'El agente las usará en cada respuesta.',
   skillsLoading: 'Cargando skills…',
+  cliMenuTitle: 'Cambiar de CLI',
+  cliNoneInstalled: 'No hay ningún CLI instalado. Instálalo y reescanea en Ajustes.',
+  cliHoldHint: 'Mantén pulsado para cambiar de CLI',
+  switcherLabel: 'Agentes',
   switcherTitle: 'Agentes',
+  switcherClear: 'Quitar agente',
+  switcherEmpty: 'Todavía no tienes agentes.',
   switcherNone: 'Sin agente',
   switcherAll: 'Todos los agentes',
   skillsSearch: 'Buscar skill…',
@@ -179,7 +191,13 @@ const en: AgentsCopy = {
   skillsLabel: 'Skills',
   skillsHint: 'The agent applies them on every reply.',
   skillsLoading: 'Loading skills…',
+  cliMenuTitle: 'Switch CLI',
+  cliNoneInstalled: 'No CLI is installed. Install one and rescan in Settings.',
+  cliHoldHint: 'Hold to switch CLI',
+  switcherLabel: 'Agents',
   switcherTitle: 'Agents',
+  switcherClear: 'Remove agent',
+  switcherEmpty: "You don't have any agents yet.",
   switcherNone: 'No agent',
   switcherAll: 'All agents',
   skillsSearch: 'Search skills…',
@@ -203,4 +221,14 @@ const en: AgentsCopy = {
 
 export function getAgentsCopy(locale: string): AgentsCopy {
   return locale.toLowerCase().startsWith('es') ? es : en;
+}
+
+/**
+ * Copy for the current UI language, read from `<html lang>` (which the i18n
+ * provider keeps in sync). For hosts that only need a string or two and should
+ * not take a hard dependency on the i18n context.
+ */
+export function getAgentsCopyForDocument(): AgentsCopy {
+  const lang = typeof document !== 'undefined' ? document.documentElement.lang : '';
+  return getAgentsCopy(lang || 'en');
 }

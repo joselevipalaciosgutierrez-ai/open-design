@@ -98,6 +98,7 @@ import {
   pluginInputsAreValid,
   requiredInputsAreUserFillable,
 } from '../utils/pluginRequiredInputs';
+import { ComposerAgentPicker } from './ComposerAgentPicker';
 import { HomeHero, type ExamplePromptInfo, type HomeHeroHandle } from './HomeHero';
 import { findChip, HOME_HERO_CHIPS, type HomeHeroChip } from './home-hero/chips';
 import {
@@ -626,6 +627,7 @@ export function HomeView({
   // Home composer mode picker restored in this fork: Design (default) / Ask / Plan.
   // The chosen mode travels as `conversationMode` when the project is created.
   const [sessionMode, setSessionMode] = useState<ChatSessionMode>('design');
+  const [agentProfileId, setAgentProfileId] = useState<string | null>(null);
   // Automatic task routes do not apply the placeholder plugin. Its legacy
   // required fields must not block the free-form brief that the route owns.
   const activeAutomaticStrategyTaskProfile = sessionMode === 'design'
@@ -3055,6 +3057,7 @@ export function HomeView({
         ...(workingDirToken ? { workingDirToken } : {}),
         ...(contextLinkedDirs.length > 0 ? { linkedDirs: contextLinkedDirs } : {}),
         conversationMode: sessionMode,
+        ...(agentProfileId ? { agentProfileId } : {}),
         ...(examplePromptToSend ? { examplePromptContext: examplePromptToSend } : {}),
       });
       if (accepted === false) {
@@ -3158,6 +3161,7 @@ export function HomeView({
         onSubmitScenario={submitScenario}
         sessionMode={sessionMode}
         onSessionModeChange={setSessionMode}
+        agentPicker={<ComposerAgentPicker value={agentProfileId} onChange={setAgentProfileId} />}
         submitting={sending}
         activePluginTitle={activeBadgeTitle}
         activePluginIsExplicit={activePluginIsExplicit}

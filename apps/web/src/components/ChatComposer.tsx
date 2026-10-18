@@ -436,6 +436,8 @@ interface Props {
   // ChatPane). Pass `null` (or omit) to render the full rail.
   pinnedPluginId?: string | null;
   footerAccessory?: ReactNode;
+  // Agent picker, rendered just left of the mode picker in the bottom toolbar.
+  agentPicker?: ReactNode;
   // Slot rendered in the composer's bottom toolbar, immediately right of the
   // "+" menu. Hosts the working-directory pill so the folder selector sits by
   // the composer (mirroring the home input) instead of the file-panel header.
@@ -642,6 +644,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       onProjectSkillChange,
       pinnedPluginId = null,
       footerAccessory,
+      agentPicker,
       leadingAccessory,
       designSystemPicker,
       onShowToast,
@@ -3879,6 +3882,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
             {/* Mode picker restored in this fork (Design / Ask / Plan). Shown only when
                 the host passes `onSessionModeChange`. Ask keeps the conversation as
                 a plain chat; switching to Design brings the workspace back. */}
+            {agentPicker}
             {onSessionModeChange ? (
               <ComposerModePicker
                 mode={sessionMode}

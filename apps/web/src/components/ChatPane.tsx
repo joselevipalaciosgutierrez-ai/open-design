@@ -195,7 +195,8 @@ import { repoConnectCopy } from './design-system-github-evidence';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
 import type { SettingsSection } from './SettingsDialog';
 import { findSwitchModeMarker } from '../artifacts/internal-markers';
-import { AgentSwitcher } from './agents/AgentSwitcher';
+import { ComposerAgentPicker } from './ComposerAgentPicker';
+import { patchConversation } from '../state/projects';
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
@@ -4116,17 +4117,40 @@ export function ChatPane({
     };
   }, [composerPortalRect, composerPortalTarget, tab]);
 
+  // The daemon reads the conversation's agent profile when it creates a run, so
+  // a change applies from the next message. `agentOverride` shows the new value
+  // at once; the conversation list prop catches up on its next refresh.
+  const [agentOverride, setAgentOverride] = useState<{
+    conversationId: string;
+    agentProfileId: string | null;
+  } | null>(null);
+  const activeAgentProfileId =
+    agentOverride && agentOverride.conversationId === activeConversationId
+      ? agentOverride.agentProfileId
+      : (conversations.find((c) => c.id === activeConversationId)?.agentProfileId ?? null);
+  const handleAgentProfileChange = useCallback(
+    async (agentProfileId: string | null) => {
+      if (!projectId || !activeConversationId) return;
+      const updated = await patchConversation(projectId, activeConversationId, { agentProfileId });
+      if (updated) setAgentOverride({ conversationId: activeConversationId, agentProfileId });
+    },
+    [projectId, activeConversationId],
+  );
+
   const composerNode = (
     <>
       {/* 插件 / 设计百宝箱 live inside the composer's "+" menu (below 工作目录,
           hover to expand); they no longer sit as quick pills above the input. */}
-    <AgentSwitcher
-      projectId={projectId}
-      conversationId={activeConversationId}
-      agentProfileId={conversations.find((c) => c.id === activeConversationId)?.agentProfileId}
-    />
     <ChatComposer
       ref={composerRef}
+      agentPicker={
+        projectId && activeConversationId ? (
+          <ComposerAgentPicker
+            value={activeAgentProfileId}
+            onChange={handleAgentProfileChange}
+          />
+        ) : null
+      }
       quotes={quotes}
       onClearQuotes={clearQuotes}
       onRestoreQuotes={setQuotes}

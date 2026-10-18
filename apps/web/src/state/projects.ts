@@ -749,6 +749,7 @@ export async function createProject(
     pendingPrompt?: string;
     metadata?: ProjectMetadata;
     conversationMode?: ChatSessionMode;
+    agentProfileId?: string | null;
     // Plan §3.A1 / spec §11.5 — POST /api/projects accepts a pluginId
     // (or pre-applied snapshot id) to resolve and pin a plugin to the new
     // project. Used by the PluginLoopHome flow on Home.

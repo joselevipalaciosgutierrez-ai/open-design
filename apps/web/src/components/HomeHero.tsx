@@ -158,6 +158,8 @@ interface Props {
   // path) stays intact.
   sessionMode?: ChatSessionMode;
   onSessionModeChange?: (mode: ChatSessionMode) => void;
+  /** Agent picker, rendered just left of the mode picker. */
+  agentPicker?: ReactNode;
   activePluginTitle: string | null;
   // True when the active plugin chip shows a user-picked plugin (Community card
   // or example-prompt preset) rather than a task-type chip's default plugin —
@@ -361,6 +363,7 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
     onSubmitScenario = () => undefined,
     sessionMode = 'design',
     onSessionModeChange,
+    agentPicker,
     firstRunGuide,
     activePluginTitle,
     activePluginIsExplicit = false,
@@ -2410,6 +2413,7 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
             ) : null}
           </div>
           <div className="home-hero__foot-right">
+            {agentPicker}
             {/* Mode picker restored in this fork (Design / Ask / Plan). Ask ('chat') is
                 the entry point for the central chat. The default stays 'design'. */}
             {onSessionModeChange ? (
