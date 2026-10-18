@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatStatusPanel, ChatStatusToggle } from '../../src/components/ChatStatusPanel';
+import { I18nProvider } from '../../src/i18n';
 import {
   formatElapsed,
   type StatusBackgroundItem,
@@ -27,19 +28,18 @@ function renderPanel(state: Partial<StatusPanelState>, handlers = {}) {
   const onOpenFile = vi.fn();
   const onOpenConversation = vi.fn();
   render(
-    <ChatStatusPanel
-      state={{ ...empty, ...state, isEmpty: false }}
-      onOpenFile={onOpenFile}
-      onOpenConversation={onOpenConversation}
-      {...handlers}
-    />,
+    <I18nProvider initial="es-ES">
+      <ChatStatusPanel
+        state={{ ...empty, ...state, isEmpty: false }}
+        onOpenFile={onOpenFile}
+        onOpenConversation={onOpenConversation}
+        {...handlers}
+      />
+    </I18nProvider>,
   );
   return { onOpenFile, onOpenConversation };
 }
 
-beforeEach(() => {
-  document.documentElement.lang = 'es';
-});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -149,7 +149,7 @@ describe('ChatStatusPanel', () => {
 describe('ChatStatusToggle', () => {
   it('says what it will do and reports being pressed', () => {
     const onToggle = vi.fn();
-    render(<ChatStatusToggle shown onToggle={onToggle} />);
+    render(<I18nProvider initial="es-ES"><ChatStatusToggle shown onToggle={onToggle} /></I18nProvider>);
     const button = screen.getByRole('button', { name: 'Ocultar estado' });
     expect(button.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(button);
@@ -157,7 +157,7 @@ describe('ChatStatusToggle', () => {
   });
 
   it('offers to show the panel when it is hidden', () => {
-    render(<ChatStatusToggle shown={false} onToggle={() => undefined} />);
+    render(<I18nProvider initial="es-ES"><ChatStatusToggle shown={false} onToggle={() => undefined} /></I18nProvider>);
     expect(screen.getByRole('button', { name: 'Mostrar estado' })).toBeTruthy();
   });
 });

@@ -22,7 +22,7 @@ import type { AmrWalletSnapshot } from '@open-design/contracts';
 import { VisuallyHidden } from '@open-design/components';
 import { useT } from '../i18n';
 import { CliPickerMenu } from './agents/CliPickerMenu';
-import { getAgentsCopyForDocument } from './agents/agents-copy';
+import { useAgentsCopy } from './agents/use-agents-copy';
 import { useLongPress } from './agents/use-long-press';
 import {
   agentIdToTracking,
@@ -1134,7 +1134,7 @@ export function InlineModelSwitcher({
   // keeps opening the model popover; the click that ends a long press is
   // swallowed so the two never fire together.
   const [cliMenuOpen, setCliMenuOpen] = useState(false);
-  const cliHoldHint = getAgentsCopyForDocument().cliHoldHint;
+  const cliHoldHint = useAgentsCopy().cliHoldHint;
   const openCliMenu = useCallback(() => {
     setOpen(false);
     setCliMenuOpen(true);

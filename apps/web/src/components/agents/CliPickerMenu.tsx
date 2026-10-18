@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { AgentInfo } from '../../types';
 import { AgentIcon } from '../AgentIcon';
 import { Icon } from '../Icon';
-import { getAgentsCopyForDocument } from './agents-copy';
+import { useAgentsCopy } from './use-agents-copy';
 
 const MENU_WIDTH = 260;
 const MENU_MARGIN = 12;
@@ -29,7 +29,7 @@ export function CliPickerMenu({
   onSelect: (agentId: string) => void;
   onClose: () => void;
 }) {
-  const copy = useMemo(() => getAgentsCopyForDocument(), []);
+  const copy = useAgentsCopy();
   const [pos, setPos] = useState<CSSProperties | null>(null);
   // Only CLIs that are installed: the registry lists dozens, and offering the
   // ones that cannot run just buries the few that can. Installing or rescanning

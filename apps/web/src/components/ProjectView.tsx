@@ -336,6 +336,7 @@ import { PluginDetailsModal } from './PluginDetailsModal';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { ChatDesignToggle } from './ChatDesignToggle';
 import { ChatPreviewCloseButton } from './ChatPreviewCloseButton';
+import { useRouteFileOpen } from './useRouteFileOpen';
 import { ChatStatusPanel, ChatStatusToggle } from './ChatStatusPanel';
 import { buildStatusPanelState } from '../runtime/chat/status-panel';
 import { useConversationDelegates } from '../state/run-delegates';
@@ -5509,10 +5510,7 @@ export function ProjectView({
   // When the URL points at a specific file, fire an open request so the
   // FileWorkspace promotes it to an active tab. We watch routeFileName
   // (the parsed segment) so back/forward navigation triggers the same path.
-  useEffect(() => {
-    if (!routeFileName) return;
-    requestOpenFileFromChat(routeFileName);
-  }, [routeFileName, requestOpenFileFromChat]);
+  useRouteFileOpen(routeFileName, requestOpenFileFromChat);
 
   // Sync the URL when the active tab changes, so reload + share-link both
   // land back on the same view. Replace (not push) on tab activation so the

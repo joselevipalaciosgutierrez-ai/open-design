@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
 import { navigate } from '../../router';
 import { useRunDelegates } from '../../state/run-delegates';
-import { getAgentsCopyForDocument } from './agents-copy';
+import { useAgentsCopy } from './use-agents-copy';
 import styles from './DelegationCards.module.css';
 
 /**
@@ -22,7 +21,7 @@ export function DelegationCards({
   live: boolean;
 }) {
   const delegates = useRunDelegates(projectId, runId, live);
-  const copy = useMemo(() => getAgentsCopyForDocument(), []);
+  const copy = useAgentsCopy();
   if (!projectId || delegates.length === 0) return null;
 
   const statusOf = (status: string) => {

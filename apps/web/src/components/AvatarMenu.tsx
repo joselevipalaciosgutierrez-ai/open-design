@@ -5,7 +5,7 @@ import { amrHandoffDeviceId, attributedAmrUrl, recordAmrEntry } from '../analyti
 import { useAnalytics } from '../analytics/provider';
 import { useT } from '../i18n';
 import { CliPickerMenu } from './agents/CliPickerMenu';
-import { getAgentsCopyForDocument } from './agents/agents-copy';
+import { useAgentsCopy } from './agents/use-agents-copy';
 import { useLongPress } from './agents/use-long-press';
 import { AgentIcon } from './AgentIcon';
 import { modelProviderIconSrc } from './modelProviderIcon';
@@ -555,7 +555,7 @@ export function AvatarMenu({
   // pick another CLI; a plain click still opens the model popover.
   const connected = config.mode === 'daemon' ? currentAgent?.available === true : true;
   const [cliMenuOpen, setCliMenuOpen] = useState(false);
-  const cliHoldHint = getAgentsCopyForDocument().cliHoldHint;
+  const cliHoldHint = useAgentsCopy().cliHoldHint;
   const openCliMenu = () => {
     setOpen(false);
     setCliMenuOpen(true);

@@ -273,13 +273,3 @@ const en: AgentsCopy = {
 export function getAgentsCopy(locale: string): AgentsCopy {
   return locale.toLowerCase().startsWith('es') ? es : en;
 }
-
-/**
- * Copy for the current UI language, read from `<html lang>` (which the i18n
- * provider keeps in sync). For hosts that only need a string or two and should
- * not take a hard dependency on the i18n context.
- */
-export function getAgentsCopyForDocument(): AgentsCopy {
-  const lang = typeof document !== 'undefined' ? document.documentElement.lang : '';
-  return getAgentsCopy(lang || 'en');
-}

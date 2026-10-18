@@ -21,6 +21,7 @@ const { openExternalUrlMock } = vi.hoisted(() => ({
 
 vi.mock('../../src/i18n', () => ({
   useT: () => (key: string) => key,
+  useI18n: () => ({ locale: 'en' }),
 }));
 
 vi.mock('../../src/providers/registry', () => ({

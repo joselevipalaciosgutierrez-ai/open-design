@@ -12,6 +12,18 @@
   overflow-y: auto;
 }
 
+/* Wide window: the right margin beside the centred chat (see shell.css). */
+@media (min-width: 1500px) {
+  .root {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    grid-column: auto;
+    grid-row: auto;
+    width: 320px;
+  }
+}
+
 .card {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

@@ -2398,9 +2398,19 @@ a.avatar-item:visited {
 .split.split-chat-only {
   grid-template-columns: minmax(0, 1fr);
 }
-/* The status panel takes a column to the right of the centred chat. */
+/* The status panel. On a narrow window it takes a column beside the chat. On a
+   wide one (the chat is 820px, so each side margin is then wider than the
+   panel) it sits in the right margin instead, so the chat stays centred in the
+   window rather than shifting left to make room. 1500px = 820 chat + two
+   336px gutters; keep it in step with the same query in ChatStatusPanel.module.css. */
 .split.split-chat-only.split-has-status {
   grid-template-columns: minmax(0, 1fr) 320px;
+}
+@media (min-width: 1500px) {
+  .split.split-chat-only.split-has-status {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
 }
 /* A chat page of its own, not a card floating on the app wash. The wash is
    transparent by design, and in the desktop app (macOS) that lets the window's
@@ -2470,6 +2480,13 @@ a.avatar-item:visited {
 .split:not(.split-chat-only) > .split-chat-slot {
   z-index: 2;
   box-shadow: var(--shadow-lg);
+}
+/* The chat column is solid white in Design too, as in Ask. The app wash is
+   transparent, and in the macOS desktop app that shows the window's vibrancy as
+   gray behind the conversation. Same specificity story as `.app .split` above:
+   routines.css paints the veil there, so this has to be at least as heavy. */
+.app .split:not(.split-chat-only) > .split-chat-slot {
+  background: var(--bg-app);
 }
 
 .split-chat-slot {

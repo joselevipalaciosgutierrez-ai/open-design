@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CliPickerMenu } from '../../src/components/agents/CliPickerMenu';
+import { I18nProvider } from '../../src/i18n';
 import type { AgentInfo } from '../../src/types';
 
 const agents = [
@@ -15,16 +16,15 @@ afterEach(cleanup);
 function renderMenu(props: Partial<Parameters<typeof CliPickerMenu>[0]> = {}) {
   const onSelect = vi.fn();
   const onClose = vi.fn();
-  document.documentElement.lang = 'en';
   render(
-    <CliPickerMenu
+    <I18nProvider initial="en"><CliPickerMenu
       anchor={document.body}
       agents={agents}
       currentAgentId="antigravity"
       onSelect={onSelect}
       onClose={onClose}
       {...props}
-    />,
+    /></I18nProvider>,
   );
   return { onSelect, onClose };
 }

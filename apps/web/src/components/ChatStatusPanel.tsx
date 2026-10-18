@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatElapsed, type StatusPanelState } from '../runtime/chat/status-panel';
-import { getAgentsCopyForDocument } from './agents/agents-copy';
+import { useAgentsCopy } from './agents/use-agents-copy';
 import { Icon } from './Icon';
 import styles from './ChatStatusPanel.module.css';
 
@@ -58,7 +58,7 @@ export function ChatStatusPanel({
   onOpenFile: (name: string) => void;
   onOpenConversation: (conversationId: string) => void;
 }) {
-  const copy = useMemo(() => getAgentsCopyForDocument(), []);
+  const copy = useAgentsCopy();
   const running = state.background?.running ?? [];
   const now = useNow(running.length > 0);
   const [showFinished, setShowFinished] = useState(false);
@@ -198,7 +198,7 @@ export function ChatStatusPanel({
 
 /** Show or hide the panel; the host renders it only when there is something to show. */
 export function ChatStatusToggle({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
-  const copy = getAgentsCopyForDocument();
+  const copy = useAgentsCopy();
   const label = shown ? copy.statusHide : copy.statusShow;
   return (
     <button

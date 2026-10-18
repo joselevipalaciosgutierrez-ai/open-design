@@ -7,6 +7,7 @@ const navigateMock = vi.hoisted(() => vi.fn());
 vi.mock('../../src/router', () => ({ navigate: navigateMock }));
 
 import { DelegationCards } from '../../src/components/agents/DelegationCards';
+import { I18nProvider } from '../../src/i18n';
 import { resetRunDelegatesCache } from '../../src/state/run-delegates';
 
 function delegate(over: Partial<RunDelegate> & { runId: string }): RunDelegate {
@@ -30,7 +31,6 @@ function stub(delegates: Record<string, RunDelegate[]>) {
 beforeEach(() => {
   resetRunDelegatesCache();
   navigateMock.mockClear();
-  document.documentElement.lang = 'es';
 });
 
 afterEach(() => {
@@ -42,7 +42,7 @@ afterEach(() => {
 describe('DelegationCards', () => {
   it('renders nothing for a turn that delegated nothing', async () => {
     const fetchMock = stub({});
-    render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+    render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId="r1" live={false} /></I18nProvider>);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(screen.queryByTestId('delegation-cards')).toBeNull();
   });
@@ -55,7 +55,7 @@ describe('DelegationCards', () => {
         delegate({ runId: 'c3', status: 'failed', agent: { id: 'a2', name: 'QA', emoji: null } }),
       ],
     });
-    render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+    render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId="r1" live={false} /></I18nProvider>);
 
     expect((await screen.findByTestId('delegation-cards')).textContent).toContain('El orquestador delegó');
     expect(screen.getByTestId('delegation-card-c1').textContent).toContain('🎨 Diseño');
@@ -68,7 +68,7 @@ describe('DelegationCards', () => {
 
   it('opens the delegate\'s own conversation', async () => {
     stub({ r1: [delegate({ runId: 'c1' })] });
-    render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+    render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId="r1" live={false} /></I18nProvider>);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Abrir conversación' }));
 
@@ -83,11 +83,11 @@ describe('DelegationCards', () => {
   it('asks for every turn of a conversation in one request', async () => {
     const fetchMock = stub({});
     render(
-      <>
+      <I18nProvider initial="es-ES">
         <DelegationCards projectId="p1" runId="r1" live={false} />
         <DelegationCards projectId="p1" runId="r2" live={false} />
         <DelegationCards projectId="p1" runId="r3" live={false} />
-      </>,
+      </I18nProvider>,
     );
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -107,7 +107,7 @@ describe('DelegationCards', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+    render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId="r1" live={false} /></I18nProvider>);
     expect((await screen.findByTestId('delegation-card-c1')).textContent).toContain('Trabajando');
 
     await waitFor(
@@ -124,7 +124,7 @@ describe('DelegationCards', () => {
       for (const body of ['{}', 'null', '"x"', '<html>not json</html>']) {
         resetRunDelegatesCache();
         vi.stubGlobal('fetch', vi.fn(async () => new Response(body, { status: 200 })));
-        const { unmount } = render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+        const { unmount } = render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId="r1" live={false} /></I18nProvider>);
         await new Promise((r) => setTimeout(r, 120));
         expect(screen.queryByTestId('delegation-cards'), body).toBeNull();
         unmount();
@@ -138,7 +138,7 @@ describe('DelegationCards', () => {
 
   it('does not fetch without a run to ask about', () => {
     const fetchMock = stub({});
-    render(<DelegationCards projectId="p1" runId={null} live />);
+    render(<I18nProvider initial="es-ES"><DelegationCards projectId="p1" runId={null} live /></I18nProvider>);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
