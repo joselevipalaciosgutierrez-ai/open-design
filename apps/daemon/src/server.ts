@@ -829,6 +829,7 @@ import {
   upsertPreviewComment,
   userRequestBeforeAssistantMessage,
 } from './db.js';
+import { resolveOrchestratorForRun } from './orchestrator-context.js';
 import {
   createPhysicalAgentSessionUsageTracker,
   computeIncludeStable,
@@ -9934,6 +9935,7 @@ export async function startServer({
     odNextSyntheticCanary = false,
     odNextAutomaticAdmission = false,
     runtimeCapabilitySnapshot,
+    orchestrator = null,
   }) => {
     const project =
       typeof projectId === 'string' && projectId
@@ -10659,6 +10661,7 @@ export async function startServer({
       critiqueSkill: critiqueShouldRun ? critiqueSkill : undefined,
       locale: typeof locale === 'string' ? locale : undefined,
       sessionMode: normalizeConversationSessionMode(sessionMode),
+      orchestrator,
       mediaExecution,
       byokMediaDefaults,
       streamFormat,
@@ -10790,6 +10793,7 @@ export async function startServer({
           memoryBody,
           locale: typeof locale === 'string' ? locale : undefined,
           sessionMode: normalizeConversationSessionMode(sessionMode),
+          orchestrator,
           userInstructions,
           projectInstructions,
         }
@@ -11582,6 +11586,13 @@ export async function startServer({
         streamFormat: def?.streamFormat ?? 'plain',
         locale,
         sessionMode: runSessionMode,
+        // The default assistant coordinates the user's agents when they have
+        // some and chose none (see orchestrator-context.ts).
+        orchestrator: resolveOrchestratorForRun(db, {
+          run: { ...run, analyticsHints: chatBody?.analyticsHints },
+          sessionMode: runSessionMode,
+          streamFormat: def?.streamFormat ?? 'plain',
+        }),
         mediaExecution: run?.mediaExecution,
         byokMediaDefaults,
         // Plan §3.M2 / §3.V1 — forward the run's snapshot id so the

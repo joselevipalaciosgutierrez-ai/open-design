@@ -7,6 +7,7 @@ import {
 } from '../plugins/strategy-v2.js';
 
 import type { ChatSessionMode } from '../api/chat.js';
+import { renderOrchestratorDirective, type OrchestratorContext } from './orchestrator.js';
 import {
   renderDeckFrameworkDirective,
   renderLegacyDeckCompatibilityDirective,
@@ -95,6 +96,12 @@ export interface OdNextStrategyStableRequestContextV2 {
    * runtime contract when the Build chooses to produce a deck.
    */
   deckIntent?: boolean | undefined;
+  /**
+   * The user has agents and selected none: the default assistant coordinates
+   * them. Present only for such runs; absent costs nothing. One source for every
+   * prompt path (`./orchestrator.ts`).
+   */
+  orchestrator?: OrchestratorContext | null | undefined;
   /**
    * Canonical is only safe for a blank/new deck. Selected legacy seeds and
    * existing deck HTML keep their own scaffold and rely on the host bridge.
@@ -560,6 +567,13 @@ export function composeOdNextStrategyStableRequestContextV2(
       : renderDeckFrameworkDirective(executionProfile);
     blocks.push(
       `<od-next-context kind="instruction" name="deck-framework">\n${escaped("Apply this host protocol only when creating or editing an HTML deck. Its presence does not request a deck or override the user's requested deliverable.\n\n" + directive)}\n</od-next-context>`,
+    );
+  }
+  if (context.orchestrator && context.orchestrator.agents.length > 0) {
+    // Host-owned static protocol text, not plugin or user input, so it bypasses
+    // the guard for untrusted stable instructions the way the deck directive does.
+    blocks.push(
+      `<od-next-context kind="instruction" name="orchestrator">\n${escaped(renderOrchestratorDirective(context.orchestrator))}\n</od-next-context>`,
     );
   }
   if (context.metadata) {

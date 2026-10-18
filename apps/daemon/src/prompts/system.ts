@@ -52,6 +52,7 @@ import {
   normalizePromptLocale,
   PROMPT_LOCALE_EXEMPT_TERMS_SENTENCE,
   promptLanguageName,
+  renderOrchestratorDirective,
   SETTINGS_MEDIA_PROVIDERS_PATH,
   type ByokMediaDefaults,
   type ChatSessionMode,
@@ -60,6 +61,7 @@ import {
   type MediaExecutionPolicy,
   type MediaSurface,
   type OdNextStrategyRequestRecipeV2,
+  type OrchestratorContext,
 } from '@open-design/contracts';
 
 // Prepended first in every composed prompt so it wins precedence over all
@@ -861,6 +863,12 @@ export interface ComposeInput {
   // chat mode keeps the same context/tools but answers like a standard
   // multi-turn assistant unless the user explicitly asks to build.
   sessionMode?: ChatSessionMode | undefined;
+  /**
+   * The user has agents and selected none for this run: the default assistant
+   * coordinates them. Resolved by the caller; absent for every other run. The
+   * directive's single source is `@open-design/contracts` `orchestrator.ts`.
+   */
+  orchestrator?: OrchestratorContext | null | undefined;
   // Run-scoped media policy. Defaults to enabled when omitted so existing
   // local OD behavior keeps the same media prompt contract.
   mediaExecution?: MediaExecutionPolicy | undefined;
@@ -929,6 +937,7 @@ export function composeSystemPrompt({
   streamFormat,
   locale,
   sessionMode,
+  orchestrator,
   userInstructions,
   projectInstructions,
   mediaExecution,
@@ -961,6 +970,7 @@ export function composeSystemPrompt({
       // stay byte-identical.
       planToolNote,
       sessionMode,
+      orchestrator,
       locale,
       deckIntent: odNextStrategyRecipe.taskType !== 'ppt' && freeformDeckSignal === true,
       deckFrameworkMode,
@@ -1525,6 +1535,12 @@ export function composeSystemPrompt({
     "- **Questions go through `<question-form>`**, never as a markdown list of options — a list renders as plain text and forces the user to type their answer back.\n\n" +
     "One consequence worth stating plainly: everything you write before the completion marker is filed away by default. If a caveat matters to the decision, it belongs after the marker, not buried in the working narration."
   );
+
+  // The orchestrator directive extends whichever charter is above (it says so
+  // itself), so it lands after them and before the pinned role-marker guard.
+  if (orchestrator && orchestrator.agents.length > 0) {
+    parts.push('\n\n---\n\n', renderOrchestratorDirective(orchestrator));
+  }
 
   // Pinned LAST so recency bias reinforces the role-marker prohibition.
   // Slim uses the SP v2.0 translation; classic retains its existing wording.

@@ -185,6 +185,15 @@ const REGISTRY: readonly Entry[] = [
     why: 'Reports an incomplete audible film delivery, not host infrastructure '
       + 'state or diagnostic text. Required sound cannot be presented as completed silence.',
   },
+  {
+    file: 'packages/contracts/src/prompts/orchestrator.ts',
+    match: 'say so plainly and offer to retry; retry silently at most once',
+    chars: [280],
+    verdict: 'self-report',
+    why: 'The orchestrator reports the outcome of work the user asked for: a '
+      + 'piece an agent did not finish. That is the user\'s own task, not host '
+      + 'infrastructure state; the limits line above it carries no narration.',
+  },
   // ---- The two prior fixes. These lines FORBID narration. ----
   {
     file: 'apps/daemon/src/prompts/official-system.ts',

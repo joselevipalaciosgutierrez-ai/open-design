@@ -98,8 +98,16 @@ to the **host**, not to either strategy — if a strategy is retired, these stay
 | Shared motion source player | Composition-only preview controls and persisted playback; suppressed during frame capture | ✅ motion source | ✅ motion source |
 | Motion `data-poster-time` | Agent-selected seconds; daemon validates the linked MP4 and freezes its frame with the composition dimensions | ✅ selected motion skill | ✅ motion task profile |
 | `.od-frames/` device shells | prototype device frames | ❌ | ✅ OD Next only |
+| Orchestrator directive (`orchestrator.ts`) | `resolveOrchestratorForRun` in `apps/daemon/src/orchestrator-context.ts` decides per run; the run's CLI then starts agents through `od run start` | ✅ `system.ts` | ✅ `od-next-strategy.ts` (`name="orchestrator"`) |
 
 Two things to read off this table.
+
+The orchestrator row is carried the same way, with one wrinkle worth knowing: OD Next
+composes its initial prompt in `apps/daemon/src/strategies/od-next/initial-prompt-bundle-service.ts`,
+NOT in `server.ts`, so a new input has to be supplied at both call sites. Both use
+`resolveOrchestratorForRun`; `apps/daemon/tests/orchestrator-run.test.ts` reads what the CLI
+actually receives and is what caught the OD Next half missing. API/BYOK runs are out of scope on
+purpose (no shell to delegate with), so `packages/contracts/src/prompts/system.ts` does not carry it.
 
 **The deck rows are the model for how a host contract should be carried.** One
 source — `renderDeckFrameworkDirective` /

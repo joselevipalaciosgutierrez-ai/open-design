@@ -30,6 +30,7 @@ import {
 } from '../../db.js';
 import { readMcpConfig, type McpServerConfig } from '../../mcp-config.js';
 import { isTokenExpired, readAllTokens } from '../../mcp-tokens.js';
+import { resolveOrchestratorForRun } from '../../orchestrator-context.js';
 import { resolveProjectDir } from '../../projects.js';
 import { getSnapshot } from '../../plugins/snapshots.js';
 import { resolveOdNextStrategyRequestRecipeV2 } from '../../plugins/strategy-recipe.js';
@@ -99,6 +100,9 @@ export interface OdNextInitialPromptMeta {
     effectiveMode?: 'off' | 'observe' | 'active';
   } | null;
   runtimeCapabilitySnapshot?: unknown;
+  /** Set when another run started this one (see `delegation.ts`). */
+  delegation?: unknown;
+  analyticsHints?: unknown;
 }
 
 interface DaemonSystemPromptResult {
@@ -338,6 +342,17 @@ export function createOdNextInitialPromptBundleService(
       streamFormat: def.streamFormat ?? 'plain',
       locale,
       sessionMode: runSessionMode,
+      // OD Next composes its initial prompt here, not in server.ts, so the
+      // orchestrator has to be resolved here too (same function, one rule).
+      orchestrator: resolveOrchestratorForRun(deps.db, {
+        run: {
+          conversationId: conversationId ?? null,
+          delegation: meta.delegation,
+          analyticsHints: meta.analyticsHints,
+        },
+        sessionMode: runSessionMode,
+        streamFormat: def.streamFormat ?? 'plain',
+      }),
       mediaExecution: meta.mediaExecution,
       byokMediaDefaults,
       appliedPluginSnapshotId: appliedPluginSnapshotId ?? null,
