@@ -42,6 +42,7 @@ import {
   previewFallbackIcon,
   resolveFileTypeIcon,
 } from './FileTypeIcon';
+import { ComposerModePicker } from './ComposerModePicker';
 import { useAnalytics } from '../analytics/provider';
 import {
   trackContextLinkResult,
@@ -358,6 +359,8 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
     onPromptChange,
     onSubmit,
     onSubmitScenario = () => undefined,
+    sessionMode = 'design',
+    onSessionModeChange,
     firstRunGuide,
     activePluginTitle,
     activePluginIsExplicit = false,
@@ -2407,24 +2410,14 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
             ) : null}
           </div>
           <div className="home-hero__foot-right">
-            {/* No mode picker on Home (2026-09-08, product): the 「设计 ×」 chip
-                used to sit here, left of the model switcher. The project
-                composer dropped the same chooser first (2026-08-19 — see the
-                matching comment in `ChatComposer.tsx`); Home was the last
-                surface still carrying it, and every Home request defaulted
-                past it to Design anyway.
-
-                Behaviour is unchanged, only the control is gone: `HomeView`
-                still owns the `sessionMode` state that feeds `conversationMode`
-                (plus the task profile and plugin provenance), and with nothing
-                calling `setSessionMode` it stays on the app default, `design`.
-
-                To restore: re-add `import { ComposerModePicker } from
-                './ComposerModePicker'`, re-destructure the `sessionMode` /
-                `onSessionModeChange` props (still declared above, still passed
-                by `HomeView`), and render the picker here with the
-                `trackComposerSessionModeClick` call it had. Pinned by
-                `tests/components/HomeView.mode-picker-removed.test.tsx`. */}
+            {/* Mode picker restored in this fork (Design / Ask / Plan). Ask ('chat') is
+                the entry point for the central chat. The default stays 'design'. */}
+            {onSessionModeChange ? (
+              <ComposerModePicker
+                mode={sessionMode}
+                onModeChange={onSessionModeChange}
+              />
+            ) : null}
             {executionSwitcher ? (
               <div className="home-hero__execution-switcher">
                 {executionSwitcher}

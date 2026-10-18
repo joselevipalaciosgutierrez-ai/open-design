@@ -623,10 +623,9 @@ export function HomeView({
     text: string;
     chipId: string | null;
   } | null>(null);
-  // The Home composer no longer exposes a mode picker (the 「设计」 pill was
-  // removed), so every Home create runs in the default design mode; the
-  // per-conversation picker still lives in the project chat composer.
-  const sessionMode: ChatSessionMode = 'design';
+  // Home composer mode picker restored in this fork: Design (default) / Ask / Plan.
+  // The chosen mode travels as `conversationMode` when the project is created.
+  const [sessionMode, setSessionMode] = useState<ChatSessionMode>('design');
   // Automatic task routes do not apply the placeholder plugin. Its legacy
   // required fields must not block the free-form brief that the route owns.
   const activeAutomaticStrategyTaskProfile = sessionMode === 'design'
@@ -3157,6 +3156,8 @@ export function HomeView({
         onPromptChange={handlePromptChange}
         onSubmit={submit}
         onSubmitScenario={submitScenario}
+        sessionMode={sessionMode}
+        onSessionModeChange={setSessionMode}
         submitting={sending}
         activePluginTitle={activeBadgeTitle}
         activePluginIsExplicit={activePluginIsExplicit}

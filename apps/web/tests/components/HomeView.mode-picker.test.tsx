@@ -1,24 +1,15 @@
 // @vitest-environment jsdom
 //
-// Home's composer no longer mounts the session-mode picker chip.
+// Home's composer mounts the session-mode picker chip (Design / Ask / Plan).
 //
-// The chip sat in the composer footer immediately left of the model switcher
-// and the send button: a mode glyph + the mode name (「设计」) + an × that
-// cleared it. The project composer already dropped it (2026-08-19, product —
-// see the comment at the mode-picker's old slot in `ChatComposer.tsx`, and
-// `ChatComposer.mode-picker-removal.test.tsx`); Home is the last surface that
-// still carried it, so this pins the same removal at the Home mount point.
+// Upstream removed this chip on 2026-09-08 and pinned the removal in this very
+// file. This fork restores it: Ask ('chat') is the entry point for the central
+// chat, so Home must let the user choose the mode the new conversation runs in.
 //
-// The component itself (`ComposerModePicker`) stays in the tree as a dormant
-// part — see its file header. This spec is about the ENTRY, not the part:
-// nothing on Home may mount it.
-//
-// Two things are deliberately pinned alongside the removal, because the risk
-// here is removing more than was asked for:
-//   1. Home still submits `conversationMode: 'design'`. Design was always the
-//      app default; taking away the chip must change what the user SEES, not
-//      what the request DOES.
-//   2. The send button that sat directly right of the chip survives.
+// Pinned here:
+//   1. The chip is rendered, with Design selected by default.
+//   2. With nothing picked, Home still submits `conversationMode: 'design'`.
+//   3. Picking Ask makes Home submit `conversationMode: 'chat'`.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -73,26 +64,21 @@ afterEach(() => {
 });
 
 describe('HomeView — composer session-mode picker', () => {
-  it('does not render the mode chip anywhere in the Home composer', async () => {
+  it('renders the mode picker in the Home composer with Design selected by default', async () => {
     stubFetch();
     renderHome();
 
-    // The composer is really painted, so the negative assertions below cannot
-    // pass for the wrong reason (an empty render would satisfy them too).
+    // The composer is really painted, so the assertions below cannot pass for
+    // the wrong reason (an empty render would not satisfy them).
     await waitFor(() => expect(screen.getByTestId('home-hero-input')).toBeTruthy());
     expect(screen.getByTestId('home-hero-submit')).toBeTruthy();
 
-    expect(screen.queryByTestId('composer-mode-trigger')).toBeNull();
-    expect(screen.queryByTestId('composer-mode-clear')).toBeNull();
-    expect(screen.queryByTestId('composer-mode-menu')).toBeNull();
-    // The chip's own class, in case the test hooks ever move.
-    expect(document.querySelector('.composer-mode')).toBeNull();
-    // The label the chip rendered when Design was the selection.
-    expect(screen.queryByLabelText('Mode: Design')).toBeNull();
-    expect(screen.queryByLabelText('Choose a mode')).toBeNull();
+    const trigger = screen.getByTestId('composer-mode-trigger');
+    expect(trigger.getAttribute('aria-label')).toBe('Mode: Design');
+    expect(screen.getByTestId('composer-mode-clear')).toBeTruthy();
   });
 
-  it('still submits Design as the conversation mode', async () => {
+  it('submits Design as the conversation mode by default', async () => {
     stubFetch();
     const onSubmit = vi.fn();
     renderHome({ onSubmit });
@@ -113,6 +99,33 @@ describe('HomeView — composer session-mode picker', () => {
     expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
       prompt: 'Create a clean loading animation',
       conversationMode: 'design',
+    });
+  });
+
+  it('submits Ask as the conversation mode after picking it', async () => {
+    stubFetch();
+    const onSubmit = vi.fn();
+    renderHome({ onSubmit });
+
+    await waitFor(() => expect(screen.getByTestId('home-hero-input')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('composer-mode-trigger'));
+    fireEvent.click(screen.getByTestId('composer-mode-menu-chat'));
+
+    setHomeHeroPrompt('Which structure works best for a pricing page?');
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect((screen.getByTestId('home-hero-submit') as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId('home-hero-submit'));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
+      prompt: 'Which structure works best for a pricing page?',
+      conversationMode: 'chat',
     });
   });
 });

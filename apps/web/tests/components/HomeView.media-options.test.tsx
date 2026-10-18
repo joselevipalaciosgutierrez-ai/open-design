@@ -107,12 +107,10 @@ describe('HomeView media composer options', () => {
 
     await screen.findByTestId('home-hero-input');
 
-    // 设计 is the app default, and since the mode chip left the Home composer
-    // (2026-09-08, product) it is also the only mode Home submits — nothing on
-    // this surface can move it any more. Absence is pinned in full by
-    // `HomeView.mode-picker-removed.test.tsx`; this spec keeps the payload half
-    // of the pair, so a picker coming back cannot quietly change what Home runs.
-    expect(screen.queryByTestId('composer-mode-trigger')).toBeNull();
+    // Design is the app default, and the mode picker lives on Home again in this
+    // fork (see `HomeView.mode-picker.test.tsx`). With nothing picked, Home must
+    // still submit Design.
+    expect(screen.getByTestId('composer-mode-trigger').getAttribute('aria-label')).toBe('Mode: Design');
 
     await setHomePrompt('Create a clean loading animation');
     await submitHome();
