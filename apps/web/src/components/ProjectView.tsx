@@ -336,6 +336,10 @@ import { PluginDetailsModal } from './PluginDetailsModal';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { ChatDesignToggle } from './ChatDesignToggle';
 import { ChatPreviewCloseButton } from './ChatPreviewCloseButton';
+import { ChatStatusPanel, ChatStatusToggle } from './ChatStatusPanel';
+import { buildStatusPanelState } from '../runtime/chat/status-panel';
+import { useConversationDelegates } from '../state/run-delegates';
+import { useStatusPanelPreference } from '../state/status-panel-pref';
 import { isChatOnlyLayout, shouldOpenPreviewForFile } from '../runtime/chat/chat-layout';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
 import { trailingMessageIgnoringHostCards } from '../runtime/chat/host-authored-message';
@@ -13802,11 +13806,38 @@ export function ProjectView({
 
   // CLI / agent selector lives below the chat conversation (composer footer),
   // not in the top-right header.
+  // The Ask conversation's side panel: the assistant's plan, what its agents are
+  // doing in the background, and what changed in the project. Computed for every
+  // render of the page, shown only in the chat-only layout (see below).
+  const [statusPanelShown, setStatusPanelShown] = useStatusPanelPreference();
+  const statusRunIds = useMemo(
+    () =>
+      Array.from(
+        new Set(messages.map((m) => m.runId).filter((id): id is string => typeof id === 'string' && id !== '')),
+      ),
+    [messages],
+  );
+  const statusDelegates = useConversationDelegates(
+    project.id,
+    statusRunIds,
+    currentConversationStreaming,
+  );
+  const statusPanelState = useMemo(
+    () =>
+      buildStatusPanelState({
+        messages,
+        delegates: statusDelegates,
+        files: projectFiles,
+        since: activeConversation?.createdAt ?? 0,
+      }),
+    [messages, statusDelegates, projectFiles, activeConversation?.createdAt],
+  );
   const chatOnlyLayout = isChatOnlyLayout({
     sessionMode: layoutSessionMode,
     workspaceFocused,
     previewOpen: chatPreviewOpen,
   });
+  const statusPanelVisible = chatOnlyLayout && statusPanelShown && !statusPanelState.isEmpty;
 
   const executionControls = (
     <>
@@ -13892,6 +13923,7 @@ export function ProjectView({
           projectSplitClassName(workspaceFocused),
           resizingChatPanel && !workspaceFocused ? 'is-resizing-chat' : '',
           chatOnlyLayout ? 'split-chat-only' : '',
+          statusPanelVisible ? 'split-has-status' : '',
         ].filter(Boolean).join(' ')}
         style={projectSplitStyle(workspaceFocused, splitLeftPanelWidth, workspacePanelTrack)}
       >
@@ -13932,6 +13964,12 @@ export function ProjectView({
               >
                 <Icon name="panel-left" size={16} />
               </button>
+              {chatOnlyLayout && !statusPanelState.isEmpty ? (
+                <ChatStatusToggle
+                  shown={statusPanelShown}
+                  onToggle={() => setStatusPanelShown(!statusPanelShown)}
+                />
+              ) : null}
               {chatPreviewOpen ? (
                 <ChatPreviewCloseButton
                   onClose={() => {
@@ -14283,6 +14321,15 @@ export function ProjectView({
             portal before opening; `:empty` hides all chrome and hit testing
             until the localized comment panel is portaled in. Exactly one
             element ever carries `commentInspectorPortalId`. */}
+        {statusPanelVisible ? (
+          <ChatStatusPanel
+            state={statusPanelState}
+            onOpenFile={requestOpenFileFromChat}
+            onOpenConversation={(conversationId) =>
+              navigate({ kind: 'project', projectId: project.id, conversationId, fileName: null })
+            }
+          />
+        ) : null}
         <div
           id={commentInspectorPortalId}
           className="comment-float-host"

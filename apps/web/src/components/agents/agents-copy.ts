@@ -69,6 +69,15 @@ export interface AgentsCopy {
   delegateOpen: string;
   delegateWorker: string;
   previewClose: string;
+  statusTasks: string;
+  statusTasksProgress: (done: number, total: number) => string;
+  statusBackground: string;
+  statusFinished: (count: number) => string;
+  statusChanges: string;
+  statusChangesCount: (count: number) => string;
+  statusShow: string;
+  statusHide: string;
+  statusOpenFile: (name: string) => string;
   needName: string;
   needRuntime: string;
   saveError: string;
@@ -155,6 +164,15 @@ const es: AgentsCopy = {
   delegateOpen: 'Abrir conversación',
   delegateWorker: 'Ayudante',
   previewClose: 'Cerrar vista previa',
+  statusTasks: 'Tareas',
+  statusTasksProgress: (done, total) => `${done} de ${total}`,
+  statusBackground: 'Segundo plano',
+  statusFinished: (count) => (count === 1 ? '1 finalizado' : `${count} finalizados`),
+  statusChanges: 'Cambios',
+  statusChangesCount: (count) => (count === 1 ? '1 archivo' : `${count} archivos`),
+  statusShow: 'Mostrar estado',
+  statusHide: 'Ocultar estado',
+  statusOpenFile: (name) => `Abrir ${name}`,
   needName: 'Escribe un nombre.',
   needRuntime: 'Elige una CLI.',
   saveError: 'No se pudo guardar el agente.',
@@ -232,6 +250,15 @@ const en: AgentsCopy = {
   delegateOpen: 'Open conversation',
   delegateWorker: 'Helper',
   previewClose: 'Close preview',
+  statusTasks: 'Tasks',
+  statusTasksProgress: (done, total) => `${done} of ${total}`,
+  statusBackground: 'Background',
+  statusFinished: (count) => `${count} finished`,
+  statusChanges: 'Changes',
+  statusChangesCount: (count) => (count === 1 ? '1 file' : `${count} files`),
+  statusShow: 'Show status',
+  statusHide: 'Hide status',
+  statusOpenFile: (name) => `Open ${name}`,
   needName: 'Enter a name.',
   needRuntime: 'Pick a CLI.',
   saveError: 'Could not save the agent.',

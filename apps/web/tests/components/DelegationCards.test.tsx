@@ -116,6 +116,26 @@ describe('DelegationCards', () => {
     );
   }, 12000);
 
+  it('treats a response of another shape as no delegates instead of throwing', async () => {
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+    try {
+      for (const body of ['{}', 'null', '"x"', '<html>not json</html>']) {
+        resetRunDelegatesCache();
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(body, { status: 200 })));
+        const { unmount } = render(<DelegationCards projectId="p1" runId="r1" live={false} />);
+        await new Promise((r) => setTimeout(r, 120));
+        expect(screen.queryByTestId('delegation-cards'), body).toBeNull();
+        unmount();
+      }
+      await new Promise((r) => setTimeout(r, 20));
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+    expect(rejections).toEqual([]);
+  });
+
   it('does not fetch without a run to ask about', () => {
     const fetchMock = stub({});
     render(<DelegationCards projectId="p1" runId={null} live />);

@@ -2398,6 +2398,10 @@ a.avatar-item:visited {
 .split.split-chat-only {
   grid-template-columns: minmax(0, 1fr);
 }
+/* The status panel takes a column to the right of the centred chat. */
+.split.split-chat-only.split-has-status {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
 /* A chat page of its own, not a card floating on the app wash. The wash is
    transparent by design, and in the desktop app (macOS) that lets the window's
    vibrancy through as gray; a solid ground keeps the conversation white.

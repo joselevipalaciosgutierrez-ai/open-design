@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RunDelegate, RunDelegatesResponse } from '@open-design/contracts';
 
 const TERMINAL = new Set(['succeeded', 'failed', 'canceled']);
@@ -31,7 +31,14 @@ function flush(projectId: string): void {
       .map(encodeURIComponent)
       .join(',')}`,
   )
-    .then(async (resp) => (resp.ok ? ((await resp.json()) as RunDelegatesResponse).delegates : {}))
+    .then(async (resp): Promise<Record<string, RunDelegate[]>> => {
+      if (!resp.ok) return {};
+      // A response of another shape (an older daemon, a proxy page) is "no
+      // delegates", never an exception: nothing here may reject.
+      const body = (await resp.json().catch(() => null)) as Partial<RunDelegatesResponse> | null;
+      const delegates = body?.delegates;
+      return delegates && typeof delegates === 'object' ? delegates : {};
+    })
     .catch(() => ({}) as Record<string, RunDelegate[]>)
     .then(settle);
 }
@@ -105,6 +112,50 @@ export function useRunDelegates(
     const timer = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(timer);
   }, [needsPolling, projectId, runId, load]);
+
+  return delegates;
+}
+
+/**
+ * Everything the orchestrator started across a whole conversation's turns. One
+ * batched request covers every turn, and it keeps polling while the conversation
+ * is live or any of those runs is still working.
+ */
+export function useConversationDelegates(
+  projectId: string | null | undefined,
+  runIds: readonly string[],
+  live: boolean,
+): RunDelegate[] {
+  const key = runIds.join(',');
+  const [byRun, setByRun] = useState<Record<string, RunDelegate[]>>({});
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!projectId || key === '') return;
+    const ids = key.split(',');
+    const lists = await Promise.all(ids.map((id) => requestRunDelegates(projectId, id)));
+    if (!mounted.current) return;
+    setByRun(Object.fromEntries(ids.map((id, index) => [id, lists[index] ?? []])));
+  }, [projectId, key]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const delegates = useMemo(() => Object.values(byRun).flat(), [byRun]);
+  const anyRunning = delegates.some((d) => !TERMINAL.has(d.status));
+  const polling = live || anyRunning;
+  useEffect(() => {
+    if (!polling || !projectId || key === '') return;
+    const timer = setInterval(() => void load(), POLL_MS);
+    return () => clearInterval(timer);
+  }, [polling, projectId, key, load]);
 
   return delegates;
 }
