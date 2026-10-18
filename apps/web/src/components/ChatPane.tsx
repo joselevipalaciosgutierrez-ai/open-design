@@ -194,6 +194,7 @@ import type { RecoveryActionBlockReason } from '../runtime/chat/recovery-gating'
 import { repoConnectCopy } from './design-system-github-evidence';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
 import type { SettingsSection } from './SettingsDialog';
+import { findSwitchModeMarker } from '../artifacts/internal-markers';
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
@@ -1810,6 +1811,27 @@ export function ChatPane({
       sessionMode: options?.sessionMode,
     });
   }, [onSessionModeChange, sessionMode]);
+
+  // Ask -> Design hand-off: when an Ask-mode turn that streamed while this pane
+  // was mounted ends with `<od-switch-mode>design</od-switch-mode>`, switch the
+  // conversation to Design, which also brings the workspace back. Only the
+  // message that streamed in this session can trigger it, so reopening an old
+  // conversation never flips its mode.
+  const liveAssistantIdRef = useRef<string | null>(null);
+  const handledSwitchIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const last = [...messages].reverse().find((m) => m.role === 'assistant');
+    if (streaming) {
+      if (last) liveAssistantIdRef.current = last.id;
+      return;
+    }
+    if (!last || sessionMode !== 'chat' || !onSessionModeChange) return;
+    if (liveAssistantIdRef.current !== last.id) return;
+    if (handledSwitchIdRef.current === last.id) return;
+    if (findSwitchModeMarker(last.content ?? '') !== 'design') return;
+    handledSwitchIdRef.current = last.id;
+    onSessionModeChange('design');
+  }, [messages, streaming, sessionMode, onSessionModeChange]);
 
   /**
    * 下一步建议只是可编辑的起草入口。它与其他 next-step prompt
@@ -4107,6 +4129,7 @@ export function ChatPane({
       projectFiles={projectFiles}
       activeProjectFileName={activeProjectFileName}
       sessionMode={sessionMode}
+      onSessionModeChange={onSessionModeChange}
       skills={skills}
       streaming={streaming}
       sendDisabled={sendDisabled}
@@ -4796,6 +4819,7 @@ export function ChatPane({
                   <div
                     {...chatSeam('chat-composer-fixed-layer')}
                     data-composer-layer-hidden={composerLayerHidden ? '' : undefined}
+                    data-session-mode={sessionMode}
                     ref={composerLayerRef}
                     data-chat-panel-top={composerPortalRect.top}
                     style={{

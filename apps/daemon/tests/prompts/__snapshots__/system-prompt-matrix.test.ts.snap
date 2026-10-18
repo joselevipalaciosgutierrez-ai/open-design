@@ -34,7 +34,7 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
-    "totalChars": 19027,
+    "totalChars": 19579,
   },
   "codex-image-dispatcher": {
     "sections": [

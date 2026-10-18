@@ -18,6 +18,7 @@ const INTERNAL_MARKER_TAGS = [
   'od-title',
   'open-design-plan-contract',
   'open-design-runtime-state',
+  'od-switch-mode',
 ] as const;
 
 const COMPLETE_BLOCK_RE = new RegExp(
@@ -77,4 +78,17 @@ export function stripInternalControlMarkers(
     return out;
   }
   return out.replace(STRAY_TAG_RE, '');
+}
+
+const SWITCH_MODE_RE = /<od-switch-mode>\s*(design)\s*<\/od-switch-mode>/i;
+
+/**
+ * The Ask-mode agent's request to hand the conversation over to Design mode:
+ * `<od-switch-mode>design</od-switch-mode>`. Hidden from the reader by
+ * `stripInternalControlMarkers`; the chat pane reads it once the turn has
+ * finished and switches the conversation mode (which also opens the workspace).
+ */
+export function findSwitchModeMarker(text: string): 'design' | null {
+  const match = SWITCH_MODE_RE.exec(text);
+  return match ? 'design' : null;
 }

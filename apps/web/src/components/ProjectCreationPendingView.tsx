@@ -15,6 +15,7 @@ import {
   workspacePanelTrackForMinWidth,
   writeProjectSplitLayout,
 } from './project-split-layout';
+import type { ChatSessionMode } from '@open-design/contracts';
 import styles from './ProjectCreationPendingView.module.css';
 
 interface Props {
@@ -23,6 +24,8 @@ interface Props {
   /** The files the user staged on Home. Still local `File` objects here. */
   files?: readonly File[];
   agentId?: string | null;
+  /** Ask (chat) conversations paint the chat-only layout from the first frame. */
+  sessionMode?: ChatSessionMode;
 }
 
 /** One staged file, resolved to everything the card needs without a request. */
@@ -245,6 +248,7 @@ export function ProjectCreationPendingView({
   prompt,
   files,
   agentId,
+  sessionMode,
 }: Props) {
   const { t } = useI18n();
   // Same registry ProjectView uses, so WorkspaceTabsBar portals the real strip
@@ -286,7 +290,7 @@ export function ProjectCreationPendingView({
     <>
       <div
         ref={splitRef}
-        className={`split ${styles.split}`}
+        className={`split ${styles.split}${sessionMode === 'chat' ? ' split-chat-only' : ''}`}
         style={projectSplitStyle(
           false,
           savedChatPanelWidth.width,

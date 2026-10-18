@@ -428,6 +428,10 @@ import {
 } from '../lib/resolve-finalize-request';
 import type { CommentSendResult } from './comment-send-result';
 import { projectReadOnlyClaim } from './project-readonly-claim';
+import {
+  readProjectSessionModeHint,
+  rememberProjectSessionMode,
+} from '../state/project-session-mode-hint';
 
 type BrandBrowserSnapshot =
   | { status: 'ready'; html: string; css: string; baseUrl: string }
@@ -2646,6 +2650,16 @@ export function ProjectView({
     ],
   );
   const activeSessionMode = activeConversation?.sessionMode ?? 'design';
+  // Layout only: before the conversation list arrives there is no mode to read,
+  // so fall back to the project's remembered mode instead of assuming Design
+  // (which flashed the 3-column workspace for Ask conversations). Behavior
+  // keeps using `activeSessionMode` above.
+  const layoutSessionMode =
+    activeConversation?.sessionMode ?? readProjectSessionModeHint(project.id) ?? 'design';
+  useEffect(() => {
+    const known = activeConversation?.sessionMode;
+    if (known) rememberProjectSessionMode(project.id, known);
+  }, [project.id, activeConversation?.sessionMode]);
   const [messagesConversationId, setMessagesConversationId] = useState<string | null>(null);
   const [failedMessagesConversationId, setFailedMessagesConversationId] = useState<string | null>(null);
   const [conversationLoadFailure, setConversationLoadFailure] = useState<{
@@ -13846,6 +13860,7 @@ export function ProjectView({
         className={[
           projectSplitClassName(workspaceFocused),
           resizingChatPanel && !workspaceFocused ? 'is-resizing-chat' : '',
+          layoutSessionMode === 'chat' && !workspaceFocused ? 'split-chat-only' : '',
         ].filter(Boolean).join(' ')}
         style={projectSplitStyle(workspaceFocused, splitLeftPanelWidth, workspacePanelTrack)}
       >

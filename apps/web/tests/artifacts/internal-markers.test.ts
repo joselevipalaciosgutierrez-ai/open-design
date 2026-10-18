@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { stripInternalControlMarkers } from '../../src/artifacts/internal-markers';
+import {
+  findSwitchModeMarker,
+  stripInternalControlMarkers,
+} from '../../src/artifacts/internal-markers';
 
 describe('stripInternalControlMarkers', () => {
   it('removes a leaked conversation-title marker from settled prose', () => {
@@ -56,5 +59,26 @@ describe('stripInternalControlMarkers', () => {
   it('returns text without markup untouched', () => {
     expect(stripInternalControlMarkers('plain answer')).toBe('plain answer');
     expect(stripInternalControlMarkers('')).toBe('');
+  });
+});
+
+describe('switch-mode marker', () => {
+  it('is hidden from the reader like the other internal markers', () => {
+    const text = 'Perfecto, abro el modo Diseño.\n<od-switch-mode>design</od-switch-mode>';
+
+    expect(stripInternalControlMarkers(text)).toBe('Perfecto, abro el modo Diseño.\n');
+  });
+
+  it('is hidden while it is still streaming in', () => {
+    expect(
+      stripInternalControlMarkers('Listo.\n<od-switch-mode>des', { streaming: true }),
+    ).toBe('Listo.\n');
+  });
+
+  it('is found only when it asks for Design', () => {
+    expect(findSwitchModeMarker('ok\n<od-switch-mode>design</od-switch-mode>')).toBe('design');
+    expect(findSwitchModeMarker('<od-switch-mode> Design </od-switch-mode>')).toBe('design');
+    expect(findSwitchModeMarker('<od-switch-mode>plan</od-switch-mode>')).toBeNull();
+    expect(findSwitchModeMarker('no marker here')).toBeNull();
   });
 });

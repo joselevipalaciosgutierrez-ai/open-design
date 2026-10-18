@@ -15,6 +15,7 @@ import {
 import { createPortal } from 'react-dom';
 import { Button } from '@open-design/components';
 import { ThinkingOrb } from './composer/ThinkingOrb';
+import { ComposerModePicker } from './ComposerModePicker';
 import { useI18n } from '../i18n';
 import { localizePluginDescription, localizePluginTitle } from './plugins-home/localization';
 import type { Dict, Locale } from '../i18n/types';
@@ -334,6 +335,8 @@ interface Props {
   activeProjectFileName?: string | null;
   streaming: boolean;
   sessionMode?: ChatSessionMode;
+  /** When provided, the composer shows the Design / Ask / Plan picker. */
+  onSessionModeChange?: (mode: ChatSessionMode) => void;
   sendDisabled?: boolean;
   // Read-only viewer of a team-shared project: makes the Lexical editor
   // non-editable (in addition to `sendDisabled` blocking the send action) so
@@ -597,6 +600,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       activeProjectFileName = null,
       streaming,
       sessionMode = 'design',
+      onSessionModeChange,
       sendDisabled = false,
       inputDisabled = false,
       initialDraft,
@@ -3872,12 +3876,15 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
             {designSystemPicker}
             {leadingAccessory}
             <span className="composer-spacer" />
-            {/* No mode picker in the composer (2026-08-19, product): the row
-                carried a 规划/设计/提问 chooser that every run defaulted past.
-                `sessionMode` still flows through this component — a
-                conversation keeps its stored mode and next-step actions still
-                switch it (ChatPane.handleNextStepPromptAction) — it just is
-                not chosen from here any more. */}
+            {/* Mode picker restored in this fork (Design / Ask / Plan). Shown only when
+                the host passes `onSessionModeChange`. Ask keeps the conversation as
+                a plain chat; switching to Design brings the workspace back. */}
+            {onSessionModeChange ? (
+              <ComposerModePicker
+                mode={sessionMode}
+                onModeChange={onSessionModeChange}
+              />
+            ) : null}
             {footerAccessory}
             {showAdmissionPendingButton ? (
               <button

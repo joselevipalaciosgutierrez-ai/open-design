@@ -2390,6 +2390,64 @@ a.avatar-item:visited {
     --project-chat-panel-width 140ms cubic-bezier(0.23, 1, 0.32, 1),
     --project-chat-handle-width 140ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+/* Ask-mode conversations (chat-only): the design workspace stays out of the way
+   and the chat fills the page, centered, like a plain assistant chat. Switching
+   the conversation to Design or Plan drops this class and the workspace returns.
+   Only the 2nd and 3rd grid children are hidden; they have explicit
+   `grid-column`s, so nothing shifts. */
+.split.split-chat-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+.split.split-chat-only > .workspace,
+.split.split-chat-only > .split-resize-handle,
+.split.split-chat-only .split-chat-collapse {
+  display: none;
+}
+/* The slot is a COLUMN (routines.css): the docked tab strip sits above the chat
+   card. Center horizontally with `align-items`, and give the strip and the card
+   the same column width so the project title and the conversations button line
+   up with the chat instead of sticking to the window edges. */
+.split.split-chat-only .split-chat-slot {
+  align-items: center;
+  padding-inline: 8px;
+}
+.split.split-chat-only .split-chat-slot > .pane,
+.split.split-chat-only .split-chat-slot > .split-chat-tabs-dock {
+  width: 100%;
+  max-width: 820px;
+}
+/* A short transcript starts at the TOP and grows downward, like a plain
+   assistant chat. The default "balanced" state (chat.css) pushes a short
+   transcript to the bottom with `margin-top: auto` on the first message, which
+   suits the narrow side panel but, in this wide layout, made the first answer
+   hug the composer while later sends anchored to the top. Specificity (0,6,0)
+   beats the original (0,5,0). */
+.split.split-chat-only .chat-log.is-balanced-transcript > .msg:first-of-type {
+  margin-top: 0;
+}
+
+/* Ask-mode composer: same look as the Home composer (home-hero.css) — a soft
+   gray tray (`--bg-subtle`, 20px) holding a white card (16px, no stroke until
+   focus). The composer is portaled into `.chat-composer-fixed-layer`, outside
+   `.split`, so it keys on the layer's `data-session-mode`. The class is repeated
+   on purpose: it must beat the dark-theme `.chat-composer-fixed-layer .composer`
+   rule in routines.css regardless of stylesheet order. */
+.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer {
+  gap: 0;
+  padding: 4px 4px 8px;
+  background: var(--bg-subtle);
+  border-radius: 20px;
+}
+.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer-shell {
+  padding: 12px 14px 10px;
+  border-color: transparent;
+  border-radius: 16px;
+  background: var(--bg-app);
+}
+.chat-composer-fixed-layer.chat-composer-fixed-layer[data-session-mode='chat'] .composer-shell:focus-within {
+  border-color: var(--border-soft);
+}
+
 .split-chat-slot {
   grid-column: 1;
   position: relative;

@@ -15,7 +15,8 @@
 // back to the neutral trigger.
 //
 // NOTE (this fork): Home mounts this picker again (see `HomeHero.tsx`, pinned by
-// `HomeView.mode-picker.test.tsx`). The project chat composer still does not.
+// `HomeView.mode-picker.test.tsx`) and so does the project chat composer when
+// the host passes `onSessionModeChange` (see `ChatComposer.mode-picker.test.tsx`).
 // The dormant-part notes below describe the original upstream state.
 //
 // ⚠️ **休眠件(2026-09-08)** —— 产品直接指令拿掉入口:「这些代码先讲提示词干掉,
@@ -37,7 +38,7 @@
 //
 // **不要**因为「线上看不到它」就删组件、删样式、删 i18n key 或删它的单测。
 // 反过来,`HomeView.mode-picker.test.tsx` 和
-// `ChatComposer.mode-picker-removal.test.tsx` 钉的是「宿主不许挂载它」,那两条
+// `ChatComposer.mode-picker.test.tsx` 钉的是「宿主不许挂载它」,那两条
 // 才是当前生效的裁决。
 import {
   useEffect,

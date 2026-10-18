@@ -65,6 +65,7 @@ import {
   type ProjectNameAuthorityResolution,
 } from './components/ProjectView';
 import { ProjectCreationPendingView } from './components/ProjectCreationPendingView';
+import { rememberProjectSessionMode } from './state/project-session-mode-hint';
 import { projectsForWorkspaceChrome } from './runtime/workspace-chrome-projects';
 import { AmrArtifactUpgradeGate } from './components/AmrArtifactUpgradeGate';
 import { AmrArtifactUpgradeHomeCard } from './components/AmrArtifactUpgradeHomeCard';
@@ -333,6 +334,8 @@ interface PendingProjectCreation {
    * shows the attachments without reading a project that is not persisted yet.
    */
   files: readonly File[];
+  /** The mode the new conversation was created in, so the pending frame paints the right layout. */
+  sessionMode?: ChatSessionMode;
 }
 
 const APP_CONFIG_CHANGED_EVENT = 'open-design:app-config-changed';
@@ -3156,6 +3159,9 @@ function AppInner() {
           : {}),
       };
       rememberLocalProject(optimisticProjectId);
+      if (input.conversationMode) {
+        rememberProjectSessionMode(optimisticProjectId, input.conversationMode);
+      }
       // A previous rollback's snapshot must not outlive the retry that
       // carries the same files; the new attempt owns them from here.
       clearHomeComposerAttachments();
@@ -3165,6 +3171,7 @@ function AppInner() {
           name: optimisticProject.name,
           prompt: derivedPendingPrompt ?? '',
           files: stagedFiles,
+          ...(input.conversationMode ? { sessionMode: input.conversationMode } : {}),
         });
         setProjects((current) => [
           optimisticProject,
@@ -5499,6 +5506,7 @@ function AppInner() {
           projectName={activeProject?.name ?? pendingCreation.name}
           prompt={pendingCreation.prompt}
           files={pendingCreation.files}
+          sessionMode={pendingCreation.sessionMode}
           agentId={config.agentId}
         />
       </div>
