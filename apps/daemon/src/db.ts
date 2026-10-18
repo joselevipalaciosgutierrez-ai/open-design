@@ -193,12 +193,27 @@ function migrate(db: SqliteDb): void {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS agent_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      role TEXT,
+      emoji TEXT,
+      runtime_id TEXT NOT NULL,
+      model TEXT,
+      instructions TEXT,
+      skill_ids_json TEXT NOT NULL DEFAULT '[]',
+      design_system_id TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,
       title TEXT,
       session_mode TEXT NOT NULL DEFAULT 'design',
       intent_signals_json TEXT,
+      agent_profile_id TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -439,6 +454,9 @@ function migrate(db: SqliteDb): void {
   }
   if (!conversationCols.some((c: DbRow) => c.name === 'intent_signals_json')) {
     db.exec(`ALTER TABLE conversations ADD COLUMN intent_signals_json TEXT`);
+  }
+  if (!conversationCols.some((c: DbRow) => c.name === 'agent_profile_id')) {
+    db.exec(`ALTER TABLE conversations ADD COLUMN agent_profile_id TEXT`);
   }
   const messageCols = db.prepare(`PRAGMA table_info(messages)`).all() as DbRow[];
   if (!messageCols.some((c: DbRow) => c.name === 'agent_id')) {
@@ -2171,6 +2189,127 @@ export function deleteTemplate(db: SqliteDb, id: string) {
   db.prepare(`DELETE FROM templates WHERE id = ?`).run(id);
 }
 
+// ---------- agent profiles ----------
+
+const AGENT_PROFILE_SELECT = `
+  SELECT p.id, p.name, p.role, p.emoji,
+         p.runtime_id AS runtimeId, p.model, p.instructions,
+         p.skill_ids_json AS skillIdsJson,
+         p.design_system_id AS designSystemId,
+         p.created_at AS createdAt, p.updated_at AS updatedAt,
+         (SELECT MAX(c.updated_at) FROM conversations c
+           WHERE c.agent_profile_id = p.id) AS lastActiveAt,
+         (SELECT COUNT(*) FROM conversations c
+           WHERE c.agent_profile_id = p.id) AS conversationCount
+    FROM agent_profiles p`;
+
+function parseAgentProfileSkillIds(json: unknown): string[] {
+  try {
+    const value = JSON.parse(String(json ?? '[]'));
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeAgentProfile(r: DbRow) {
+  return {
+    id: String(r.id),
+    name: String(r.name),
+    role: r.role ?? null,
+    emoji: r.emoji ?? null,
+    runtimeId: String(r.runtimeId),
+    model: r.model ?? null,
+    instructions: r.instructions ?? null,
+    skillIds: parseAgentProfileSkillIds(r.skillIdsJson),
+    designSystemId: r.designSystemId ?? null,
+    createdAt: Number(r.createdAt),
+    updatedAt: Number(r.updatedAt),
+    lastActiveAt: r.lastActiveAt == null ? null : Number(r.lastActiveAt),
+    conversationCount: Number(r.conversationCount ?? 0),
+  };
+}
+
+export function listAgentProfiles(db: SqliteDb) {
+  return (db
+    .prepare(`${AGENT_PROFILE_SELECT} ORDER BY p.created_at ASC, p.id ASC`)
+    .all() as DbRow[])
+    .map(normalizeAgentProfile);
+}
+
+export function getAgentProfile(db: SqliteDb, id: string) {
+  const row = db
+    .prepare(`${AGENT_PROFILE_SELECT} WHERE p.id = ?`)
+    .get(id) as DbRow | undefined;
+  return row ? normalizeAgentProfile(row) : null;
+}
+
+export function insertAgentProfile(db: SqliteDb, p: DbRow) {
+  db.prepare(
+    `INSERT INTO agent_profiles
+       (id, name, role, emoji, runtime_id, model, instructions,
+        skill_ids_json, design_system_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    p.id,
+    p.name,
+    p.role ?? null,
+    p.emoji ?? null,
+    p.runtimeId,
+    p.model ?? null,
+    p.instructions ?? null,
+    JSON.stringify(Array.isArray(p.skillIds) ? p.skillIds : []),
+    p.designSystemId ?? null,
+    p.createdAt,
+    p.updatedAt,
+  );
+  return getAgentProfile(db, p.id);
+}
+
+export function updateAgentProfile(db: SqliteDb, id: string, patch: DbRow) {
+  const existing = getAgentProfile(db, id);
+  if (!existing) return null;
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(patch, key);
+  const merged = {
+    name: has('name') ? patch.name : existing.name,
+    role: has('role') ? patch.role : existing.role,
+    emoji: has('emoji') ? patch.emoji : existing.emoji,
+    runtimeId: has('runtimeId') ? patch.runtimeId : existing.runtimeId,
+    model: has('model') ? patch.model : existing.model,
+    instructions: has('instructions') ? patch.instructions : existing.instructions,
+    skillIds: has('skillIds') ? patch.skillIds : existing.skillIds,
+    designSystemId: has('designSystemId') ? patch.designSystemId : existing.designSystemId,
+    updatedAt: typeof patch.updatedAt === 'number' ? patch.updatedAt : Date.now(),
+  };
+  db.prepare(
+    `UPDATE agent_profiles
+        SET name = ?, role = ?, emoji = ?, runtime_id = ?, model = ?,
+            instructions = ?, skill_ids_json = ?, design_system_id = ?,
+            updated_at = ?
+      WHERE id = ?`,
+  ).run(
+    merged.name,
+    merged.role ?? null,
+    merged.emoji ?? null,
+    merged.runtimeId,
+    merged.model ?? null,
+    merged.instructions ?? null,
+    JSON.stringify(Array.isArray(merged.skillIds) ? merged.skillIds : []),
+    merged.designSystemId ?? null,
+    merged.updatedAt,
+    id,
+  );
+  return getAgentProfile(db, id);
+}
+
+/** Deleting a profile keeps its conversations; they just stop pointing at it. */
+export function deleteAgentProfile(db: SqliteDb, id: string) {
+  db.prepare(`UPDATE conversations SET agent_profile_id = NULL WHERE agent_profile_id = ?`).run(id);
+  db.prepare(`DELETE FROM agent_profiles WHERE id = ?`).run(id);
+}
+
 function normalizeTemplate(row: DbRow) {
   let files = [];
   try {
@@ -2195,6 +2334,7 @@ export function listConversations(db: SqliteDb, projectId: string) {
     .prepare(
       `WITH project_conversations AS (
           SELECT id, project_id AS projectId, title, session_mode AS sessionMode,
+                 agent_profile_id AS agentProfileId,
                  created_at AS createdAt, updated_at AS updatedAt
            FROM conversations
            WHERE project_id = ?
@@ -2239,7 +2379,7 @@ export function listConversations(db: SqliteDb, projectId: string) {
              AND m.run_status IN ('succeeded', 'failed', 'canceled')
            GROUP BY m.conversation_id
         )
-        SELECT c.id, c.projectId, c.title, c.sessionMode, c.createdAt, c.updatedAt,
+        SELECT c.id, c.projectId, c.title, c.sessionMode, c.agentProfileId, c.createdAt, c.updatedAt,
                COALESCE(mc.messageCount, 0) AS messageCount,
                lr.latestRunStatus, lr.latestRunStartedAt,
                lr.latestRunEndedAt, lr.latestRunMessageId,
@@ -2324,6 +2464,7 @@ export function getConversation(db: SqliteDb, id: string) {
   const r = db
     .prepare(
       `SELECT id, project_id AS projectId, title, session_mode AS sessionMode,
+              agent_profile_id AS agentProfileId,
               created_at AS createdAt, updated_at AS updatedAt,
               (SELECT COUNT(*) FROM messages WHERE conversation_id = conversations.id) AS messageCount
          FROM conversations WHERE id = ?`,
@@ -2349,6 +2490,7 @@ function normalizeConversation(r: DbRow) {
     projectId: r.projectId,
     title: r.title ?? null,
     sessionMode: normalizeConversationSessionMode(r.sessionMode),
+    agentProfileId: typeof r.agentProfileId === 'string' && r.agentProfileId ? r.agentProfileId : null,
     messageCount: Number(r.messageCount ?? 0),
     createdAt: Number(r.createdAt),
     updatedAt: Number(r.updatedAt),
@@ -2473,13 +2615,14 @@ function latestUsageDurationMs(eventsJson: unknown): number | undefined {
 export function insertConversation(db: SqliteDb, c: DbRow) {
   db.prepare(
     `INSERT INTO conversations
-       (id, project_id, title, session_mode, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+       (id, project_id, title, session_mode, agent_profile_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     c.id,
     c.projectId,
     c.title ?? null,
     normalizeConversationSessionMode(c.sessionMode),
+    typeof c.agentProfileId === 'string' && c.agentProfileId ? c.agentProfileId : null,
     c.createdAt,
     c.updatedAt,
   );
@@ -2495,12 +2638,15 @@ export function updateConversation(db: SqliteDb, id: string, patch: DbRow) {
     sessionMode: Object.prototype.hasOwnProperty.call(patch, 'sessionMode')
       ? normalizeConversationSessionMode(patch.sessionMode)
       : existing.sessionMode,
+    agentProfileId: Object.prototype.hasOwnProperty.call(patch, 'agentProfileId')
+      ? (typeof patch.agentProfileId === 'string' && patch.agentProfileId ? patch.agentProfileId : null)
+      : existing.agentProfileId ?? null,
     updatedAt: typeof patch.updatedAt === 'number' ? patch.updatedAt : Date.now(),
   };
   db.prepare(
     `UPDATE conversations
-        SET title = ?, session_mode = ?, updated_at = ? WHERE id = ?`,
-  ).run(merged.title ?? null, merged.sessionMode, merged.updatedAt, id);
+        SET title = ?, session_mode = ?, agent_profile_id = ?, updated_at = ? WHERE id = ?`,
+  ).run(merged.title ?? null, merged.sessionMode, merged.agentProfileId, merged.updatedAt, id);
   return getConversation(db, id);
 }
 

@@ -889,6 +889,7 @@ export const tr: Dict = {
   'entry.navTasks': 'Otomasyonlar',
   'entry.navPlugins': 'Plugin\'ler',
   'entry.navDesignSystems': 'Tasarım sistemleri',
+  'entry.navAgents': 'Ajanlar',
   'entry.navBrands': 'Marka Kiti',
   'entry.navIntegrations': 'Entegrasyonlar',
   'entry.navMembers': 'Members',

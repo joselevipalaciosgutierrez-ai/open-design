@@ -889,6 +889,7 @@ export const hu: Dict = {
   'entry.navTasks': 'Automatizálások',
   'entry.navPlugins': 'Pluginok',
   'entry.navDesignSystems': 'Tervezőrendszerek',
+  'entry.navAgents': 'Ügynökök',
   'entry.navBrands': 'Márkacsomag',
   'entry.navIntegrations': 'Integrációk',
   'entry.navMembers': 'Members',

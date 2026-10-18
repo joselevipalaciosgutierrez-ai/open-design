@@ -257,7 +257,7 @@ const PROJECT_RESOURCE_STRING_FLAGS = new Set([
   'workspace',
   'workspace-member',
 ]);
-const PROJECT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json', 'follow', 'thumbnail']);
+const PROJECT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json', 'follow', 'thumbnail', 'skip-discovery']);
 const WORKSPACE_STRING_FLAGS = new Set([
   'model',
   'daemon-url', 'workspace', 'view', 'visibility', 'owner', 'project',
@@ -349,7 +349,10 @@ const BRAND_STRING_FLAGS = new Set([
 const BRAND_BOOLEAN_FLAGS = new Set([
   'help', 'h', 'json',
 ]);
-const AGENT_STRING_FLAGS = new Set(['daemon-url']);
+const AGENT_STRING_FLAGS = new Set([
+  'daemon-url', 'name', 'role', 'emoji', 'runtime', 'model', 'instructions',
+  'instructions-file', 'skills', 'design-system',
+]);
 const AGENT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
 const STRATEGY_STRING_FLAGS = new Set(['daemon-url']);
 const STRATEGY_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
@@ -517,15 +520,110 @@ async function runStrategy(args) {
 }
 
 function printAgentHelp() {
-  console.log(`Usage: od agent setup deepseek-harness [options]
+  console.log(`Usage:
+  od agent list [--json]
+  od agent info <id> [--json]
+  od agent create --name "<name>" --runtime <runtimeId> [--model <id>]
+                  [--role "<one line>"] [--emoji <e>]
+                  [--instructions "<text>" | --instructions-file <path|->]
+                  [--skills a,b] [--design-system <id>] [--json]
+  od agent update <id> [same flags as create; "none" clears --model/--role/
+                  --emoji/--instructions/--design-system] [--json]
+  od agent delete <id> [--json]
+  od agent setup deepseek-harness [--json]
 
-Install or repair OpenDesign's bundled connection component in the user's
-official DeepSeek Harness installation. The dsh CLI itself is not installed
-or upgraded by OpenDesign.
+Agent profiles are named roles (runtime + model + instructions) that a
+conversation can be bound to. They are the same records the Agents screen
+shows. Use the profile id with a conversation to run as that agent.
+
+setup deepseek-harness installs or repairs OpenDesign's bundled connection
+component in the user's official DeepSeek Harness installation. The dsh CLI
+itself is not installed or upgraded by OpenDesign.
 
 Options:
   --json                  Print a machine-readable result.
   --daemon-url <url>      Override daemon URL.`);
+}
+
+function agentProfileBodyFromFlags(flags, { creating }) {
+  const body = {};
+  const clearable = (value) => (value === 'none' ? null : value);
+  if (typeof flags.name === 'string') body.name = flags.name;
+  if (typeof flags.runtime === 'string') body.runtimeId = flags.runtime;
+  if (typeof flags.role === 'string') body.role = clearable(flags.role);
+  if (typeof flags.emoji === 'string') body.emoji = clearable(flags.emoji);
+  if (typeof flags.model === 'string') body.model = clearable(flags.model);
+  if (typeof flags['design-system'] === 'string') {
+    body.designSystemId = clearable(flags['design-system']);
+  }
+  if (typeof flags.skills === 'string') {
+    body.skillIds = flags.skills.split(',').map((id) => id.trim()).filter(Boolean);
+  }
+  if (typeof flags['instructions-file'] === 'string') {
+    try {
+      body.instructions = readFileSync(
+        flags['instructions-file'] === '-' ? 0 : flags['instructions-file'],
+        'utf8',
+      );
+    } catch (error) {
+      console.error(`--instructions-file: ${error.message}`);
+      process.exit(2);
+    }
+  } else if (typeof flags.instructions === 'string') {
+    body.instructions = clearable(flags.instructions);
+  }
+  if (creating && (!body.name || !body.runtimeId)) {
+    console.error('od agent create requires --name and --runtime');
+    process.exit(2);
+  }
+  return body;
+}
+
+function printAgentProfile(profile) {
+  const label = [profile.emoji, profile.name].filter(Boolean).join(' ');
+  const model = profile.model ?? 'CLI default';
+  console.log(`${profile.id}  ${label}  [${profile.runtimeId} / ${model}]`);
+  if (profile.role) console.log(`  ${profile.role}`);
+}
+
+async function runAgentProfiles(positional, flags) {
+  const [sub, id] = positional;
+  const base = (await cliDaemonBaseUrl(flags)).replace(/\/$/, '');
+  const needsId = sub === 'info' || sub === 'update' || sub === 'delete';
+  if (needsId && !id) {
+    console.error(`Usage: od agent ${sub} <id>`);
+    process.exit(2);
+  }
+  const url = `${base}/api/agent-profiles${needsId ? `/${encodeURIComponent(id)}` : ''}`;
+  const method = { list: 'GET', info: 'GET', create: 'POST', update: 'PATCH', delete: 'DELETE' }[sub];
+  const init = { method, headers: {} };
+  if (sub === 'create' || sub === 'update') {
+    init.headers['content-type'] = 'application/json';
+    init.body = JSON.stringify(agentProfileBodyFromFlags(flags, { creating: sub === 'create' }));
+  }
+  let response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    surfaceFetchError(error, base);
+    process.exit(3);
+  }
+  if (!response.ok) return structuredHttpFailure(response, 'daemon-not-running');
+  const data = await response.json().catch(() => ({ ok: true }));
+  if (flags.json) {
+    process.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+    return;
+  }
+  if (sub === 'list') {
+    if (!data.profiles?.length) console.log('No agents yet. Create one with: od agent create');
+    for (const profile of data.profiles ?? []) printAgentProfile(profile);
+    return;
+  }
+  if (sub === 'delete') {
+    console.log(`[agent] deleted ${id}`);
+    return;
+  }
+  printAgentProfile(data.profile);
 }
 
 async function runAgent(args) {
@@ -540,6 +638,9 @@ async function runAgent(args) {
   if (flags.help || flags.h || positional[0] === 'help') {
     printAgentHelp();
     return;
+  }
+  if (['list', 'info', 'create', 'update', 'delete'].includes(positional[0])) {
+    return runAgentProfiles(positional, flags);
   }
   if (positional[0] !== 'setup' || positional[1] !== 'deepseek-harness') {
     printAgentHelp();
@@ -7028,7 +7129,7 @@ async function runProject(args) {
   od project create [--name "<title>"] [--skill <id>] [--design-system <id>]
                     [--plugin <id>] [--inputs <json>] [--metadata-json <path|->]
                     [--mode design|chat|plan] [--task-type motion-design]
-                    [--prompt-file <path|->] [--json]
+                    [--skip-discovery] [--prompt-file <path|->] [--json]
   od project create-design-system <id> [--name "<title>"]
                     [--prompt "<text>" | --prompt-file <path|->] [--json]
                     Duplicate a project as a design-system workspace and seed
@@ -7230,6 +7331,7 @@ Common options:
       const conversationMode = normalizeChatSessionModeFlag(flags.mode);
       if (conversationMode) body.conversationMode = conversationMode;
       if (flags['pending-prompt']) body.pendingPrompt = flags['pending-prompt'];
+      if (flags['skip-discovery']) body.skipDiscoveryBrief = true;
       if (flags['metadata-json']) {
         const mj = safeReadJsonFile(flags['metadata-json']);
         if (mj && typeof mj === 'object') body.metadata = mj;
@@ -8960,7 +9062,10 @@ async function runConversation(args) {
   if (args.length === 0 || args[0] === 'help' || args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
   od conversation new  <projectId> [--title "<title>"] [--seed-from <cid>] [--fork-after <mid>] [--mode design|chat|plan]
+                       [--agent <agentProfileId>]
                                            Create a conversation in a project.
+                                           --agent binds it to an agent profile
+                                           (see: od agent list).
                                            --seed-from copies another
                                            conversation's messages in (Side Chat).
                                            --fork-after stops the copy at one
@@ -9001,6 +9106,7 @@ Common options:
       if (typeof flags.title === 'string') body.title = flags.title;
       const sessionMode = normalizeChatSessionModeFlag(flags.mode);
       if (sessionMode) body.sessionMode = sessionMode;
+      if (typeof flags.agent === 'string' && flags.agent) body.agentProfileId = flags.agent;
       if (typeof flags['seed-from'] === 'string' && flags['seed-from']) {
         body.seedFromConversationId = flags['seed-from'];
       }

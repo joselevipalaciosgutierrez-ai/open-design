@@ -195,6 +195,7 @@ import { repoConnectCopy } from './design-system-github-evidence';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
 import type { SettingsSection } from './SettingsDialog';
 import { findSwitchModeMarker } from '../artifacts/internal-markers';
+import { AgentChip } from './agents/AgentChip';
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
@@ -4119,6 +4120,9 @@ export function ChatPane({
     <>
       {/* 插件 / 设计百宝箱 live inside the composer's "+" menu (below 工作目录,
           hover to expand); they no longer sit as quick pills above the input. */}
+    <AgentChip
+      agentProfileId={conversations.find((c) => c.id === activeConversationId)?.agentProfileId}
+    />
     <ChatComposer
       ref={composerRef}
       quotes={quotes}

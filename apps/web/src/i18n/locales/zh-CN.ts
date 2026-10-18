@@ -892,6 +892,7 @@ export const zhCN: Dict = {
   "entry.navTasks": "自动化",
   "entry.navPlugins": "插件",
   "entry.navDesignSystems": "设计体系",
+  "entry.navAgents": "智能体",
   "entry.navBrands": "设计系统",
   "entry.navIntegrations": "集成",
   "entry.navMembers": "成员",

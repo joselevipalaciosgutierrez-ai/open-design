@@ -889,6 +889,7 @@ export const id: Dict = {
   'entry.navTasks': 'Otomatisasi',
   'entry.navPlugins': 'Plugin',
   'entry.navDesignSystems': 'Sistem desain',
+  'entry.navAgents': 'Agen',
   'entry.navBrands': 'Kit Merek',
   'entry.navIntegrations': 'Integrasi',
   'entry.navMembers': 'Members',

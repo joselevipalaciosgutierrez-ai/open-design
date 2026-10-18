@@ -17,6 +17,7 @@ export type EntryHomeView =
   | 'tasks'
   | 'plugins'
   | 'design-systems'
+  | 'agents'
   | 'library'
   | 'brands'
   | 'integrations'
@@ -122,6 +123,9 @@ export function parseRoute(pathname: string): Route {
     // `/brands` and `/brands/:id` deep-links redirect onto the unified tab.
     return { kind: 'home', view: 'design-systems' };
   }
+  if (parts[0] === 'agents' && !parts[1]) {
+    return { kind: 'home', view: 'agents' };
+  }
   if (parts[0] === 'automations' || parts[0] === 'tasks') {
     return { kind: 'home', view: 'tasks' };
   }
@@ -181,6 +185,7 @@ export function buildPath(route: Route): string {
     if (route.view === 'tasks') return '/automations';
     if (route.view === 'plugins') return '/plugins';
     if (route.view === 'design-systems') return '/design-systems';
+    if (route.view === 'agents') return '/agents';
     if (route.view === 'library') return LIBRARY_UI_VISIBLE ? '/library' : '/';
     if (route.view === 'brands') {
       return route.brandId ? `/brands/${encodeURIComponent(route.brandId)}` : '/brands';

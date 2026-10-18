@@ -45,9 +45,11 @@ import {
   codexSessionIdFromRunEvents,
   readCodexRolloutFirstCall,
 } from '../codex-rollout-usage.js';
+import { applyAgentProfileToRunBody } from '../agent-profile-run.js';
 import type { ConnectorService } from '../connectors/service.js';
 import {
   conversationTurnIndexForRun,
+  getAgentProfile,
   getFirstProjectConversation,
   getConversation,
   getProject,
@@ -1430,6 +1432,14 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
       ) {
         return sendApiError(res, 404, 'CONVERSATION_NOT_FOUND', 'conversation not found for project');
       }
+    }
+    // A conversation opened with an agent profile runs as that agent. Applied
+    // here, before the run records its agent, so the run, its task and the
+    // request all agree (see agent-profile-run.ts).
+    if (typeof requestBody.conversationId === 'string' && requestBody.conversationId) {
+      const profileId = getConversation(db, requestBody.conversationId)?.agentProfileId;
+      const agentProfile = profileId ? getAgentProfile(db, profileId) : null;
+      if (agentProfile) applyAgentProfileToRunBody(requestBody, agentProfile);
     }
     let authorizedBoundMutation = false;
     if (typeof requestBody.projectId === 'string' && requestBody.projectId) {

@@ -1211,6 +1211,8 @@ export class ProjectConversationsHttpError extends Error {
 }
 
 type CreateConversationOptions = {
+  /** Open the conversation as a chat with this agent profile. */
+  agentProfileId?: string | null;
   seedFromConversationId?: string | null;
   forkAfterMessageId?: string | null;
   sessionMode?: ChatSessionMode;
@@ -1275,6 +1277,9 @@ export async function createConversation(
     const body: CreateConversationRequest = { title };
     if (opts?.sessionMode) {
       body.sessionMode = opts.sessionMode;
+    }
+    if (opts?.agentProfileId) {
+      body.agentProfileId = opts.agentProfileId;
     }
     if (opts?.seedFromConversationId) {
       body.seedFromConversationId = opts.seedFromConversationId;

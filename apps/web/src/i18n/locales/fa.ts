@@ -889,6 +889,7 @@ export const fa: Dict = {
   'entry.navTasks': 'خودکارسازی‌ها',
   'entry.navPlugins': 'افزونه‌ها',
   'entry.navDesignSystems': 'سیستم‌های طراحی',
+  'entry.navAgents': 'عامل‌ها',
   'entry.navBrands': 'کیت برند',
   'entry.navIntegrations': 'یکپارچه‌سازی‌ها',
   'entry.navMembers': 'Members',

@@ -1236,6 +1236,7 @@ export interface Dict {
   'entry.navTasks': string;
   'entry.navPlugins': string;
   'entry.navDesignSystems': string;
+  'entry.navAgents': string;
   'entry.navBrands': string;
   'entry.navIntegrations': string;
   // Team-edition navigation shell.

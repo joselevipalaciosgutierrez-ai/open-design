@@ -889,6 +889,7 @@ export const ar: Dict = {
   'entry.navTasks': 'الأتمتة',
   'entry.navPlugins': 'الإضافات',
   'entry.navDesignSystems': 'أنظمة التصميم',
+  'entry.navAgents': 'الوكلاء',
   'entry.navBrands': 'حزمة العلامة التجارية',
   'entry.navIntegrations': 'عمليات الدمج',
   'entry.navMembers': 'Members',

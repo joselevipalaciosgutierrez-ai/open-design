@@ -92,6 +92,7 @@ import type {
 import { CenteredLoader } from './Loading';
 import { DesignsTab } from './DesignsTab';
 import { DesignSystemsTab } from './DesignSystemsTab';
+import { AgentsView } from './AgentsView';
 import { BrandsTab } from './BrandsTab';
 import { EntryNavRail, type EntryView as EntryViewKind } from './EntryNavRail';
 import {
@@ -2068,6 +2069,16 @@ export function EntryShell({
                   />
                 </div>
               )}
+            </div>
+            <div data-testid="entry-view-agents" data-active={view === 'agents' ? 'true' : 'false'} {...inactiveViewProps(view === 'agents')}>
+              <div className="entry-section">
+                <AgentsView
+                  isActive={view === 'agents'}
+                  agents={agents}
+                  projects={projects}
+                  onOpenProject={onOpenProject}
+                />
+              </div>
             </div>
             {LIBRARY_UI_VISIBLE ? (
               <div data-testid="entry-view-library" data-active={view === 'library' ? 'true' : 'false'} {...inactiveViewProps(view === 'library')}>

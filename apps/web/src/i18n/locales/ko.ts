@@ -889,6 +889,7 @@ export const ko: Dict = {
   'entry.navTasks': '자동화',
   'entry.navPlugins': '플러그인',
   'entry.navDesignSystems': '디자인 시스템',
+  'entry.navAgents': '에이전트',
   'entry.navBrands': '브랜드 키트',
   'entry.navIntegrations': '통합',
   'entry.navMembers': 'Members',

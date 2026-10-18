@@ -410,6 +410,8 @@ export interface Conversation {
   projectId: string;
   title: string | null;
   sessionMode?: ChatSessionMode;
+  /** The agent profile this conversation belongs to, if it was opened with one. */
+  agentProfileId?: string | null;
   messageCount?: number;
   createdAt: number;
   updatedAt: number;
@@ -767,6 +769,8 @@ export interface ConversationResponse {
 export interface CreateConversationRequest {
   title?: string | null;
   sessionMode?: ChatSessionMode;
+  /** Open the conversation as a chat with this agent profile. */
+  agentProfileId?: string | null;
   /**
    * Seed the new conversation with another conversation's context by copying
    * its messages. The source must belong to the same project; a missing or

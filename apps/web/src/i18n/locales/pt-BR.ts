@@ -889,6 +889,7 @@ export const ptBR: Dict = {
   'entry.navTasks': 'Automações',
   'entry.navPlugins': 'Plugins',
   'entry.navDesignSystems': 'Design systems',
+  'entry.navAgents': 'Agentes',
   'entry.navBrands': 'Kit de marca',
   'entry.navIntegrations': 'Integrações',
   'entry.navMembers': 'Members',

@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import { type ChatSessionMode } from '@open-design/contracts';
 import { readAnalyticsContext } from '../../analytics.js';
 import { nextForkedConversationTitle } from '../../conversation-fork-title.js';
+import { getAgentProfile } from '../../db.js';
 import { backfillBrandExtractionTranscriptForProject } from '../../brands/index.js';
 import type { RouteDeps } from '../../server-context.js';
 import type { BoundWorkspaceResourceMutationGate } from '../../collab/workspace-resource-mutation.js';
@@ -262,11 +263,30 @@ export function registerProjectConversationRoutes(app: Express, ctx: RegisterPro
             ),
           )
         : null);
+    const rawAgentProfileId = req.body?.agentProfileId;
+    if (
+      rawAgentProfileId !== undefined
+      && rawAgentProfileId !== null
+      && typeof rawAgentProfileId !== 'string'
+    ) {
+      return sendApiError(res, 400, 'BAD_REQUEST', 'agentProfileId must be a string');
+    }
+    // A fork keeps the agent of the conversation it branches from.
+    const agentProfileId: string | null =
+      typeof rawAgentProfileId === 'string' && rawAgentProfileId
+        ? rawAgentProfileId
+        : sourceConversation && sourceConversation.projectId === req.params.id
+          ? (sourceConversation.agentProfileId ?? null)
+          : null;
+    if (agentProfileId && !getAgentProfile(db, agentProfileId)) {
+      return sendApiError(res, 404, 'NOT_FOUND', 'agent profile not found');
+    }
     const conv = insertConversation(db, {
       id: randomId(),
       projectId: req.params.id,
       title: resolvedTitle,
       sessionMode,
+      agentProfileId,
       createdAt: now,
       updatedAt: now,
     });
@@ -334,6 +354,17 @@ export function registerProjectConversationRoutes(app: Express, ctx: RegisterPro
       !isChatSessionMode(req.body.sessionMode)
     ) {
       return sendApiError(res, 400, 'BAD_REQUEST', 'sessionMode must be one of design, chat, or plan');
+    }
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'agentProfileId')) {
+      const next = req.body.agentProfileId;
+      if (next !== null && (typeof next !== 'string' || !getAgentProfile(db, next))) {
+        return sendApiError(
+          res,
+          400,
+          'BAD_REQUEST',
+          'agentProfileId must be null or the id of an existing agent profile',
+        );
+      }
     }
     const updated = updateConversation(db, req.params.cid, req.body || {});
     res.json({ conversation: updated });

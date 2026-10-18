@@ -889,6 +889,7 @@ export const uk: Dict = {
   'entry.navTasks': 'Автоматизації',
   'entry.navPlugins': 'Плагіни',
   'entry.navDesignSystems': 'Дизайн-системи',
+  'entry.navAgents': 'Агенти',
   'entry.navBrands': 'Бренд-кіт',
   'entry.navIntegrations': 'Інтеграції',
   'entry.navMembers': 'Members',

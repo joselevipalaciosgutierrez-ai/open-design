@@ -889,6 +889,7 @@ export const th: Dict = {
   'entry.navTasks': 'การทำงานอัตโนมัติ',
   'entry.navPlugins': 'ปลั๊กอิน',
   'entry.navDesignSystems': 'ดีไซน์ซิสเต็ม',
+  'entry.navAgents': 'เอเจนต์',
   'entry.navBrands': 'ชุดแบรนด์',
   'entry.navIntegrations': 'การเชื่อมต่อ',
   'entry.navMembers': 'Members',

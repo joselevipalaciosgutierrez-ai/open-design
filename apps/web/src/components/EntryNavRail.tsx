@@ -2597,6 +2597,15 @@ export function EntryNavRail({
               <Icon name="palette" size={16} />
             </NavButton>
             <NavButton
+              active={view === 'agents'}
+              ariaLabel={t('entry.navAgents')}
+              label={t('entry.navAgents')}
+              onClick={() => selectView('agents')}
+              testId="entry-nav-agents"
+            >
+              <Icon name="users" size={16} />
+            </NavButton>
+            <NavButton
               active={view === 'plugins'}
               ariaLabel={t('entry.navPlugins')}
               label={t('entry.navPlugins')}
@@ -2677,6 +2686,15 @@ export function EntryNavRail({
               testId="entry-nav-design-systems"
             >
               <Icon name="palette" size={16} />
+            </NavButton>
+            <NavButton
+              active={view === 'agents'}
+              ariaLabel={t('entry.navAgents')}
+              label={t('entry.navAgents')}
+              onClick={() => selectView('agents')}
+              testId="entry-nav-agents"
+            >
+              <Icon name="users" size={16} />
             </NavButton>
             <NavButton
               active={view === 'plugins'}

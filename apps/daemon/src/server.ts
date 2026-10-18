@@ -910,6 +910,7 @@ import { createBrowserSessionService } from './browser-sessions.js';
 import { registerSocialShareRoutes } from './routes/social-share.js';
 import { registerOpenDesignPublicMetadataRoutes } from './routes/open-design-public-metadata.js';
 import { registerWhatsNewRoutes } from './routes/whats-new.js';
+import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import {
   createCollabPresenceCloudClient,
@@ -8389,6 +8390,13 @@ export async function startServer({
 
   registerWhatsNewRoutes(app, {
     whatsNew: createWhatsNewService(),
+  });
+
+  registerAgentProfileRoutes(app, {
+    db,
+    http: httpDeps,
+    agents: { getAgentDef },
+    ids: { randomId },
   });
 
   registerPluginEventRoutes(app, {

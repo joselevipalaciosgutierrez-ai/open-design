@@ -889,6 +889,7 @@ export const fr: Dict = {
   'entry.navTasks': 'Automatisations',
   'entry.navPlugins': 'Plugins',
   'entry.navDesignSystems': 'Systèmes de design',
+  'entry.navAgents': 'Agents',
   'entry.navBrands': 'Kit de marque',
   'entry.navIntegrations': 'Intégrations',
   'entry.navMembers': 'Membres',

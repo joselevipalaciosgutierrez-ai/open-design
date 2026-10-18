@@ -329,6 +329,7 @@ function reviveTab(value: unknown): WorkspaceChromeTab | null {
       || view === 'tasks'
       || view === 'plugins'
       || view === 'design-systems'
+      || view === 'agents'
       || view === 'integrations'
     ) {
       return { id, kind: 'entry', view, createdAt, lastActiveAt };
@@ -2806,6 +2807,7 @@ function displayTabFor(
     tasks: t('entry.navTasks'),
     plugins: t('entry.navPlugins'),
     'design-systems': t('entry.navDesignSystems'),
+    agents: t('entry.navAgents'),
     library: 'Library',
     brands: t('entry.navBrands'),
     integrations: t('entry.navIntegrations'),
@@ -2824,6 +2826,7 @@ function displayTabFor(
     tasks: 'kanban',
     plugins: 'grid',
     'design-systems': 'blocks',
+    agents: 'users',
     library: 'image',
     brands: 'blocks',
     integrations: 'link',

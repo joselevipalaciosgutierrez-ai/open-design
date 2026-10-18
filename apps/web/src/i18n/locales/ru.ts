@@ -889,6 +889,7 @@ export const ru: Dict = {
   'entry.navTasks': 'Автоматизации',
   'entry.navPlugins': 'Плагины',
   'entry.navDesignSystems': 'Дизайн-системы',
+  'entry.navAgents': 'Агенты',
   'entry.navBrands': 'Бренд-кит',
   'entry.navIntegrations': 'Интеграции',
   'entry.navMembers': 'Members',
