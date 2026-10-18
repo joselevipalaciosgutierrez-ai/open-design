@@ -14,7 +14,7 @@ import type {
 } from '@open-design/contracts';
 
 import { useI18n } from '../i18n';
-import { fetchDesignSystems, fetchSkills } from '../providers/registry';
+import { fetchDesignSystems, fetchSkills, importSkill } from '../providers/registry';
 import { navigate } from '../router';
 import {
   createAgentProfile,
@@ -25,6 +25,7 @@ import {
 import { createConversation, createProject, patchConversation } from '../state/projects';
 import type { AgentInfo, Project } from '../types';
 import { getAgentsCopy, type AgentsCopy } from './agents/agents-copy';
+import { parseSkillFile } from './agents/skill-file';
 import styles from './AgentsView.module.css';
 
 const CUSTOM_MODEL = '__custom__';
@@ -254,6 +255,36 @@ function AgentEditor({
     };
   }, []);
 
+  const [skillFilter, setSkillFilter] = useState('');
+  const [skillNotice, setSkillNotice] = useState<string | null>(null);
+
+  const uploadSkill = async (file: File | undefined) => {
+    if (!file) return;
+    setSkillNotice(null);
+    const parsed = parseSkillFile(await file.text(), file.name);
+    if ('error' in parsed) return setSkillNotice(copy.skillsUploadError);
+    const result = await importSkill(parsed);
+    if ('error' in result) return setSkillNotice(result.error.message || copy.skillsUploadError);
+    setSkills((current) => [...(current ?? []), result.skill]);
+    setSkillIds((current) => [...current, result.skill.id]);
+    setSkillNotice(copy.skillsUploaded(result.skill.name));
+  };
+
+  // Only skills the user owns are suggested; the bundled catalog stays out of
+  // the way. Anything else can still be uploaded with a SKILL.md.
+  const userSkills = useMemo(
+    () => (skills ?? []).filter((skill) => skill.source === 'user'),
+    [skills],
+  );
+  const suggestions = useMemo(() => {
+    const query = skillFilter.trim().toLowerCase();
+    return userSkills.filter(
+      (skill) =>
+        !skillIds.includes(skill.id) &&
+        `${skill.name} ${skill.description ?? ''}`.toLowerCase().includes(query),
+    );
+  }, [userSkills, skillIds, skillFilter]);
+
   const toggleSkill = (id: string) =>
     setSkillIds((current) =>
       current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
@@ -437,29 +468,71 @@ function AgentEditor({
           </select>
         </label>
 
-        <fieldset className={styles.field}>
+        <fieldset className={`${styles.field} ${styles.skillsSet}`}>
           <legend>{copy.skillsLabel}</legend>
+          {skillIds.length > 0 ? (
+            <div className={styles.skillChips} aria-label={copy.skillsSelected}>
+              {skillIds.map((id) => {
+                const label = skills?.find((skill) => skill.id === id)?.name ?? id;
+                return (
+                <span key={id} className={styles.skillChip}>
+                  {label}
+                  <button
+                    type="button"
+                    className={styles.skillChipRemove}
+                    aria-label={copy.skillRemove(label)}
+                    onClick={() => toggleSkill(id)}
+                  >
+                    ×
+                  </button>
+                </span>
+                );
+              })}
+            </div>
+          ) : null}
+          <div className={styles.skillTools}>
+            <input
+              className={`${styles.input} ${styles.skillSearch}`}
+              type="search"
+              value={skillFilter}
+              placeholder={copy.skillsSearch}
+              aria-label={copy.skillsSearch}
+              onChange={(event) => setSkillFilter(event.target.value)}
+            />
+            <label className={styles.skillUpload}>
+              {copy.skillsUpload}
+              <input
+                type="file"
+                accept=".md,text/markdown"
+                hidden
+                data-testid="skill-upload"
+                onChange={(event) => {
+                  void uploadSkill(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+          {skillNotice ? <small className={styles.hint} role="status">{skillNotice}</small> : null}
           {skills === null ? (
             <small className={styles.hint}>{copy.skillsLoading}</small>
-          ) : (
-            <div className={styles.skillList}>
-              {[
-                ...skills,
-                ...skillIds
-                  .filter((id) => !skills.some((skill) => skill.id === id))
-                  .map((id) => ({ id, name: id }) as SkillSummary),
-              ].map((skill) => (
-                <label key={skill.id} className={styles.skillOption}>
-                  <input
-                    type="checkbox"
-                    checked={skillIds.includes(skill.id)}
-                    onChange={() => toggleSkill(skill.id)}
-                  />
-                  <span>{skill.name}</span>
-                </label>
+          ) : suggestions.length > 0 ? (
+            <div className={styles.skillSuggestions} aria-label={copy.skillsSuggested}>
+              {suggestions.map((skill) => (
+                <button
+                  key={skill.id}
+                  type="button"
+                  className={styles.skillSuggestion}
+                  title={skill.description || undefined}
+                  onClick={() => toggleSkill(skill.id)}
+                >
+                  + {skill.name}
+                </button>
               ))}
             </div>
-          )}
+          ) : userSkills.length === 0 ? (
+            <small className={styles.hint}>{copy.skillsNone}</small>
+          ) : null}
           <small className={styles.hint}>{copy.skillsHint}</small>
         </fieldset>
 

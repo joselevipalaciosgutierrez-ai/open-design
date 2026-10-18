@@ -44,6 +44,17 @@ export interface AgentsCopy {
   skillsLabel: string;
   skillsHint: string;
   skillsLoading: string;
+  switcherTitle: string;
+  switcherNone: string;
+  switcherAll: string;
+  skillsSearch: string;
+  skillsUpload: string;
+  skillsUploaded: (name: string) => string;
+  skillsUploadError: string;
+  skillsSelected: string;
+  skillRemove: (name: string) => string;
+  skillsSuggested: string;
+  skillsNone: string;
   needName: string;
   needRuntime: string;
   saveError: string;
@@ -105,6 +116,17 @@ const es: AgentsCopy = {
   skillsLabel: 'Skills',
   skillsHint: 'El agente las usará en cada respuesta.',
   skillsLoading: 'Cargando skills…',
+  switcherTitle: 'Agentes',
+  switcherNone: 'Sin agente',
+  switcherAll: 'Todos los agentes',
+  skillsSearch: 'Buscar skill…',
+  skillsUpload: 'Subir SKILL.md',
+  skillsUploaded: (name) => `Skill «${name}» añadida.`,
+  skillsUploadError: 'No se pudo importar ese archivo. Debe ser un SKILL.md con contenido.',
+  skillsSelected: 'Seleccionadas',
+  skillRemove: (name) => `Quitar ${name}`,
+  skillsSuggested: 'Tus skills',
+  skillsNone: 'No tienes skills propias todavía. Sube un SKILL.md para añadir una.',
   needName: 'Escribe un nombre.',
   needRuntime: 'Elige una CLI.',
   saveError: 'No se pudo guardar el agente.',
@@ -157,6 +179,17 @@ const en: AgentsCopy = {
   skillsLabel: 'Skills',
   skillsHint: 'The agent applies them on every reply.',
   skillsLoading: 'Loading skills…',
+  switcherTitle: 'Agents',
+  switcherNone: 'No agent',
+  switcherAll: 'All agents',
+  skillsSearch: 'Search skills…',
+  skillsUpload: 'Upload SKILL.md',
+  skillsUploaded: (name) => `Skill "${name}" added.`,
+  skillsUploadError: 'Could not import that file. It must be a SKILL.md with content.',
+  skillsSelected: 'Selected',
+  skillRemove: (name) => `Remove ${name}`,
+  skillsSuggested: 'Your skills',
+  skillsNone: "You don't have any skills of your own yet. Upload a SKILL.md to add one.",
   needName: 'Enter a name.',
   needRuntime: 'Pick a CLI.',
   saveError: 'Could not save the agent.',

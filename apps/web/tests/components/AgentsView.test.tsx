@@ -63,7 +63,11 @@ function stubProfiles(initial: AgentProfile[]) {
       return json({ profile: created }, 201);
     }
     if (href === '/api/skills') {
-      return json({ skills: [{ id: 'web-proto', name: 'Web prototype' }, { id: 'deck', name: 'Deck' }] });
+      return json({ skills: [{ id: 'web-proto', name: 'Web prototype', source: 'user' }, { id: 'deck', name: 'Deck', source: 'user' }, { id: 'bundled', name: 'Bundled thing', source: 'built-in' }] });
+    }
+    if (href === '/api/skills/import' && init?.method === 'POST') {
+      const body = JSON.parse(String(init.body));
+      return json({ skill: { id: body.name, name: body.name } }, 201);
     }
     if (href === '/api/design-systems') {
       return json({ designSystems: [{ id: 'airbnb', title: 'Airbnb' }] });
@@ -142,9 +146,9 @@ describe('AgentsView', () => {
 
     fireEvent.click(screen.getByTestId('agents-new'));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'UI' } });
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'Web prototype' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Deck' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Deck' }));
+    fireEvent.click(await screen.findByRole('button', { name: '+ Web prototype' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Deck' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deck' }));
     await screen.findByRole('option', { name: 'Airbnb' });
     fireEvent.change(screen.getByLabelText('Design system'), { target: { value: 'airbnb' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -155,6 +159,40 @@ describe('AgentsView', () => {
       skillIds: ['web-proto'],
       designSystemId: 'airbnb',
     });
+  });
+
+  it('uploads a SKILL.md, imports it and selects it for the agent', async () => {
+    const fetchMock = stubProfiles([]);
+    renderView();
+    await screen.findByTestId('agents-empty');
+    fireEvent.click(screen.getByTestId('agents-new'));
+
+    const file = new File(['---\nname: my-skill\ndescription: Does things\n---\nDo the thing.'], 'SKILL.md');
+    fireEvent.change(screen.getByTestId('skill-upload'), { target: { files: [file] } });
+
+    await screen.findByText('Skill "my-skill" added.');
+    const imp = fetchMock.mock.calls.find(([url]) => String(url) === '/api/skills/import');
+    expect(JSON.parse(String(imp?.[1]?.body))).toMatchObject({
+      name: 'my-skill',
+      description: 'Does things',
+      body: 'Do the thing.',
+    });
+    expect(screen.getByRole('button', { name: 'Remove my-skill' })).toBeTruthy();
+  });
+
+  it('suggests only the user\'s own skills and filters them as you type', async () => {
+    stubProfiles([]);
+    renderView();
+    await screen.findByTestId('agents-empty');
+    fireEvent.click(screen.getByTestId('agents-new'));
+    await screen.findByRole('button', { name: '+ Deck' });
+    // Bundled skills are never suggested, only the user's own.
+    expect(screen.queryByRole('button', { name: '+ Bundled thing' })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Search skills…'), { target: { value: 'deck' } });
+
+    expect(screen.queryByRole('button', { name: '+ Web prototype' })).toBeNull();
+    expect(screen.getByRole('button', { name: '+ Deck' })).toBeTruthy();
   });
 
   it('refuses to save an agent without a name', async () => {
