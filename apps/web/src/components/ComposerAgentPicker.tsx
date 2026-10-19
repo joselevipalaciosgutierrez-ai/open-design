@@ -136,10 +136,14 @@ export function ComposerAgentPicker({ value, onChange }: ComposerAgentPickerProp
         title={selected?.role ?? copy.switcherTitle}
       >
         <span className="composer-mode__icon" aria-hidden>
-          <Icon name="users" size={16} />
+          {selected?.emoji ? (
+            <span className="composer-mode__emoji">{selected.emoji}</span>
+          ) : (
+            <Icon name="users" size={16} />
+          )}
         </span>
         <span className="composer-mode__label">
-          {selected ? profileLabel(selected) : hasValue ? '…' : copy.switcherLabel}
+          {selected ? selected.name : hasValue ? '…' : copy.switcherLabel}
         </span>
       </button>
       {hasValue ? (
@@ -165,6 +169,24 @@ export function ComposerAgentPicker({ value, onChange }: ComposerAgentPickerProp
             >
               {profiles.length === 0 ? (
                 <div className="composer-mode-menu__desc">{copy.switcherEmpty}</div>
+              ) : null}
+              {hasValue ? (
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={false}
+                  className="composer-mode-menu__item"
+                  data-testid="composer-agent-default"
+                  onClick={() => {
+                    setOpen(false);
+                    onChange(null);
+                  }}
+                >
+                  <span className="composer-mode-menu__head">
+                    <span className="composer-mode-menu__name">{copy.switcherNone}</span>
+                  </span>
+                  <span className="composer-mode-menu__desc">{copy.switcherNoneHint}</span>
+                </button>
               ) : null}
               {profiles.map((profile) => (
                 <button

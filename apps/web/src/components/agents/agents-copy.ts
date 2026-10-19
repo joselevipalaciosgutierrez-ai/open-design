@@ -52,6 +52,7 @@ export interface AgentsCopy {
   switcherClear: string;
   switcherEmpty: string;
   switcherNone: string;
+  switcherNoneHint: string;
   switcherAll: string;
   skillsSearch: string;
   skillsUpload: string;
@@ -71,6 +72,12 @@ export interface AgentsCopy {
   previewClose: string;
   statusTasks: string;
   statusTasksProgress: (done: number, total: number) => string;
+  deliveryContinue: string;
+  deliveryPublish: string;
+  deliveryRetry: string;
+  deliveryContinueMessage: (stage: string) => string;
+  deliveryPublishMessage: string;
+  deliveryRetryMessage: (stage: string) => string;
   statusBackground: string;
   statusFinished: (count: number) => string;
   statusChanges: string;
@@ -146,7 +153,8 @@ const es: AgentsCopy = {
   switcherTitle: 'Agentes',
   switcherClear: 'Quitar agente',
   switcherEmpty: 'Todavía no tienes agentes.',
-  switcherNone: 'Sin agente',
+  switcherNone: 'Predeterminado',
+  switcherNoneHint: 'Vuelve al asistente por defecto, que reparte el trabajo entre tus agentes.',
   switcherAll: 'Todos los agentes',
   skillsSearch: 'Buscar skill…',
   skillsUpload: 'Subir SKILL.md',
@@ -166,6 +174,12 @@ const es: AgentsCopy = {
   previewClose: 'Cerrar vista previa',
   statusTasks: 'Tareas',
   statusTasksProgress: (done, total) => `${done} de ${total}`,
+  deliveryContinue: 'Continuar',
+  deliveryPublish: 'Publicar',
+  deliveryRetry: 'Reintentar',
+  deliveryContinueMessage: (stage) => `Continúa con la siguiente etapa: ${stage}.`,
+  deliveryPublishMessage: 'Sí, publica el resultado.',
+  deliveryRetryMessage: (stage) => `Reintenta la etapa bloqueada: ${stage}.`,
   statusBackground: 'Segundo plano',
   statusFinished: (count) => (count === 1 ? '1 finalizado' : `${count} finalizados`),
   statusChanges: 'Cambios',
@@ -232,7 +246,8 @@ const en: AgentsCopy = {
   switcherTitle: 'Agents',
   switcherClear: 'Remove agent',
   switcherEmpty: "You don't have any agents yet.",
-  switcherNone: 'No agent',
+  switcherNone: 'Default',
+  switcherNoneHint: 'Back to the default assistant, which hands work to your agents.',
   switcherAll: 'All agents',
   skillsSearch: 'Search skills…',
   skillsUpload: 'Upload SKILL.md',
@@ -252,6 +267,12 @@ const en: AgentsCopy = {
   previewClose: 'Close preview',
   statusTasks: 'Tasks',
   statusTasksProgress: (done, total) => `${done} of ${total}`,
+  deliveryContinue: 'Continue',
+  deliveryPublish: 'Publish',
+  deliveryRetry: 'Retry',
+  deliveryContinueMessage: (stage) => `Continue with the next stage: ${stage}.`,
+  deliveryPublishMessage: 'Yes, publish the result.',
+  deliveryRetryMessage: (stage) => `Retry the blocked stage: ${stage}.`,
   statusBackground: 'Background',
   statusFinished: (count) => `${count} finished`,
   statusChanges: 'Changes',

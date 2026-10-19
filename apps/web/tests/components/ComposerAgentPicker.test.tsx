@@ -90,6 +90,23 @@ describe('ComposerAgentPicker', () => {
     expect(screen.getByTestId('composer-agent-trigger').textContent).toBe('Agentes');
   });
 
+  it('offers "Predeterminado" in the menu only while an agent is selected', async () => {
+    stub();
+    const onChange = vi.fn();
+    render(<Host initial="a1" onChange={onChange} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('composer-agent-trigger').textContent).toContain('Diseño'),
+    );
+
+    fireEvent.click(screen.getByTestId('composer-agent-trigger'));
+    fireEvent.click(await screen.findByTestId('composer-agent-default'));
+
+    expect(onChange).toHaveBeenLastCalledWith(null);
+    expect(screen.getByTestId('composer-agent-trigger').textContent).toBe('Agentes');
+    fireEvent.click(screen.getByTestId('composer-agent-trigger'));
+    expect(screen.queryByTestId('composer-agent-default')).toBeNull();
+  });
+
   it('tells you there are no agents yet instead of showing an empty menu', async () => {
     stub([]);
     render(<Host />);
