@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectFile, RunDelegate } from '@open-design/contracts';
 
-import { buildStatusPanelState, MAX_LISTED_CHANGES } from '../../src/runtime/chat/status-panel';
+import { buildStatusPanelState, deliveryActionOf, MAX_LISTED_CHANGES } from '../../src/runtime/chat/status-panel';
 
 function file(name: string, mtime: number, over: Partial<ProjectFile> = {}): ProjectFile {
   return { name, size: 10, mtime, kind: 'text', mime: 'text/plain', ...over } as ProjectFile;
@@ -31,7 +31,7 @@ const none = { messages: [], delegates: [], files: [], since: 0 };
 describe('buildStatusPanelState', () => {
   it('is empty when there is nothing to show', () => {
     const state = buildStatusPanelState(none);
-    expect(state).toEqual({ tasks: null, background: null, changes: null, isEmpty: true });
+    expect(state).toEqual({ delivery: null, tasks: null, background: null, changes: null, isEmpty: true });
   });
 
   describe('tasks', () => {
@@ -139,3 +139,54 @@ describe('buildStatusPanelState', () => {
     });
   });
 });
+
+
+describe('staged delivery in the status panel', () => {
+  const stage = (id: string, status: string, name = `Etapa ${id}`) => ({
+    id, name, agent: null, deliverable: null, status, notes: null,
+  });
+  const delivery = (stages: ReturnType<typeof stage>[]) => {
+    const done = stages.filter((s) => s.status === 'done').length;
+    const next = stages.find((s) => s.status !== 'done') ?? null;
+    return {
+      present: true, goal: 'g', stages, next, completed: done, total: stages.length,
+      finished: next === null, blocked: stages.some((s) => s.status === 'blocked'), issues: [], violations: [],
+    } as never;
+  };
+  const base = { messages: [], delegates: [], files: [], since: 0 };
+
+  it('uses the stages as the tasks, ahead of tool-call steps', () => {
+    const state = buildStatusPanelState({
+      ...base,
+      delivery: delivery([stage('design', 'done'), stage('build', 'running'), stage('publish', 'pending')]),
+    });
+    expect(state.tasks?.items.map((t) => [t.content, t.mark])).toEqual([
+      ['Etapa design', 'done'], ['Etapa build', 'running'], ['Etapa publish', 'pending'],
+    ]);
+    expect(state.tasks?.completed).toBe(1);
+  });
+
+  it('offers nothing while a run works, continue after a checkpoint, retry when blocked', () => {
+    const mid = delivery([stage('design', 'done'), stage('build', 'pending'), stage('publish', 'pending')]);
+    expect(deliveryActionOf(mid, true)).toBeNull();
+    expect(deliveryActionOf(mid, false)).toEqual({ kind: 'continue', stageName: 'Etapa build' });
+    const blocked = delivery([stage('design', 'done'), stage('build', 'blocked'), stage('publish', 'pending')]);
+    expect(deliveryActionOf(blocked, false)).toEqual({ kind: 'retry', stageName: 'Etapa build' });
+  });
+
+  it('offers publish only when everything before it is done', () => {
+    expect(
+      deliveryActionOf(delivery([stage('build', 'done'), stage('publish', 'pending')]), false),
+    ).toEqual({ kind: 'publish' });
+    expect(
+      deliveryActionOf(delivery([stage('build', 'pending'), stage('publish', 'pending')]), false),
+    ).toEqual({ kind: 'continue', stageName: 'Etapa build' });
+    expect(deliveryActionOf(delivery([stage('publish', 'done')]), false)).toBeNull();
+  });
+
+  it('ignores a delivery that is not present', () => {
+    const state = buildStatusPanelState({ ...base, delivery: { present: false, stages: [] } as never });
+    expect(state.delivery).toBeNull();
+  });
+});
+

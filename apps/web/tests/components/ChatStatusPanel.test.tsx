@@ -10,7 +10,7 @@ import {
   type StatusPanelState,
 } from '../../src/runtime/chat/status-panel';
 
-const empty: StatusPanelState = { tasks: null, background: null, changes: null, isEmpty: true };
+const empty: StatusPanelState = { delivery: null, tasks: null, background: null, changes: null, isEmpty: true };
 
 function item(runId: string, status: StatusBackgroundItem['status'], over: Partial<StatusBackgroundItem> = {}) {
   return {
@@ -170,3 +170,33 @@ describe('formatElapsed', () => {
     expect(formatElapsed(2 * 3_600_000)).toBe('2 h');
   });
 });
+
+describe('ChatStatusPanel — staged delivery', () => {
+  const tasks = { items: [{ content: 'Diseño', mark: 'done' as const }, { content: 'Publicar', mark: 'pending' as const }], completed: 1, total: 2 };
+
+  it('offers the next move as a button that sends the user\'s reply', () => {
+    const onSendMessage = vi.fn();
+    renderPanel(
+      { tasks, delivery: { action: { kind: 'continue', stageName: 'Construir' }, finished: false } },
+      { onSendMessage },
+    );
+    fireEvent.click(screen.getByTestId('delivery-action-continue'));
+    expect(onSendMessage).toHaveBeenCalledWith('Continúa con la siguiente etapa: Construir.');
+  });
+
+  it('publishing is its own button with its own explicit yes', () => {
+    const onSendMessage = vi.fn();
+    renderPanel({ tasks, delivery: { action: { kind: 'publish' }, finished: false } }, { onSendMessage });
+    fireEvent.click(screen.getByTestId('delivery-action-publish'));
+    expect(onSendMessage).toHaveBeenCalledWith('Sí, publica el resultado.');
+  });
+
+  it('shows no button when there is no next move or nothing to send with', () => {
+    renderPanel({ tasks, delivery: { action: null, finished: false } }, { onSendMessage: vi.fn() });
+    expect(screen.queryByTestId('delivery-action-continue')).toBeNull();
+    cleanup();
+    renderPanel({ tasks, delivery: { action: { kind: 'retry', stageName: 'X' }, finished: false } });
+    expect(screen.queryByTestId('delivery-action-retry')).toBeNull();
+  });
+});
+

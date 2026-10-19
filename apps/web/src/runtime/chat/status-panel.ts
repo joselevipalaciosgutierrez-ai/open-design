@@ -1,4 +1,4 @@
-import type { ProjectFile, RunDelegate } from '@open-design/contracts';
+import type { DeliveryStatusResponse, ProjectFile, RunDelegate } from '@open-design/contracts';
 import type { AgentEvent } from '../../types';
 import { latestTodoWriteInputFromMessages, parseTodoWriteInput } from '../todos';
 import { buildActivitySteps } from './activity-steps';
@@ -32,7 +32,15 @@ export interface StatusChange {
   mtime: number;
 }
 
+/** What the user can do next in a staged delivery, decided from its state. */
+export type DeliveryAction =
+  | { kind: 'continue'; stageName: string }
+  | { kind: 'publish' }
+  | { kind: 'retry'; stageName: string };
+
 export interface StatusPanelState {
+  /** Present only while the tasks come from a staged delivery. */
+  delivery: { action: DeliveryAction | null; finished: boolean } | null;
   tasks: { items: StatusTask[]; completed: number; total: number } | null;
   background: { running: StatusBackgroundItem[]; finished: StatusBackgroundItem[] } | null;
   changes: { files: StatusChange[]; count: number } | null;
@@ -59,11 +67,33 @@ function isUserVisibleChange(file: ProjectFile): boolean {
   return !segments.some((segment) => segment.startsWith('.') || segment === 'node_modules');
 }
 
+/**
+ * The single next move offered for a delivery. Nothing is offered while a run
+ * works, and publishing is only offered once everything before it is done: the
+ * button is the user's explicit yes, so it must not appear early.
+ */
+export function deliveryActionOf(delivery: DeliveryStatusResponse, runActive: boolean): DeliveryAction | null {
+  if (runActive) return null;
+  const blocked = delivery.stages.find((stage) => stage.status === 'blocked');
+  if (blocked) return { kind: 'retry', stageName: blocked.name };
+  const next = delivery.next;
+  if (!next) return null;
+  if (next.id === 'publish') {
+    const othersDone = delivery.stages.every((stage) => stage.id === 'publish' || stage.status === 'done');
+    return othersDone ? { kind: 'publish' } : null;
+  }
+  return { kind: 'continue', stageName: next.name };
+}
+
 export function buildStatusPanelState(input: {
   /** The conversation's messages, for the assistant's latest plan. */
   messages: ReadonlyArray<{ role: string; events?: AgentEvent[] | undefined; runStatus?: string | undefined }> | undefined;
   /** App locale, for the wording of steps derived from tool calls. */
   locale?: string;
+  /** The project's staged delivery (`DELIVERY.json`), when it has one. */
+  delivery?: DeliveryStatusResponse | null;
+  /** A run is working right now: no "continue" while it is. */
+  runActive?: boolean;
   /** Runs the orchestrator started from this conversation's turns. */
   delegates: readonly RunDelegate[];
   files: readonly ProjectFile[];
@@ -72,8 +102,28 @@ export function buildStatusPanelState(input: {
 }): StatusPanelState {
   const todos = parseTodoWriteInput(latestTodoWriteInputFromMessages(input.messages));
   const planned: StatusTask[] = todos.map((todo) => ({ content: todo.content, mark: markOf(todo.status) }));
+  // A staged delivery is the plan of record: its stages are the tasks.
+  const delivery = input.delivery && input.delivery.present && input.delivery.stages.length > 0
+    ? input.delivery
+    : null;
+  const deliverySteps: StatusTask[] = delivery
+    ? delivery.stages.map((stage) => ({
+        content: stage.name,
+        mark: stage.status === 'done'
+          ? 'done'
+          : stage.status === 'running'
+            ? 'running'
+            : stage.status === 'blocked'
+              ? 'stopped'
+              : 'pending',
+      }))
+    : [];
   // An agent that writes no plan still shows what it did, one step per tool call.
-  const steps = planned.length > 0 ? planned : buildActivitySteps({ messages: input.messages, locale: input.locale ?? 'en' });
+  const steps = deliverySteps.length > 0
+    ? deliverySteps
+    : planned.length > 0
+      ? planned
+      : buildActivitySteps({ messages: input.messages, locale: input.locale ?? 'en' });
   const tasks =
     steps.length === 0
       ? null
@@ -106,7 +156,15 @@ export function buildStatusPanelState(input: {
             .map((file) => ({ name: file.name, kind: file.kind, mtime: file.mtime })),
         };
 
-  return { tasks, background, changes, isEmpty: !tasks && !background && !changes };
+  return {
+    delivery: delivery
+      ? { action: deliveryActionOf(delivery, input.runActive === true), finished: delivery.finished }
+      : null,
+    tasks,
+    background,
+    changes,
+    isEmpty: !tasks && !background && !changes,
+  };
 }
 
 /** "42s", "3 min", "2 h": how long something has been going, coarse on purpose. */

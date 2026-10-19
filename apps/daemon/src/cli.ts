@@ -277,6 +277,7 @@ const TEMPLATES_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
 // `od deploy …` posts to /api/projects/:id/deploy. The CLI form is the
 // embeddability contract: external agents can deploy a project file to
 // Vercel or Cloudflare Pages without going through the web UI.
+const DELIVERY_STRING_FLAGS = new Set(['daemon-url', 'workspace', 'workspace-member']);
 const DEPLOY_STRING_FLAGS = new Set([
   'daemon-url', 'file', 'provider', 'target',
   'cf-zone-id', 'cf-zone-name', 'cf-domain-prefix',
@@ -416,6 +417,7 @@ const SUBCOMMAND_MAP = {
   conversation: runConversation,
   chat: runChat,
   deploy: runDeploy,
+  delivery: runDelivery,
   daemon: runDaemon,
   atoms: runAtoms,
   skill: runSkills,
@@ -12305,4 +12307,66 @@ Options:
   if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
   const url = data?.url ?? data?.deploymentUrl ?? '';
   console.log(`[deploy] ${data?.id ?? 'done'}${url ? ` → ${url}` : ''}`);
+}
+
+// ---------------------------------------------------------------------------
+// Subcommand: od delivery
+// ---------------------------------------------------------------------------
+
+
+/**
+ * `od delivery status <projectId> [--json]` — where a staged delivery stands:
+ * which stage is next, what is blocked, and any edit to DELIVERY.json that broke
+ * its rules. Same `GET /api/projects/:id/delivery` the UI reads.
+ */
+async function runDelivery(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: DELIVERY_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const positionals = positionalArgs(args, DELIVERY_STRING_FLAGS);
+  const sub = positionals[0] ?? '';
+  if (flags.help || flags.h || sub !== 'status') {
+    console.log(`Usage: od delivery status <projectId> [--json] [--daemon-url <url>]
+
+Shows the staged delivery of a project (DELIVERY.json): progress, the next
+stage, a blocked stage, and edits that deleted or reworded a stage.`);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  const projectId = positionals[1] ?? '';
+  if (!projectId) {
+    console.error('projectId is required: od delivery status <projectId>');
+    process.exit(2);
+  }
+  const base = await cliDaemonBaseUrl(flags);
+  const workspaceHeaders = workspaceHeadersFromExplicitFlags(flags) ?? {};
+  let resp;
+  try {
+    resp = await fetch(`${base}/api/projects/${encodeURIComponent(projectId)}/delivery`, {
+      headers: { ...workspaceHeaders },
+    });
+  } catch (err) {
+    surfaceFetchError(err, base);
+    process.exit(3);
+  }
+  if (!resp.ok) return structuredHttpFailure(resp);
+  const data = await resp.json();
+  if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+  if (!data.present) {
+    console.log('[delivery] no DELIVERY.json in this project');
+    for (const issue of data.issues ?? []) console.log(`  ! ${issue}`);
+    return;
+  }
+  console.log(`[delivery] ${data.completed}/${data.total} done${data.goal ? ` — ${data.goal}` : ''}`);
+  for (const stage of data.stages) {
+    const mark = stage.status === 'done' ? 'x' : stage.status === 'blocked' ? '!' : stage.status === 'running' ? '~' : ' ';
+    console.log(`  [${mark}] ${stage.id}: ${stage.name} (${stage.status})`);
+  }
+  if (data.finished) console.log('  everything is done');
+  else if (data.next) console.log(`  next: ${data.next.id}`);
+  for (const v of data.violations ?? []) console.log(`  ! ${v}`);
 }

@@ -38,6 +38,25 @@ describe('renderOrchestratorDirective', () => {
     expect(text).toContain('at most 2 at once');
   });
 
+  it('does not retry an agent whose CLI is signed out', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('Do not retry the same agent');
+    expect(text).toContain('which agent needs signing in');
+  });
+
+  it('teaches a staged delivery with a state file, verification limits and checkpoints', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('spec → design → build → verify → review → publish');
+    expect(text).toContain('`DELIVERY.json`');
+    expect(text).toContain('only change a stage\'s `status`, add a `notes` field, and change its `agent`');
+    expect(text).toContain('`publish` stage that stays `pending` until the user confirms');
+    expect(text).toContain('run `git init` before the build stage');
+    expect(text).toContain('export a screenshot, then open it and look at it');
+    expect(text).toContain('At most 3 repair rounds');
+    expect(text).toContain('Before publishing, always ask');
+    expect(text).toContain('deploy "$OD_PROJECT_ID" --file');
+  });
+
   it('teaches the three cases, fail-cheap asking, delegation, and the standing-rules file', () => {
     const text = renderOrchestratorDirective(context());
     expect(text).toContain('A conversation or a simple question');

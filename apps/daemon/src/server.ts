@@ -912,6 +912,7 @@ import { registerSocialShareRoutes } from './routes/social-share.js';
 import { registerOpenDesignPublicMetadataRoutes } from './routes/open-design-public-metadata.js';
 import { registerWhatsNewRoutes } from './routes/whats-new.js';
 import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
+import { registerDeliveryRoutes } from './routes/delivery.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import {
   createCollabPresenceCloudClient,
@@ -9336,6 +9337,15 @@ export async function startServer({
     deploy: deployDeps,
     projectStore: projectStoreDeps,
     authorizeProjectRequest,
+  });
+  registerDeliveryRoutes(app, {
+    db,
+    http: httpDeps,
+    paths: pathDeps,
+    projectStore: projectStoreDeps,
+    validation: validationDeps,
+    authorizeProjectRequest,
+    resolveProjectDir,
   });
   app.use('/frames', express.static(FRAMES_DIR));
   registerProjectExportRoutes(app, {

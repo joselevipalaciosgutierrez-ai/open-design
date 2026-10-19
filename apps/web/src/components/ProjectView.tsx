@@ -340,6 +340,7 @@ import { useRouteFileOpen } from './useRouteFileOpen';
 import { ChatStatusPanel, ChatStatusToggle } from './ChatStatusPanel';
 import { buildStatusPanelState } from '../runtime/chat/status-panel';
 import { useConversationDelegates } from '../state/run-delegates';
+import { useProjectDelivery } from '../state/delivery';
 import { useStatusPanelPreference } from '../state/status-panel-pref';
 import { isChatOnlyLayout, shouldOpenPreviewForFile } from '../runtime/chat/chat-layout';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
@@ -13820,16 +13821,23 @@ export function ProjectView({
     statusRunIds,
     currentConversationStreaming,
   );
+  const projectDelivery = useProjectDelivery(
+    project?.id ?? null,
+    currentConversationStreaming || statusDelegates.some((d) => d.status === 'queued' || d.status === 'running'),
+    activeConversationId,
+  );
   const statusPanelState = useMemo(
     () =>
       buildStatusPanelState({
         messages,
         locale,
+        delivery: projectDelivery,
+        runActive: currentConversationStreaming,
         delegates: statusDelegates,
         files: projectFiles,
         since: activeConversation?.createdAt ?? 0,
       }),
-    [messages, locale, statusDelegates, projectFiles, activeConversation?.createdAt],
+    [messages, locale, projectDelivery, currentConversationStreaming, statusDelegates, projectFiles, activeConversation?.createdAt],
   );
   const chatOnlyLayout = isChatOnlyLayout({
     sessionMode: layoutSessionMode,
@@ -14327,6 +14335,9 @@ export function ProjectView({
             onOpenConversation={(conversationId) =>
               navigate({ kind: 'project', projectId: project.id, conversationId, fileName: null })
             }
+            onSendMessage={(text) => {
+              void handleSend(text, []);
+            }}
           />
         ) : null}
         <div

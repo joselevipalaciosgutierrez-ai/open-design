@@ -194,6 +194,24 @@ const REGISTRY: readonly Entry[] = [
       + 'piece an agent did not finish. That is the user\'s own task, not host '
       + 'infrastructure state; the limits line above it carries no narration.',
   },
+  {
+    file: 'packages/contracts/src/prompts/orchestrator.ts',
+    match: 'stop, set the stage to `blocked`, and tell the user what is failing',
+    chars: [468],
+    verdict: 'self-report',
+    why: 'The user asked for a built, verified product. A failing build or test '
+      + 'is the outcome of that work, so reporting it after the repair rounds '
+      + 'are used up is the model reporting its own task, not host state.',
+  },
+  {
+    file: 'packages/contracts/src/prompts/orchestrator.ts',
+    match: 'which agent needs signing in',
+    chars: [258],
+    verdict: 'self-report',
+    why: 'The agent is one the user configured and asked the orchestrator to '
+      + 'use. When its run fails the work is not done, so saying which agent '
+      + 'needs signing in is reporting the outcome of the user\'s own task.',
+  },
   // ---- The two prior fixes. These lines FORBID narration. ----
   {
     file: 'apps/daemon/src/prompts/official-system.ts',

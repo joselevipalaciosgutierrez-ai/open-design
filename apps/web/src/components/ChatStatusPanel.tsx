@@ -53,10 +53,13 @@ export function ChatStatusPanel({
   state,
   onOpenFile,
   onOpenConversation,
+  onSendMessage,
 }: {
   state: StatusPanelState;
   onOpenFile: (name: string) => void;
   onOpenConversation: (conversationId: string) => void;
+  /** Sends a message to the conversation: the delivery buttons are the user's reply. */
+  onSendMessage?: (text: string) => void;
 }) {
   const copy = useAgentsCopy();
   const running = state.background?.running ?? [];
@@ -64,6 +67,22 @@ export function ChatStatusPanel({
   const [showFinished, setShowFinished] = useState(false);
   const who = (agent: { name: string; emoji: string | null } | null) =>
     agent ? [agent.emoji, agent.name].filter(Boolean).join(' ') : copy.delegateWorker;
+
+  const action = state.delivery?.action ?? null;
+  const actionLabel = !action
+    ? ''
+    : action.kind === 'publish'
+      ? copy.deliveryPublish
+      : action.kind === 'retry'
+        ? copy.deliveryRetry
+        : copy.deliveryContinue;
+  const actionMessage = !action
+    ? ''
+    : action.kind === 'publish'
+      ? copy.deliveryPublishMessage
+      : action.kind === 'retry'
+        ? copy.deliveryRetryMessage(action.stageName)
+        : copy.deliveryContinueMessage(action.stageName);
 
   return (
     <aside className={styles.root} data-testid="chat-status-panel">
@@ -96,6 +115,16 @@ export function ChatStatusPanel({
               </li>
             ))}
           </ul>
+          {action && onSendMessage ? (
+            <button
+              type="button"
+              className={styles.action}
+              data-testid={`delivery-action-${action.kind}`}
+              onClick={() => onSendMessage(actionMessage)}
+            >
+              {actionLabel}
+            </button>
+          ) : null}
         </Section>
       ) : null}
 
