@@ -1189,7 +1189,7 @@ export function InlineModelSwitcher({
         }}
         {...longPress.handlers}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={open || cliMenuOpen}
         // No hover bubble: the chip already prints the model it would name,
         // and the popover it opens spells out the agent — a tooltip repeating
         // both only covered the composer text under it. The accessible name

@@ -1,0 +1,149 @@
+/* Composer chips rest as their mark alone and open up on hover.
+   Owner: the composer footer — Home, and the project chat in Ask / Design / Plan.
+
+   Three chips share the behaviour: the model/CLI chip (`.avatar-agent-trigger`
+   in the project chat; Home's own rule lives in home/home-hero.css), the agent
+   picker and the mode picker (`.composer-mode`). At rest each is an icon; the
+   name, and the × that clears a selection, collapse to zero width and come back
+   on hover, keyboard focus or while the menu is open. `max-width` is what
+   animates so a name still sizes to its own text. The labels stay in the DOM:
+   they are what the triggers read out.
+
+   Timing is shared on purpose: a soft, long ease with a short grace delay before
+   opening and before closing, so sweeping the pointer across the row eases chips
+   open and shut instead of flashing them. */
+.composer-mode,
+.app .composer-row .avatar-agent-trigger {
+  --chip-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --chip-open: 380ms;
+  --chip-fade: 260ms;
+  --chip-delay: 120ms;
+}
+
+/* ── Model chip in the project chat ── */
+.app .composer-row .avatar-agent-trigger .avatar-agent-trigger__model,
+.chat-skin .composer-row .avatar-agent-trigger .avatar-agent-trigger__model,
+.chat-composer-fixed-layer .composer-row .avatar-agent-trigger .avatar-agent-trigger__model {
+  max-width: 0;
+  margin-left: -7px;
+  opacity: 0;
+  transition:
+    max-width 380ms cubic-bezier(0.32, 0.72, 0, 1) 140ms,
+    margin-left 380ms cubic-bezier(0.32, 0.72, 0, 1) 140ms,
+    opacity 260ms cubic-bezier(0.32, 0.72, 0, 1) 140ms;
+}
+.app .composer-row .avatar-agent-trigger:hover .avatar-agent-trigger__model,
+.app .composer-row .avatar-agent-trigger:focus-visible .avatar-agent-trigger__model,
+.app .composer-row .avatar-agent-trigger[aria-expanded='true'] .avatar-agent-trigger__model,
+.chat-skin .composer-row .avatar-agent-trigger:hover .avatar-agent-trigger__model,
+.chat-skin .composer-row .avatar-agent-trigger:focus-visible .avatar-agent-trigger__model,
+.chat-skin .composer-row .avatar-agent-trigger[aria-expanded='true'] .avatar-agent-trigger__model,
+.chat-composer-fixed-layer .composer-row .avatar-agent-trigger:hover .avatar-agent-trigger__model,
+.chat-composer-fixed-layer .composer-row .avatar-agent-trigger:focus-visible .avatar-agent-trigger__model,
+.chat-composer-fixed-layer .composer-row .avatar-agent-trigger[aria-expanded='true'] .avatar-agent-trigger__model {
+  max-width: 148px;
+  margin-left: 0;
+  opacity: 1;
+  transition-delay: 120ms;
+}
+
+/* ── Agent and mode pickers ──
+   One outlined pill per picker, the same circle as the "+" and palette buttons
+   beside it, whether or not something is selected. The border lives on the
+   ROOT so the × that clears a selection sits inside it when the pill opens.
+   The class is repeated to outrank the Home composer's and the agent picker's
+   own rules regardless of sheet order. */
+.composer-mode.composer-mode.composer-mode.composer-mode {
+  box-sizing: border-box;
+  height: 36px;
+  min-width: 36px;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-xs);
+  transition:
+    border-color var(--chip-fade) var(--chip-ease),
+    background-color var(--chip-fade) var(--chip-ease);
+}
+.composer-mode.composer-mode.composer-mode.composer-mode:hover,
+.composer-mode.composer-mode.composer-mode.composer-mode:focus-within,
+.composer-mode.composer-mode.composer-mode.composer-mode:has(.composer-mode__trigger.is-open) {
+  border-color: var(--border-strong);
+}
+.composer-mode.composer-mode.composer-mode.composer-mode .composer-mode__trigger,
+.composer-mode.composer-mode.composer-mode.composer-mode .composer-mode__trigger:hover:not(:disabled),
+.composer-mode.composer-mode.composer-mode.composer-mode .composer-mode__trigger.is-open {
+  width: auto;
+  min-width: 34px;
+  height: 34px;
+  gap: 0;
+  padding: 0 9px;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+.composer-mode.composer-mode.composer-mode.composer-mode .composer-mode__trigger:hover:not(:disabled),
+.composer-mode.composer-mode.composer-mode.composer-mode .composer-mode__trigger.is-open {
+  color: var(--text);
+}
+.composer-mode.composer-mode.composer-mode .composer-mode__label {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-width var(--chip-open) var(--chip-ease) var(--chip-delay),
+    margin-left var(--chip-open) var(--chip-ease) var(--chip-delay),
+    opacity var(--chip-fade) var(--chip-ease) var(--chip-delay);
+}
+.composer-mode.composer-mode.composer-mode .composer-mode__clear {
+  width: 0;
+  min-width: 0;
+  margin-right: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    width var(--chip-open) var(--chip-ease) var(--chip-delay),
+    margin-right var(--chip-open) var(--chip-ease) var(--chip-delay),
+    opacity var(--chip-fade) var(--chip-ease) var(--chip-delay),
+    background-color 120ms var(--chip-ease);
+}
+.composer-mode.composer-mode.composer-mode:hover .composer-mode__label,
+.composer-mode.composer-mode.composer-mode:focus-within .composer-mode__label,
+.composer-mode.composer-mode.composer-mode .composer-mode__trigger.is-open .composer-mode__label {
+  max-width: 160px;
+  margin-left: 6px;
+  opacity: 1;
+}
+.composer-mode.composer-mode.composer-mode:hover .composer-mode__clear,
+.composer-mode.composer-mode.composer-mode:focus-within .composer-mode__clear,
+.composer-mode.composer-mode.composer-mode .composer-mode__trigger.is-open ~ .composer-mode__clear {
+  width: 20px;
+  margin-right: 8px;
+  opacity: 1;
+  pointer-events: auto;
+}
+.composer-mode__emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 15px;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .composer-row .avatar-agent-trigger .avatar-agent-trigger__model,
+  .composer-mode.composer-mode.composer-mode .composer-mode__label,
+  .composer-mode.composer-mode.composer-mode .composer-mode__clear {
+    transition: none;
+  }
+}

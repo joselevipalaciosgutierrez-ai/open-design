@@ -583,7 +583,7 @@ export function AvatarMenu({
         }}
         {...longPress.handlers}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={open || cliMenuOpen}
         data-tooltip={cliHoldHint}
         title={cliHoldHint}
         aria-label={t('avatar.title')}

@@ -1689,9 +1689,9 @@
   opacity: 0;
   overflow: hidden;
   transition:
-    max-width 180ms var(--ease-out),
-    margin-left 180ms var(--ease-out),
-    opacity 120ms var(--ease-out);
+    max-width 380ms cubic-bezier(0.32, 0.72, 0, 1) 140ms,
+    margin-left 380ms cubic-bezier(0.32, 0.72, 0, 1) 140ms,
+    opacity 260ms cubic-bezier(0.32, 0.72, 0, 1) 140ms;
 }
 .home-hero__execution-switcher .inline-switcher__chip:hover .inline-switcher__chip-model-name,
 .home-hero__execution-switcher .inline-switcher__chip:focus-visible .inline-switcher__chip-model-name,
@@ -1702,6 +1702,7 @@
   max-width: 160px;
   margin-left: 0;
   opacity: 1;
+  transition-delay: 120ms;
 }
 @media (prefers-reduced-motion: reduce) {
   .home-hero__execution-switcher .inline-switcher__chip-model-name,
