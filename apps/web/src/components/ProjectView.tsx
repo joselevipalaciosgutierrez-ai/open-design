@@ -341,6 +341,7 @@ import { ChatStatusPanel, ChatStatusToggle } from './ChatStatusPanel';
 import { buildStatusPanelState } from '../runtime/chat/status-panel';
 import { useConversationDelegates } from '../state/run-delegates';
 import { useProjectDelivery } from '../state/delivery';
+import { DeliveryStrip } from './delivery/DeliveryStrip';
 import { useStatusPanelPreference } from '../state/status-panel-pref';
 import { isChatOnlyLayout, shouldOpenPreviewForFile } from '../runtime/chat/chat-layout';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
@@ -14292,6 +14293,17 @@ export function ProjectView({
               collapseControlLifted={!workspaceFocused}
               backLabel={t('project.backToProjects')}
               composerFooterAccessory={executionControls}
+              deliveryStrip={
+                projectDelivery && !statusPanelVisible ? (
+                  <DeliveryStrip
+                    delivery={projectDelivery}
+                    runActive={currentConversationStreaming}
+                    onSendMessage={(text) => {
+                      void handleSend(text, []);
+                    }}
+                  />
+                ) : null
+              }
               designSystemPicker={(
                 <DesignSystemPicker
                   variant="home"

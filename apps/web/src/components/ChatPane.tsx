@@ -928,6 +928,10 @@ interface Props {
   byokSpeechVoice?: string;
   onChangeByokSpeechVoice?: (voice: string) => void;
   composerFooterAccessory?: ReactNode;
+  // A card pinned in the page flow between the transcript and the composer
+  // (the staged-delivery strip). It changes the transcript's height, so it is
+  // observed like the queued-send strip.
+  deliveryStrip?: ReactNode;
   // Slot rendered next to the composer's "+" menu (e.g. the working-dir pill).
   composerLeadingAccessory?: ReactNode;
   // Forwarded straight to the chat composer's mid-chat design-system
@@ -1464,6 +1468,7 @@ export function ChatPane({
   onChangeByokSpeechVoice,
   composerLeadingAccessory,
   composerFooterAccessory,
+  deliveryStrip,
   currentDesignSystemId,
   onActiveDesignSystemChange,
   onShowToast,
@@ -1645,6 +1650,7 @@ export function ChatPane({
   const composerSlotRef = useRef<HTMLDivElement | null>(null);
   const composerLayerRef = useRef<HTMLDivElement | null>(null);
   const queuedSendStripRef = useRef<HTMLDivElement | null>(null);
+  const deliveryStripRef = useRef<HTMLDivElement | null>(null);
   /** The queued-send stack is spread open over the transcript (see `QueuedSendStack.onExpandedChange`). */
   const [queuedSendExpanded, setQueuedSendExpanded] = useState(false);
   const didInitialScrollRef = useRef(false);
@@ -3444,6 +3450,7 @@ export function ChatPane({
       };
     };
     const syncQueuedSendStrip = outsideLog(queuedSendStripRef);
+    const syncDeliveryStrip = outsideLog(deliveryStripRef);
 
     /*
      * 滚动容器**自己**也要观察:输入框长高、软键盘弹出、旁边的 flex 兄弟变大,
@@ -3459,12 +3466,14 @@ export function ChatPane({
     if (!chatLogSelfResizeObserveDisabled()) resizeObserver?.observe(el);
     syncObservedChildren();
     syncQueuedSendStrip();
+    syncDeliveryStrip();
 
     const mutationObserver =
       typeof MutationObserver !== 'undefined'
         ? new MutationObserver(() => {
             syncObservedChildren();
             syncQueuedSendStrip();
+            syncDeliveryStrip();
             scheduleFollowSync();
           })
         : null;
@@ -4778,6 +4787,11 @@ export function ChatPane({
               </div>
               {chatLogTray}
             </div>
+            {deliveryStrip ? (
+              <div ref={deliveryStripRef} data-testid="delivery-strip-slot">
+                {deliveryStrip}
+              </div>
+            ) : null}
             <QueuedSendStrip
               key={activeConversationId ?? projectId ?? 'draft'}
               containerRef={queuedSendStripRef}

@@ -72,6 +72,10 @@ export interface AgentsCopy {
   previewClose: string;
   statusTasks: string;
   statusTasksProgress: (done: number, total: number) => string;
+  deliveryTitle: string;
+  deliveryReady: string;
+  deliveryBlocked: string;
+  deliveryAllDone: string;
   deliveryContinue: string;
   deliveryPublish: string;
   deliveryRetry: string;
@@ -174,6 +178,10 @@ const es: AgentsCopy = {
   previewClose: 'Cerrar vista previa',
   statusTasks: 'Tareas',
   statusTasksProgress: (done, total) => `${done} de ${total}`,
+  deliveryTitle: 'Entrega',
+  deliveryReady: 'Lista para publicar',
+  deliveryBlocked: 'Bloqueada',
+  deliveryAllDone: 'Todo listo',
   deliveryContinue: 'Continuar',
   deliveryPublish: 'Publicar',
   deliveryRetry: 'Reintentar',
@@ -267,6 +275,10 @@ const en: AgentsCopy = {
   previewClose: 'Close preview',
   statusTasks: 'Tasks',
   statusTasksProgress: (done, total) => `${done} of ${total}`,
+  deliveryTitle: 'Delivery',
+  deliveryReady: 'Ready to publish',
+  deliveryBlocked: 'Blocked',
+  deliveryAllDone: 'All done',
   deliveryContinue: 'Continue',
   deliveryPublish: 'Publish',
   deliveryRetry: 'Retry',
