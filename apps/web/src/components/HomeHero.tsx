@@ -90,6 +90,7 @@ import { inferPluginPreview } from './plugins-home/preview';
 import { ComposerPlusMenu, PLUS_SUBMENU_RESOURCE_KIND } from './ComposerPlusMenu';
 import { ContextChipHoverCard } from './ContextChipHoverCard';
 import { workspaceContextDetailLine, workspaceContextKindLabel } from './workspace-context';
+import { hasHomeGreeting, homeGreeting } from '../runtime/home-greeting';
 import { FigmaHelpModal } from './FigmaHelpModal';
 import { TemplatePicker } from './home-hero/TemplatePicker';
 import { LibraryPicker } from './LibraryPicker';
@@ -1539,6 +1540,21 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
   const titleAriaLabel = titleParts
     ? `${titleParts.lead}${titlePinnedWord ?? titleRotatingWords[0] ?? ''}${titleParts.tail}`
     : undefined;
+  /* Spanish and English greet by the time of day (and the first name when the
+     account has one); every other locale keeps its translated headline. Computed
+     once per mount: the seed is the calendar day, so the wording does not shuffle
+     while the page is open. */
+  const greeting = useMemo(() => {
+    if (!hasHomeGreeting(locale)) return null;
+    const now = new Date();
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000);
+    return homeGreeting({
+      locale,
+      hour: now.getHours(),
+      name: workspaceContext?.displayName,
+      seed: dayOfYear,
+    });
+  }, [locale, workspaceContext?.displayName]);
   let optionRenderIndex = 0;
 
   return (
@@ -1581,18 +1597,22 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
           <h1
             className={
               'home-hero__title' +
-              (endsWithFullWidthPunctuation(t('homeHero.title'))
+              (greeting ? ' home-hero__title--greeting' : '') +
+              (!greeting && endsWithFullWidthPunctuation(t('homeHero.title'))
                 ? ' home-hero__title--optical-trim'
                 : '')
             }
-            aria-label={titleAriaLabel}
+            aria-label={greeting ? greeting.heading : titleAriaLabel}
+            data-testid="home-hero-title"
           >
             {/* A locale opts into the rotating noun by putting `{word}` in its
                 own headline string — en / zh-CN / zh-TW do; the other 16 keep a
                 plain sentence and fall straight through to the `else`. Nothing
                 here knows which locale is which, so any translation can join
                 later by editing one string. */}
-            {titleParts ? (
+            {greeting ? (
+              greeting.heading
+            ) : titleParts ? (
               <>
                 {titleParts.lead}
                 <RotatingTitleWord words={titleRotatingWords} pinned={titlePinnedWord} />
@@ -1603,7 +1623,9 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
             )}
           </h1>
           {/* One quiet line under the headline (per product). */}
-          <p className="home-hero__subtitle">{t('homeHero.subtitle')}</p>
+          <p className={`home-hero__subtitle${greeting ? ' home-hero__subtitle--greeting' : ''}`}>
+            {greeting ? greeting.subtitle : t('homeHero.subtitle')}
+          </p>
         </>
       )}
 

@@ -170,6 +170,18 @@
    flex cross-axis centring hand back half of it, which is exactly the shift the
    ink needs. Measured against the live card: -0.55em lands it within 0.1px.
    `.home-hero__title` sets `margin: 0 0 …`, so this has to come after it. */
+/* The time-of-day greeting is the page's headline, so it is set larger than the
+   old 32px sentence and its question sits a size up as well. */
+.home-hero__title--greeting {
+  font-size: clamp(40px, 5.4vw, 58px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin-bottom: var(--spacing-6, 6px);
+}
+.home-hero__subtitle--greeting {
+  font-size: clamp(17px, 1.7vw, 20px);
+  margin-bottom: var(--spacing-24, 24px);
+}
 .home-hero__title--optical-trim {
   margin-right: -0.55em;
 }
