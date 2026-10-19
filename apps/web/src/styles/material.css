@@ -84,11 +84,11 @@
    (same contract as tokens.css). Surfaces sit on the elevated neutral
    (#353535) so translucent layers still read as lifted off #202020. */
 [data-theme='dark'] {
-  --material-ultrathin: rgba(53, 53, 53, 0.45);
-  --material-thin: rgba(53, 53, 53, 0.6);
-  --material-regular: rgba(53, 53, 53, 0.72);
-  --material-thick: rgba(53, 53, 53, 0.85);
-  --glass-clear: rgba(32, 32, 32, 0.18);
+  --material-ultrathin: rgba(28, 28, 28, 0.45);
+  --material-thin: rgba(28, 28, 28, 0.6);
+  --material-regular: rgba(28, 28, 28, 0.72);
+  --material-thick: rgba(28, 28, 28, 0.85);
+  --glass-clear: rgba(18, 18, 18, 0.18);
   --glass-clear-dim: rgba(0, 0, 0, 0.35);
   --vibrancy-label: rgba(250, 250, 250, 0.92);
   --vibrancy-label-secondary: rgba(237, 237, 237, 0.62);
@@ -105,11 +105,11 @@
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
-    --material-ultrathin: rgba(53, 53, 53, 0.45);
-    --material-thin: rgba(53, 53, 53, 0.6);
-    --material-regular: rgba(53, 53, 53, 0.72);
-    --material-thick: rgba(53, 53, 53, 0.85);
-    --glass-clear: rgba(32, 32, 32, 0.18);
+    --material-ultrathin: rgba(28, 28, 28, 0.45);
+    --material-thin: rgba(28, 28, 28, 0.6);
+    --material-regular: rgba(28, 28, 28, 0.72);
+    --material-thick: rgba(28, 28, 28, 0.85);
+    --glass-clear: rgba(18, 18, 18, 0.18);
     --glass-clear-dim: rgba(0, 0, 0, 0.35);
     --vibrancy-label: rgba(250, 250, 250, 0.92);
     --vibrancy-label-secondary: rgba(237, 237, 237, 0.62);

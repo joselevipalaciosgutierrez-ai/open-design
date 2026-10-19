@@ -1,0 +1,112 @@
+/* Dark-theme corrections for surfaces whose original rules hard-code a light
+   colour. Everything here is written with tokens (`--bg-*`, `--text-*`,
+   `--material-*`) so it follows the theme; a hard-coded value would only move
+   the problem.
+
+   Owner: the Appearance setting (components/appearance). Add a block per
+   surface, with the rule it overrides named in the comment, and delete the block
+   when the original rule is migrated to a token. Loaded last. */
+
+/* The Home / Agents content panel is a translucent white sheet over the window
+   material (home/entry-layout.css `.entry-main`). In dark it is the dark
+   material instead. */
+[data-theme='dark'] .entry-main {
+  --entry-content-surface: var(--material-thick);
+}
+
+/* The chat transcript sits directly on the page: no lifted panel behind the
+   messages (same as Ask in light), so the column and the page read as one. */
+[data-theme='dark'] .app .chat-log,
+[data-theme='dark'] .app .chat-log-wrap,
+[data-theme='dark'] .app .chat-log-viewport,
+[data-theme='dark'] .app .split > .split-chat-slot {
+  background: var(--bg-app);
+}
+
+/* ── Hard-coded light backgrounds ──
+   Generated from an audit: each selector paints a white or near-white fill in its
+   original rule and had no dark counterpart, so it gets the panel token in dark.
+   Selectors that show user content (previews, frames, thumbnails, canvases)
+   are left white on purpose: they depict the design, not the app. Migrate the
+   original rule to a token and delete its line here. */
+/* styles/home/entry-layout.css */
+[data-theme='dark'] .entry-top-right-account-pill {
+  background: var(--bg-panel);
+}
+/* styles/home/entry-layout.css */
+[data-theme='dark'] .entry-top-right-account-pill:not(.entry-top-right-account-pill--upgrade):hover,
+[data-theme='dark'] .entry-top-right-account-pill:not(.entry-top-right-account-pill--upgrade):has( .entry-top-right-credits[aria-expanded='true'] ) {
+  background: var(--bg-panel);
+}
+/* styles/home/entry-layout.css */
+[data-theme='dark'] .entry-nav-rail__menu-credits-upgrade {
+  background: var(--bg-panel);
+}
+/* styles/home/entry-layout.css */
+[data-theme='dark'] .entry-nav-rail__menu-credits-upgrade:hover:not(:disabled),
+[data-theme='dark'] .entry-nav-rail__menu-credits-upgrade:focus-visible {
+  background: var(--bg-panel);
+}
+/* styles/home/entry-layout.css */
+[data-theme='dark'] [data-testid="design-systems-tab"] > aside div:has(> [data-testid^="design-system-card-"][aria-pressed="true"]) {
+  background: var(--bg-panel);
+}
+/* styles/home/plugin-marketplace-demo.css */
+[data-theme='dark'] .plugin-marketplace__switch button.is-active {
+  background: var(--bg-panel);
+}
+/* styles/home/plugin-marketplace-demo.css */
+[data-theme='dark'] .plugin-marketplace__filters button.is-active,
+[data-theme='dark'] .plugin-marketplace__category-tags button.is-active {
+  background: var(--bg-panel);
+}
+/* styles/home/plugin-marketplace-demo.css */
+[data-theme='dark'] .plugin-marketplace__create-tabs button.is-active {
+  background: var(--bg-panel);
+}
+/* styles/home/plugins-home.css */
+[data-theme='dark'] .plugins-home__use-menu-list {
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+}
+/* styles/home/plugins-home.css */
+[data-theme='dark'] .plugins-home__action--primary {
+  background: var(--bg-panel);
+}
+/* styles/viewer/routines.css */
+[data-theme='dark'] .workspace-shell .workspace-tab.is-active {
+  background: var(--bg-panel);
+}
+/* styles/viewer/routines.css */
+[data-theme='dark'] .app .df-panel,
+[data-theme='dark'] .app .df-main {
+  background: var(--bg-panel);
+}
+/* styles/viewer/routines.css */
+[data-theme='dark'] .app .df-body {
+  background: var(--bg-panel);
+}
+/* styles/workspace/design-files.css */
+[data-theme='dark'] .df-empty {
+  background: var(--bg-panel);
+}
+/* styles/workspace/design-files.css */
+[data-theme='dark'] .df-card {
+  background: var(--bg-panel);
+}
+/* styles/workspace/drawer.css */
+[data-theme='dark'] .ws-tabs-bar.is-overflowing + .ws-add-tab {
+  background: var(--bg-panel);
+}
+
+
+/* macOS desktop: the window is translucent glass over the wallpaper, and the
+   shell's scrim (`--app-wash`, app-wash.css) is a thin 20% veil of the base
+   colour. Over a dark wallpaper that reads as a mid-gray rail and page, not the
+   app's black. In dark the scrim is nearly opaque so Home, Agents and Settings
+   sit on the same ground as the workspace; a sliver of the glass still shows. */
+html[data-theme='dark']:has(.workspace-shell--desktop[data-host-platform='darwin']) {
+  --app-wash: linear-gradient(
+    color-mix(in srgb, var(--bg-app) 90%, transparent),
+    color-mix(in srgb, var(--bg-app) 90%, transparent)
+  );
+}

@@ -210,7 +210,10 @@ import {
 import {
   applyAppearanceToDocument,
   resolveAccentColor,
+  resolveAppTheme,
 } from '../state/appearance';
+import { AppearanceSection } from './appearance/AppearanceSection';
+import { useAppearanceCopy } from './appearance/use-appearance-copy';
 import { isAutosaveDraftOnlyChange } from '../App';
 import {
   FAILURE_SOUNDS,
@@ -269,7 +272,6 @@ export type SettingsSection =
 function normalizeSettingsSection(section: SettingsSection): SettingsSection {
   switch (section) {
     case 'language':
-    case 'appearance':
     case 'notifications':
     case 'pet':
     case 'projectLocations':
@@ -1531,6 +1533,7 @@ export function SettingsDialog({
   onDraftChange,
 }: Props) {
   const { t, locale, setLocale } = useI18n();
+  const appearanceCopy = useAppearanceCopy();
   const analytics = useAnalytics();
   // Backfill the fixed-origin base URL on mount too, so a config persisted with
   // an empty baseUrl (e.g. selected AIHubMix before this resolution existed)
@@ -1550,9 +1553,11 @@ export function SettingsDialog({
     ReadonlySet<string>
   >(() => new Set());
   const previousInitialRef = useRef(initial);
-  // Accent only — the theme is a constant now that the app ships light-only.
+  // The appearance last written to disk: closing Settings reverts any live
+  // preview to this.
   const lastSavedAppearanceRef = useRef({
     accentColor: resolveAccentColor(initial.accentColor),
+    theme: resolveAppTheme(initial.theme),
   });
 
   useEffect(() => {
@@ -1568,8 +1573,9 @@ export function SettingsDialog({
   useEffect(() => {
     lastSavedAppearanceRef.current = {
       accentColor: resolveAccentColor(initial.accentColor),
+      theme: resolveAppTheme(initial.theme),
     };
-  }, [initial.accentColor]);
+  }, [initial.accentColor, initial.theme]);
 
   useEffect(() => {
     const previousInitial = previousInitialRef.current;
@@ -3364,6 +3370,7 @@ export function SettingsDialog({
           }
           lastSavedAppearanceRef.current = {
             accentColor: resolveAccentColor(persistedSnapshot.accentColor),
+            theme: resolveAppTheme(persistedSnapshot.theme),
           };
           // If a newer edit landed while the request was in flight,
           // leave the status as 'pending' so the next debounce tick
@@ -4394,6 +4401,18 @@ export function SettingsDialog({
               <span>
                 <strong>{t('settings.general')}</strong>
                 <small>{t('settings.generalHint')}</small>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`settings-nav-item${activeSection === 'appearance' ? ' active' : ''}`}
+              onClick={() => setActiveSection('appearance')}
+              data-testid="settings-nav-appearance"
+            >
+              <Icon name="palette" size={18} />
+              <span>
+                <strong>{appearanceCopy.navTitle}</strong>
+                <small>{appearanceCopy.navHint}</small>
               </span>
             </button>
             <button
@@ -6034,6 +6053,17 @@ export function SettingsDialog({
                 />
               </div>
             </section>
+          ) : null}
+
+          {activeSection === 'appearance' ? (
+            <AppearanceSection
+              theme={resolveAppTheme(cfg.theme)}
+              onThemeChange={(theme) => {
+                // Preview at once; autosave persists it and App re-applies it.
+                applyAppearanceToDocument({ accentColor: cfg.accentColor, theme });
+                setCfg((c) => ({ ...c, theme }));
+              }}
+            />
           ) : null}
 
           {activeSection === 'labs' ? (
