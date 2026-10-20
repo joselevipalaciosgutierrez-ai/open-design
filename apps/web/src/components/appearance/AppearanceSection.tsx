@@ -1,4 +1,7 @@
 import type { AppTheme } from '../../types';
+import { useI18n } from '../../i18n';
+import { AssistantSettings } from './AssistantSettings';
+import { AgentAccessSettings } from './AgentAccessSettings';
 import { useAppearanceCopy } from './use-appearance-copy';
 import styles from './AppearanceSection.module.css';
 
@@ -15,6 +18,8 @@ const OPTIONS: ReadonlyArray<AppTheme> = ['system', 'light', 'dark'];
  */
 export function AppearanceSection({ theme, onThemeChange }: AppearanceSectionProps) {
   const copy = useAppearanceCopy();
+  const { locale } = useI18n();
+  const lang = locale.toLowerCase().startsWith('es') ? 'es-MX' : 'en-US';
   const label = (value: AppTheme) =>
     value === 'light' ? copy.light : value === 'dark' ? copy.dark : copy.system;
 
@@ -56,6 +61,14 @@ export function AppearanceSection({ theme, onThemeChange }: AppearanceSectionPro
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="settings-general-block">
+        <AssistantSettings lang={lang} />
+      </div>
+
+      <div className="settings-general-block">
+        <AgentAccessSettings />
       </div>
     </section>
   );
