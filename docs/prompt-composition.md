@@ -262,6 +262,10 @@ Three blocks carry memory, each capped so it never grows with history:
 - **Lev's directive** (`renderOrchestratorDirective`, scope `everywhere`, shared
   by both sides): one latest-notebook line per listed project and its 5 most
   recent sessions; the rest is read with `od project notebook` / `od lev show`.
+- **Lessons** (`apps/daemon/src/lessons.ts`): how to record one is in the tool
+  prompt (`AGENT_LESSON_RULES`, both sides); the lessons themselves ride the
+  per-turn `clientSystemPrompt` (legacy side), at most 6: standing rules
+  (confirmed 3 times) first, then the ones whose words meet the message.
 
 ## Ask mode never takes OD Next
 

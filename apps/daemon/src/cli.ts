@@ -283,6 +283,7 @@ const DELIVERY_STRING_FLAGS = new Set(['daemon-url', 'workspace', 'workspace-mem
 const SPEECH_STRING_FLAGS = new Set(['daemon-url', 'voice', 'rate', 'lang', 'prompt-file', 'out']);
 const ACCESS_STRING_FLAGS = new Set(['daemon-url', 'read-all', 'mac-control']);
 const LEV_STRING_FLAGS = new Set(['daemon-url', 'title']);
+const LESSON_STRING_FLAGS = new Set(['daemon-url']);
 const MAC_STRING_FLAGS = new Set(['daemon-url', 'app', 'url', 'prompt-file']);
 const DEPLOY_STRING_FLAGS = new Set([
   'daemon-url', 'file', 'provider', 'target',
@@ -427,6 +428,7 @@ const SUBCOMMAND_MAP = {
   speech: runSpeech,
   access: runAccess,
   lev: runLev,
+  lesson: runLesson,
   mac: runMac,
   daemon: runDaemon,
   atoms: runAtoms,
@@ -12707,6 +12709,65 @@ Home shows the same sessions.`;
   });
   if (flags.json) return process.stdout.write(JSON.stringify(created) + '\n');
   console.log(`[lev] new session ${created.conversation?.id ?? created.id}`);
+}
+
+// `od lesson`: what agents learned from their own mistakes (lessons.ts). An
+// agent adds one from inside its run; the person lists and removes them.
+async function runLesson(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: LESSON_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const [sub = 'list', ...words] = positionalArgs(args, LESSON_STRING_FLAGS);
+  const usage = `Usage:
+  od lesson list [--json]                 What agents have learned
+  od lesson add "<one short rule>" [--json]
+                                          Record what you learned from a mistake
+                                          (from inside a run: it is kept for this
+                                          project and agent until it recurs elsewhere)
+  od lesson forget <id> [--json]          Remove one (the person; agents cannot)`;
+  if (flags.help || flags.h || !['list', 'add', 'forget'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  if (sub === 'list') {
+    const data = await accessCall(flags, '/api/lessons');
+    if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+    if (data.lessons.length === 0) console.log('[lesson] none yet');
+    for (const lesson of data.lessons) {
+      console.log(`${lesson.id}\t${lesson.scope}\t×${lesson.confirmations}\t${lesson.rule}`);
+    }
+    return;
+  }
+  if (sub === 'add') {
+    const rule = words.join(' ').trim();
+    if (!rule) {
+      console.error('Usage: od lesson add "<one short rule>"');
+      process.exit(2);
+    }
+    const data = await accessCall(flags, '/api/lessons', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ rule, ...(process.env.OD_RUN_ID ? { runId: process.env.OD_RUN_ID } : {}) }),
+    });
+    if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+    console.log(`[lesson] ${data.outcome === 'new' ? 'learned' : 'confirmed'}: ${data.lesson?.rule ?? rule}`);
+    return;
+  }
+  const id = words[0];
+  if (!id) {
+    console.error('Usage: od lesson forget <id>');
+    process.exit(2);
+  }
+  const base = await cliDaemonBaseUrl(flags);
+  const resp = await fetch(`${base}/api/lessons/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!resp.ok) return structuredHttpFailure(resp, 'lesson-not-found');
+  if (flags.json) return process.stdout.write(JSON.stringify({ deleted: id }) + '\n');
+  console.log(`[lesson] forgot ${id}`);
 }
 
 async function runAccess(args) {

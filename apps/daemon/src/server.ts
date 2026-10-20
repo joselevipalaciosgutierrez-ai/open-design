@@ -923,6 +923,8 @@ import { registerAgentAccessRoutes } from './routes/agent-access.js';
 import { findOrchestratorProjectId, registerOrchestratorRoutes } from './routes/orchestrator.js';
 import { appendNotebookEntry, NOTEBOOK_FRESH_RUN_MS, readNotebook, renderNotebookPrompt, runNotebookEntry } from './notebook.js';
 import { registerNotebookRoutes } from './routes/notebook.js';
+import { lessonAgentKey, registerLessonRoutes } from './routes/lessons.js';
+import { lessonsForTurn, readLessons, renderLessonsPrompt, renderPreviousFailureNudge } from './lessons.js';
 import { createAgentAccessStore } from './agent-access/access-store.js';
 import { createMacControl } from './agent-access/mac-control.js';
 import { startAgentGateway, type AgentGateway } from './agent-access/agent-gateway.js';
@@ -1945,6 +1947,17 @@ export const AGENT_TOKEN_RULES = [
   '- When a request reads two different ways, ask one short question instead of building both.',
 ];
 
+/**
+ * How an agent records what it learned (lessons.ts). Kept short and strict:
+ * a rule, not a story, and only when it would change what happens next time.
+ */
+export const AGENT_LESSON_RULES = [
+  '## Learning from mistakes',
+  '',
+  '- When something you did failed and you found what fixed it, or the person corrected how you did something, record one short rule so it does not happen again: `"$OD_NODE_BIN" "$OD_BIN" lesson add "<rule>"`.',
+  '- Write the rule, not the story ("Run pnpm install before building this project"), only when it would change what you do next time, and never for a one-off.',
+];
+
 export function createAgentRuntimeToolPrompt(
   daemonUrl: string,
   toolTokenGrant: { token?: string } | null = null,
@@ -1968,6 +1981,8 @@ export function createAgentRuntimeToolPrompt(
     ...AGENT_MAC_RULES,
     '',
     ...AGENT_TOKEN_RULES,
+    '',
+    ...AGENT_LESSON_RULES,
   ].join('\n');
 }
 
@@ -9444,6 +9459,13 @@ export async function startServer({
     listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
   });
   registerNotebookRoutes(app, { http: httpDeps, db, dataDir: RUNTIME_DATA_DIR });
+  registerLessonRoutes(app, {
+    http: httpDeps,
+    db,
+    dataDir: RUNTIME_DATA_DIR,
+    getRun: (runId) => design.runs.get(runId),
+    orchestratorProjectId: () => findOrchestratorProjectId(db),
+  });
   registerOrchestratorRoutes(app, {
     http: httpDeps,
     db,
@@ -11881,6 +11903,32 @@ export async function startServer({
     if (typeof projectId === 'string' && projectId && projectId !== findOrchestratorProjectId(db)) {
       projectNotebookPrompt = renderNotebookPrompt(projectId, await readNotebook(RUNTIME_DATA_DIR, projectId));
     }
+    // What this agent learned before (lessons.ts): standing rules and the ones
+    // that meet this message, at most a few. And, when this conversation's
+    // previous attempt failed, a nudge to record what fixes it.
+    let lessonsPrompt = '';
+    try {
+      const levProjectId = findOrchestratorProjectId(db);
+      const lessonProjectId = typeof projectId === 'string' && projectId && projectId !== levProjectId ? projectId : null;
+      const turnLessons = lessonsForTurn(
+        await readLessons(RUNTIME_DATA_DIR),
+        lessonAgentKey(db, { conversationId: run.conversationId, agentId: def.id }),
+        lessonProjectId,
+        typeof currentPrompt === 'string' ? currentPrompt : typeof message === 'string' ? message : '',
+      );
+      const previous = run.conversationId
+        ? design.runs
+            .list({ conversationId: run.conversationId })
+            .filter((other) => other.id !== run.id && design.runs.isTerminal(other.status))
+            .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))[0]
+        : undefined;
+      lessonsPrompt = [
+        renderLessonsPrompt(turnLessons),
+        previous?.status === 'failed' ? renderPreviousFailureNudge(typeof previous.error === 'string' ? previous.error : null) : '',
+      ].filter(Boolean).join('\n\n');
+    } catch {
+      lessonsPrompt = '';
+    }
     let runSkills: RunSkills | null = null;
     if (!strategyTaskAtStart) {
       try {
@@ -12745,6 +12793,8 @@ export async function startServer({
         runSkills?.indexPrompt ?? '',
         // Same for the project's notebook: it grows with every run.
         projectNotebookPrompt,
+        // And for lessons: they depend on the message.
+        lessonsPrompt,
         includeStableForPayload ? systemPrompt : '',
       ]
         .map((part) => (typeof part === 'string' ? part.trim() : ''))

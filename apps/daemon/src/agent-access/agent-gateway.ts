@@ -33,6 +33,8 @@ export function isBlockedForAgents(url: string | undefined, method = 'GET'): boo
   const reading = method.toUpperCase() === 'GET' || method.toUpperCase() === 'HEAD';
   if (under('/api/skills')) return !reading || lower !== '/api/skills';
   if (under('/api/agent-profiles')) return !reading;
+  // Agents record lessons; only the person removes them.
+  if (under('/api/lessons')) return method.toUpperCase() === 'DELETE';
   return false;
 }
 

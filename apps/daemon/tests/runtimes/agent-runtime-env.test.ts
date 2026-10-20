@@ -336,10 +336,17 @@ describe('agent runtime tool environment', () => {
 
   it('carries the always-on token-saving rules, short', () => {
     const prompt = createAgentRuntimeToolPrompt('http://127.0.0.1:7456', null);
-    const rules = prompt.slice(prompt.indexOf('## Spend tokens on the work'));
+    const rules = prompt.slice(prompt.indexOf('## Spend tokens on the work'), prompt.indexOf('## Learning from mistakes'));
     expect(rules).toContain('do not re-read a file already in this conversation');
     expect(rules).toContain('ask one short question');
     expect(rules.length / 4).toBeLessThan(200);
+  });
+
+  it('tells agents how to record a lesson, briefly', () => {
+    const prompt = createAgentRuntimeToolPrompt('http://127.0.0.1:7456', null);
+    const rules = prompt.slice(prompt.indexOf('## Learning from mistakes'));
+    expect(rules).toContain('lesson add');
+    expect(rules.length / 4).toBeLessThan(150);
   });
 });
 

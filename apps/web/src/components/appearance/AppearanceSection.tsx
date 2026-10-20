@@ -2,6 +2,7 @@ import type { AppTheme } from '../../types';
 import { useI18n } from '../../i18n';
 import { AssistantSettings } from './AssistantSettings';
 import { AgentAccessSettings } from './AgentAccessSettings';
+import { LessonsSettings } from './LessonsSettings';
 import { useAppearanceCopy } from './use-appearance-copy';
 import styles from './AppearanceSection.module.css';
 
@@ -69,6 +70,7 @@ export function AppearanceSection({ theme, onThemeChange }: AppearanceSectionPro
 
       <div className="settings-general-block">
         <AgentAccessSettings />
+        <LessonsSettings />
       </div>
     </section>
   );
