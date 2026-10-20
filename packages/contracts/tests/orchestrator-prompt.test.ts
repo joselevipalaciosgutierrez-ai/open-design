@@ -172,3 +172,21 @@ describe('Lev remembers without rereading', () => {
     expect(text).toContain('lev show <session id>');
   });
 });
+
+describe('Lev knows its agents', () => {
+  it('shows each agent\'s card in one line and how to choose between them', () => {
+    const text = renderOrchestratorDirective({
+      agents: [
+        { id: 'm', name: 'Mercado', runtimeId: 'claude', goodFor: 'investigación de mercado y competencia', notFor: 'diseño visual', delivers: 'informe en Markdown', record: '4 orders, 4 done' },
+        { id: 'd', name: 'Diseño', runtimeId: 'antigravity', goodFor: 'landing pages' },
+      ],
+      limits: { maxDepth: 2, maxRunsPerTree: 8, maxConcurrentPerTree: 3, maxInstancesPerAgent: 2 },
+      scope: 'everywhere',
+      projects: [],
+    });
+    expect(text).toContain('Mercado (id: m); runs on claude. good for: investigación de mercado y competencia; not for: diseño visual; delivers: informe en Markdown; record: 4 orders, 4 done');
+    expect(text).toContain('agent show <id>');
+    expect(text).toContain('never to one whose "not for" covers it');
+    expect(text).toContain('split into pieces');
+  });
+});

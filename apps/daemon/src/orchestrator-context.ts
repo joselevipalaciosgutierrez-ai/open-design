@@ -10,6 +10,7 @@ import { isSystemProject, type AgentProfile, type ChatSessionMode, type Orchestr
 
 import { countMessages, getConversation, listAgentProfiles, listConversations, listMessages, listProjects } from './db.js';
 import { lastNotebookEntrySync } from './notebook.js';
+import { describeAgentStats, readAgentStatsSync } from './agent-stats.js';
 import { findOrchestratorProjectId } from './routes/orchestrator.js';
 import { DEFAULT_DELEGATION_LIMITS, type DelegationLimits } from './delegation.js';
 
@@ -41,6 +42,8 @@ export interface ResolveOrchestratorInput {
   projects?: ReadonlyArray<{ id: string; name: string; lastNote?: string | null }>;
   /** Lev's earlier sessions, most recent first. */
   recentSessions?: ReadonlyArray<{ id: string; label: string; date: string }>;
+  /** Each agent's track record as one phrase, by profile id. */
+  agentRecords?: Readonly<Record<string, string>>;
 }
 
 function isDesignSystemEnrichment(hints: unknown): boolean {
@@ -74,6 +77,10 @@ export function resolveOrchestratorContext(input: ResolveOrchestratorInput): Orc
       role: profile.role,
       runtimeId: profile.runtimeId,
       model: profile.model,
+      goodFor: profile.card?.goodFor ?? null,
+      notFor: profile.card?.notFor ?? null,
+      delivers: profile.card?.delivers ?? null,
+      record: input.agentRecords?.[profile.id] ?? null,
     })),
     limits: {
       maxDepth: limits.maxDepth,
@@ -110,8 +117,16 @@ export function resolveOrchestratorForRun(
   const conversationId = input.run.conversationId;
   const levProjectId = findOrchestratorProjectId(db);
   const inOrchestratorSpace = !!levProjectId && input.run.projectId === levProjectId;
+  const agentRecords: Record<string, string> = {};
+  if (input.dataDir) {
+    for (const [profileId, stats] of Object.entries(readAgentStatsSync(input.dataDir))) {
+      const phrase = describeAgentStats(stats);
+      if (phrase) agentRecords[profileId] = phrase;
+    }
+  }
   return resolveOrchestratorContext({
     ...input,
+    agentRecords,
     inOrchestratorSpace,
     ...(inOrchestratorSpace
       ? {

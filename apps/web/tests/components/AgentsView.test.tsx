@@ -34,6 +34,7 @@ const design: AgentProfile = {
   updatedAt: 1,
   lastActiveAt: null,
   conversationCount: 0,
+  card: { goodFor: null, notFor: null, delivers: null },
 };
 
 const projects = [
@@ -158,6 +159,27 @@ describe('AgentsView', () => {
     expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
       skillIds: ['web-proto'],
       designSystemId: 'airbnb',
+    });
+  });
+
+  it('saves the card Lev reads to route work to the agent', async () => {
+    const fetchMock = stubProfiles([]);
+    renderView();
+    await screen.findByTestId('agents-empty');
+
+    fireEvent.click(screen.getByTestId('agents-new'));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Market' } });
+    fireEvent.change(screen.getByTestId('agent-routing-good-for'), { target: { value: 'market and competitor research' } });
+    fireEvent.change(screen.getByTestId('agent-routing-not-for'), { target: { value: 'visual design' } });
+    fireEvent.change(screen.getByTestId('agent-routing-delivers'), { target: { value: 'a Markdown report' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(true));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+    expect(JSON.parse(String(post?.[1]?.body)).card).toEqual({
+      goodFor: 'market and competitor research',
+      notFor: 'visual design',
+      delivers: 'a Markdown report',
     });
   });
 

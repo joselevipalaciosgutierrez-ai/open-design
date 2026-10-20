@@ -11,6 +11,7 @@ import {
   type AgentProfilesResponse,
 } from '@open-design/contracts';
 import {
+  normalizeAgentCard,
   deleteAgentProfile,
   getAgentProfile,
   insertAgentProfile,
@@ -107,6 +108,15 @@ export function parseAgentProfileInput(raw: unknown, partial: boolean): Parsed {
       };
     }
     out.skillIds = [...new Set(ids.map((id: string) => id.trim()).filter(Boolean))];
+  }
+
+  // The card the orchestrator reads (goodFor / notFor / delivers), short prose.
+  if (Object.prototype.hasOwnProperty.call(body, 'card')) {
+    const card = body.card;
+    if (card === null || typeof card !== 'object' || Array.isArray(card)) {
+      return { ok: false, message: 'card must be an object with goodFor, notFor, delivers' };
+    }
+    out.card = normalizeAgentCard(card);
   }
 
   return { ok: true, value: out };

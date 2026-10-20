@@ -237,3 +237,21 @@ describe('agent profiles · request validation', () => {
     ).toMatchObject({ ok: false });
   });
 });
+
+describe('agent profiles · card for the orchestrator', () => {
+  it('stores the card, and an update merges only the fields it carries', () => {
+    const db = openDb();
+    insertAgentProfile(db, profile({ card: { goodFor: 'landing pages', notFor: 'backend' } }));
+    expect(getAgentProfile(db, 'a1')?.card).toEqual({ goodFor: 'landing pages', notFor: 'backend', delivers: null });
+    const updated = updateAgentProfile(db, 'a1', { card: { delivers: 'HTML pages' } });
+    expect(updated?.card).toEqual({ goodFor: 'landing pages', notFor: 'backend', delivers: 'HTML pages' });
+  });
+
+  it('accepts only an object for the card, keeping the known fields', () => {
+    expect(parseAgentProfileInput({ card: 'x' }, true)).toMatchObject({ ok: false });
+    expect(parseAgentProfileInput({ card: { goodFor: '  research ', extra: 'drop' } }, true)).toEqual({
+      ok: true,
+      value: { card: { goodFor: 'research', notFor: null, delivers: null } },
+    });
+  });
+});

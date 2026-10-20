@@ -7,6 +7,7 @@ import path from 'node:path';
 
 import type { OrchestratorOrder, OrchestratorOrdersResponse, OrchestratorWorkspaceResponse } from '@open-design/contracts';
 
+import { readAgentStatsSync } from '../agent-stats.js';
 import { countMessages, getConversation, getProject, listConversations, listMessages, listProjects } from '../db.js';
 import type { RouteDeps } from '../server-context.js';
 
@@ -20,6 +21,8 @@ export interface RegisterOrchestratorRoutesDeps extends RouteDeps<'http'> {
   listRuns: () => Array<OrderRunRecord>;
   /** Where each run's persisted state lives (`<dir>/<runId>/state.json`). */
   runsDir: string;
+  /** The daemon's data root (agent track records). */
+  dataDir: string;
 }
 
 /** The fields of a run (in memory or persisted) that make an order. */
@@ -112,6 +115,11 @@ export function registerOrchestratorRoutes(app: Express, ctx: RegisterOrchestrat
     })();
     return creating;
   };
+
+  // Each agent's track record (agent-stats.ts), for `od agent show` and the app.
+  app.get('/api/agent-stats', async (_req, res) => {
+    res.json({ stats: readAgentStatsSync(ctx.dataDir) });
+  });
 
   app.get('/api/orchestrator/orders', requireLocal, async (req, res) => {
     const runId = typeof req.query.runId === 'string' ? req.query.runId : '';

@@ -448,6 +448,11 @@ function migrate(db: SqliteDb): void {
       `ALTER TABLE workspace_projects ADD COLUMN metadata_refresh_pending INTEGER NOT NULL DEFAULT 0`,
     );
   }
+  // The agent's card for the orchestrator (what to send it, what not, what it delivers).
+  const agentProfileCols = db.prepare(`PRAGMA table_info(agent_profiles)`).all() as DbRow[];
+  if (!agentProfileCols.some((c: DbRow) => c.name === 'card_json')) {
+    db.exec(`ALTER TABLE agent_profiles ADD COLUMN card_json TEXT`);
+  }
   const conversationCols = db.prepare(`PRAGMA table_info(conversations)`).all() as DbRow[];
   if (!conversationCols.some((c: DbRow) => c.name === 'session_mode')) {
     db.exec(`ALTER TABLE conversations ADD COLUMN session_mode TEXT NOT NULL DEFAULT 'design'`);
@@ -2196,6 +2201,7 @@ const AGENT_PROFILE_SELECT = `
          p.runtime_id AS runtimeId, p.model, p.instructions,
          p.skill_ids_json AS skillIdsJson,
          p.design_system_id AS designSystemId,
+         p.card_json AS cardJson,
          p.created_at AS createdAt, p.updated_at AS updatedAt,
          (SELECT MAX(c.updated_at) FROM conversations c
            WHERE c.agent_profile_id = p.id) AS lastActiveAt,
@@ -2214,6 +2220,26 @@ function parseAgentProfileSkillIds(json: unknown): string[] {
   }
 }
 
+const AGENT_CARD_FIELD_MAX = 600;
+
+/** Keeps only the card's known fields, as trimmed text (or null). */
+export function normalizeAgentCard(value: unknown) {
+  const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const field = (key: string) =>
+    typeof source[key] === 'string' && (source[key] as string).trim()
+      ? (source[key] as string).trim().slice(0, AGENT_CARD_FIELD_MAX)
+      : null;
+  return { goodFor: field('goodFor'), notFor: field('notFor'), delivers: field('delivers') };
+}
+
+function parseAgentCard(json: unknown) {
+  try {
+    return normalizeAgentCard(JSON.parse(String(json ?? '{}')));
+  } catch {
+    return normalizeAgentCard({});
+  }
+}
+
 function normalizeAgentProfile(r: DbRow) {
   return {
     id: String(r.id),
@@ -2225,6 +2251,7 @@ function normalizeAgentProfile(r: DbRow) {
     instructions: r.instructions ?? null,
     skillIds: parseAgentProfileSkillIds(r.skillIdsJson),
     designSystemId: r.designSystemId ?? null,
+    card: parseAgentCard(r.cardJson),
     createdAt: Number(r.createdAt),
     updatedAt: Number(r.updatedAt),
     lastActiveAt: r.lastActiveAt == null ? null : Number(r.lastActiveAt),
@@ -2250,8 +2277,8 @@ export function insertAgentProfile(db: SqliteDb, p: DbRow) {
   db.prepare(
     `INSERT INTO agent_profiles
        (id, name, role, emoji, runtime_id, model, instructions,
-        skill_ids_json, design_system_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        skill_ids_json, design_system_id, card_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     p.id,
     p.name,
@@ -2262,6 +2289,7 @@ export function insertAgentProfile(db: SqliteDb, p: DbRow) {
     p.instructions ?? null,
     JSON.stringify(Array.isArray(p.skillIds) ? p.skillIds : []),
     p.designSystemId ?? null,
+    JSON.stringify(normalizeAgentCard(p.card)),
     p.createdAt,
     p.updatedAt,
   );
@@ -2281,13 +2309,14 @@ export function updateAgentProfile(db: SqliteDb, id: string, patch: DbRow) {
     instructions: has('instructions') ? patch.instructions : existing.instructions,
     skillIds: has('skillIds') ? patch.skillIds : existing.skillIds,
     designSystemId: has('designSystemId') ? patch.designSystemId : existing.designSystemId,
+    card: has('card') ? normalizeAgentCard({ ...existing.card, ...(patch.card ?? {}) }) : existing.card,
     updatedAt: typeof patch.updatedAt === 'number' ? patch.updatedAt : Date.now(),
   };
   db.prepare(
     `UPDATE agent_profiles
         SET name = ?, role = ?, emoji = ?, runtime_id = ?, model = ?,
             instructions = ?, skill_ids_json = ?, design_system_id = ?,
-            updated_at = ?
+            card_json = ?, updated_at = ?
       WHERE id = ?`,
   ).run(
     merged.name,
@@ -2298,6 +2327,7 @@ export function updateAgentProfile(db: SqliteDb, id: string, patch: DbRow) {
     merged.instructions ?? null,
     JSON.stringify(Array.isArray(merged.skillIds) ? merged.skillIds : []),
     merged.designSystemId ?? null,
+    JSON.stringify(merged.card),
     merged.updatedAt,
     id,
   );

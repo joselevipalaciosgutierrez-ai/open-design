@@ -28,6 +28,14 @@ export interface OrchestratorAgent {
   /** The coding-agent CLI the agent runs on. */
   runtimeId: string;
   model?: string | null | undefined;
+  /** From the agent's card: what to send it. */
+  goodFor?: string | null | undefined;
+  /** From the agent's card: what not to send it. */
+  notFor?: string | null | undefined;
+  /** From the agent's card: what it hands back. */
+  delivers?: string | null | undefined;
+  /** Its track record, one phrase ("12 orders, 11 done"). */
+  record?: string | null | undefined;
 }
 
 export interface OrchestratorLimits {
@@ -87,7 +95,14 @@ function renderAgent(agent: OrchestratorAgent): string {
   const label = [oneLine(agent.emoji, 16), oneLine(agent.name, 60)].filter(Boolean).join(' ');
   const role = oneLine(agent.role, 160);
   const runsOn = [oneLine(agent.runtimeId, 60), oneLine(agent.model, 80)].filter(Boolean).join(' / ');
-  return `- ${label} (id: ${oneLine(agent.id, 80)})${role ? ` — ${role}` : ''}; runs on ${runsOn}`;
+  // The card, kept to one line per agent: the full card is `od agent show`.
+  const card = [
+    agent.goodFor ? `good for: ${oneLine(agent.goodFor, 140)}` : '',
+    agent.notFor ? `not for: ${oneLine(agent.notFor, 90)}` : '',
+    agent.delivers ? `delivers: ${oneLine(agent.delivers, 70)}` : '',
+    agent.record ? `record: ${oneLine(agent.record, 50)}` : '',
+  ].filter(Boolean).join('; ');
+  return `- ${label} (id: ${oneLine(agent.id, 80)})${role ? ` — ${role}` : ''}; runs on ${runsOn}${card ? `. ${card}` : ''}`;
 }
 
 export function renderOrchestratorDirective(context: OrchestratorContext): string {
@@ -225,6 +240,13 @@ function renderGeneralOrchestratorDirective(context: OrchestratorContext): strin
     '- What the person tells you that is worth keeping (who they are, their brands, how they like things done): save it once with `"$OD_NODE_BIN" "$OD_BIN" memory remember --name "<short title>" --description "<one line>"`. It reaches every later session.',
     '- A decision about a project (made here, not in its chat): write it in that project\'s notebook with `"$OD_NODE_BIN" "$OD_BIN" project note <projectId> "<the decision>"`. The project\'s own chat reads it there.',
     '- To recall what happened in a project, read its notebook: `"$OD_NODE_BIN" "$OD_BIN" project notebook <projectId>`. To reread an earlier session with the person: `"$OD_NODE_BIN" "$OD_BIN" lev show <session id>`. Read only when the answer needs it.',
+    '',
+    '## Choosing the agent',
+    '',
+    '- Send each piece to the agent whose card fits it best, and never to one whose "not for" covers it. When two could do it, read both cards (`"$OD_NODE_BIN" "$OD_BIN" agent show <id>`) and prefer the one with the better record for this kind of work.',
+    '- Work that spans several specialities (research, then copy, then the interface) is split into pieces, each to its agent, in order: hand the next agent what the previous one produced.',
+    '- Before starting anything with more than one agent, tell the person the plan in one line ("Market researches, then Design builds").',
+    '- If no agent fits, do it yourself when it is small; otherwise say which kind of agent is missing and offer to create it.',
     '',
     '## Decide first, for every message',
     '',

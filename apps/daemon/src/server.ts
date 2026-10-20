@@ -921,6 +921,7 @@ import { registerDeliveryRoutes } from './routes/delivery.js';
 import { registerSpeechRoutes } from './routes/speech.js';
 import { registerAgentAccessRoutes } from './routes/agent-access.js';
 import { findOrchestratorProjectId, registerOrchestratorRoutes } from './routes/orchestrator.js';
+import { recordAgentOutcome } from './agent-stats.js';
 import { appendNotebookEntry, NOTEBOOK_FRESH_RUN_MS, readNotebook, renderNotebookPrompt, runNotebookEntry } from './notebook.js';
 import { registerNotebookRoutes } from './routes/notebook.js';
 import { lessonAgentKey, registerLessonRoutes } from './routes/lessons.js';
@@ -8158,6 +8159,11 @@ export async function startServer({
             && typeof run.projectId === 'string' && run.projectId && run.projectId !== findOrchestratorProjectId(db)
           ) {
             notedRunIds.add(run.id);
+            // The agent's track record, for the orchestrator (agent-stats.ts).
+            const profileId = typeof run.conversationId === 'string'
+              ? (getConversation(db, run.conversationId) as { agentProfileId?: string | null } | null)?.agentProfileId
+              : null;
+            if (profileId) void recordAgentOutcome(RUNTIME_DATA_DIR, profileId, status, endedAt);
             const entry = runNotebookEntry(run, status);
             if (entry) {
               void appendNotebookEntry(RUNTIME_DATA_DIR, run.projectId, entry, endedAt).catch(() => {});
@@ -9472,6 +9478,7 @@ export async function startServer({
     daemonUrl: () => daemonUrl,
     listRuns: () => design.runs.list({}),
     runsDir: path.join(RUNTIME_DATA_DIR, 'runs'),
+    dataDir: RUNTIME_DATA_DIR,
   });
   registerAgentAccessRoutes(app, {
     http: httpDeps,

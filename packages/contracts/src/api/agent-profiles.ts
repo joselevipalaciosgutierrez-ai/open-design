@@ -14,6 +14,19 @@ export const AGENT_PROFILE_MODEL_MAX = 200;
 export const AGENT_PROFILE_INSTRUCTIONS_MAX = 8000;
 export const AGENT_PROFILE_SKILL_IDS_MAX = 20;
 
+/**
+ * What the orchestrator reads to hand the right work to this agent. Each
+ * field is short prose, written by the person on the agent's page.
+ */
+export interface AgentCard {
+  /** What to send it, with examples of typical orders. */
+  goodFor?: string | null;
+  /** What not to send it (the main guard against misrouted work). */
+  notFor?: string | null;
+  /** What it hands back: files, a report, code… */
+  delivers?: string | null;
+}
+
 export interface AgentProfile {
   id: string;
   name: string;
@@ -28,6 +41,8 @@ export interface AgentProfile {
   instructions: string | null;
   skillIds: string[];
   designSystemId: string | null;
+  /** The agent's card for the orchestrator. */
+  card: AgentCard;
   createdAt: number;
   updatedAt: number;
   /** Most recent activity across this agent's conversations. */
@@ -45,6 +60,7 @@ export interface AgentProfileInput {
   instructions?: string | null;
   skillIds?: string[];
   designSystemId?: string | null;
+  card?: AgentCard;
 }
 
 export interface AgentProfilesResponse {

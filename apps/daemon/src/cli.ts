@@ -360,6 +360,8 @@ const BRAND_BOOLEAN_FLAGS = new Set([
 const AGENT_STRING_FLAGS = new Set([
   'daemon-url', 'name', 'role', 'emoji', 'runtime', 'model', 'instructions',
   'instructions-file', 'skills', 'design-system',
+  // The card the orchestrator reads to route work.
+  'good-for', 'not-for', 'delivers',
 ]);
 const AGENT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
 const STRATEGY_STRING_FLAGS = new Set(['daemon-url']);
@@ -537,10 +539,14 @@ function printAgentHelp() {
   console.log(`Usage:
   od agent list [--json]
   od agent info <id> [--json]
+  od agent show <id> [--json]             The agent's card and track record, as
+                                          the orchestrator reads them
   od agent create --name "<name>" --runtime <runtimeId> [--model <id>]
                   [--role "<one line>"] [--emoji <e>]
                   [--instructions "<text>" | --instructions-file <path|->]
-                  [--skills a,b] [--design-system <id>] [--json]
+                  [--skills a,b] [--design-system <id>]
+                  [--good-for "<what to send it>"] [--not-for "<what not>"]
+                  [--delivers "<what it hands back>"] [--json]
   od agent update <id> [same flags as create; "none" clears --model/--role/
                   --emoji/--instructions/--design-system] [--json]
   od agent delete <id> [--json]
@@ -586,6 +592,11 @@ function agentProfileBodyFromFlags(flags, { creating }) {
   } else if (typeof flags.instructions === 'string') {
     body.instructions = clearable(flags.instructions);
   }
+  const card = {};
+  if (typeof flags['good-for'] === 'string') card.goodFor = clearable(flags['good-for']);
+  if (typeof flags['not-for'] === 'string') card.notFor = clearable(flags['not-for']);
+  if (typeof flags.delivers === 'string') card.delivers = clearable(flags.delivers);
+  if (Object.keys(card).length > 0) body.card = card;
   if (creating && (!body.name || !body.runtimeId)) {
     console.error('od agent create requires --name and --runtime');
     process.exit(2);
@@ -598,6 +609,37 @@ function printAgentProfile(profile) {
   const model = profile.model ?? 'CLI default';
   console.log(`${profile.id}  ${label}  [${profile.runtimeId} / ${model}]`);
   if (profile.role) console.log(`  ${profile.role}`);
+}
+
+// `od agent show`: the card and track record the orchestrator routes work by.
+async function runAgentShow(id, flags) {
+  if (!id) {
+    console.error('Usage: od agent show <id> [--json]');
+    process.exit(2);
+  }
+  const base = (await cliDaemonBaseUrl(flags)).replace(/\/$/, '');
+  let profileResp;
+  let statsResp;
+  try {
+    [profileResp, statsResp] = await Promise.all([
+      fetch(`${base}/api/agent-profiles/${encodeURIComponent(id)}`),
+      fetch(`${base}/api/agent-stats`),
+    ]);
+  } catch (error) {
+    surfaceFetchError(error, base);
+    process.exit(3);
+  }
+  if (!profileResp.ok) return structuredHttpFailure(profileResp, 'agent-not-found');
+  const { profile } = await profileResp.json();
+  const stats = statsResp.ok ? ((await statsResp.json()).stats ?? {})[id] ?? null : null;
+  if (flags.json) return process.stdout.write(JSON.stringify({ profile, stats }) + '\n');
+  printAgentProfile(profile);
+  const card = profile.card ?? {};
+  console.log(`  good for: ${card.goodFor ?? '(not written)'}`);
+  console.log(`  not for:  ${card.notFor ?? '(not written)'}`);
+  console.log(`  delivers: ${card.delivers ?? '(not written)'}`);
+  const total = stats ? stats.succeeded + stats.failed : 0;
+  console.log(`  record:   ${total ? `${total} orders, ${stats.succeeded} done, ${stats.failed} failed` : 'no orders yet'}`);
 }
 
 async function runAgentProfiles(positional, flags) {
@@ -653,6 +695,7 @@ async function runAgent(args) {
     printAgentHelp();
     return;
   }
+  if (positional[0] === 'show') return runAgentShow(positional[1], flags);
   if (['list', 'info', 'create', 'update', 'delete'].includes(positional[0])) {
     return runAgentProfiles(positional, flags);
   }

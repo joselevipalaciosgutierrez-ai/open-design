@@ -33,6 +33,14 @@ export interface AgentsCopy {
   modelOtherPlaceholder: string;
   instructionsLabel: string;
   instructionsHint: string;
+  cardTitle: string;
+  cardHint: string;
+  goodForLabel: string;
+  goodForPlaceholder: string;
+  notForLabel: string;
+  notForPlaceholder: string;
+  deliversLabel: string;
+  deliversPlaceholder: string;
   instructionsPlaceholder: string;
   save: string;
   saving: string;
@@ -139,6 +147,14 @@ const es: AgentsCopy = {
   modelOtherPlaceholder: 'Id del modelo',
   instructionsLabel: 'Instrucciones del rol',
   instructionsHint: 'Se agregan al prompt del sistema en cada mensaje de este agente.',
+  cardTitle: 'Ficha para Lev',
+  cardHint: 'Lev la lee para decidir a quién mandar cada encargo. Corta y concreta: con ejemplos.',
+  goodForLabel: 'Para qué sirve',
+  goodForPlaceholder: 'Ej.: landing pages, dashboards, ajustar estilos y paletas',
+  notForLabel: 'Para qué no',
+  notForPlaceholder: 'Ej.: backend, bases de datos, investigación de mercado',
+  deliversLabel: 'Qué entrega',
+  deliversPlaceholder: 'Ej.: páginas HTML en el proyecto',
   instructionsPlaceholder: 'Eres el agente de diseño. Escribes solo dentro de design/…',
   save: 'Guardar',
   saving: 'Guardando…',
@@ -236,6 +252,14 @@ const en: AgentsCopy = {
   modelOtherPlaceholder: 'Model id',
   instructionsLabel: 'Role instructions',
   instructionsHint: "Added to the system prompt on every message to this agent.",
+  cardTitle: "Card for Lev",
+  cardHint: "Lev reads it to decide which agent gets each order. Short and concrete, with examples.",
+  goodForLabel: "Good for",
+  goodForPlaceholder: "e.g. landing pages, dashboards, styling and palettes",
+  notForLabel: "Not for",
+  notForPlaceholder: "e.g. backend, databases, market research",
+  deliversLabel: "Delivers",
+  deliversPlaceholder: "e.g. HTML pages in the project",
   instructionsPlaceholder: 'You are the design agent. You write only inside design/…',
   save: 'Save',
   saving: 'Saving…',

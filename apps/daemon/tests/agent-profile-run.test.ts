@@ -18,6 +18,7 @@ function profile(overrides: Partial<AgentProfile> = {}): AgentProfile {
     updatedAt: 1,
     lastActiveAt: null,
     conversationCount: 0,
+    card: { goodFor: null, notFor: null, delivers: null },
     ...overrides,
   };
 }

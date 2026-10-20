@@ -23,6 +23,7 @@ function agent(id: string, over: Partial<AgentProfile> = {}): AgentProfile {
     updatedAt: 1,
     lastActiveAt: null,
     conversationCount: 0,
+    card: { goodFor: null, notFor: null, delivers: null },
     ...over,
   };
 }
@@ -99,5 +100,15 @@ describe('Lev on Home', () => {
 
   it('is an ordinary run outside Lev\'s space when there are no agents', () => {
     expect(resolve({ profiles: [] })).toBeNull();
+  });
+});
+
+describe('agent cards for the orchestrator', () => {
+  it('passes each agent\'s card and record to the prompt', () => {
+    const context = resolve({
+      profiles: [agent('design', { card: { goodFor: 'landing pages', notFor: 'backend', delivers: 'HTML' } })],
+      agentRecords: { design: '3 orders, 3 done' },
+    });
+    expect(context?.agents[0]).toMatchObject({ goodFor: 'landing pages', notFor: 'backend', delivers: 'HTML', record: '3 orders, 3 done' });
   });
 });

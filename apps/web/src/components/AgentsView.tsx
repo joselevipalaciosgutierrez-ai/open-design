@@ -233,6 +233,9 @@ function AgentEditor({
   const [role, setRole] = useState(profile?.role ?? '');
   const [runtimeId, setRuntimeId] = useState(profile?.runtimeId ?? usable[0]?.id ?? '');
   const [instructions, setInstructions] = useState(profile?.instructions ?? '');
+  const [goodFor, setGoodFor] = useState(profile?.card?.goodFor ?? '');
+  const [notFor, setNotFor] = useState(profile?.card?.notFor ?? '');
+  const [delivers, setDelivers] = useState(profile?.card?.delivers ?? '');
   const [designSystemId, setDesignSystemId] = useState(profile?.designSystemId ?? '');
   const [skillIds, setSkillIds] = useState<string[]>(profile?.skillIds ?? []);
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
@@ -326,6 +329,11 @@ function AgentEditor({
       instructions: instructions.trim() || null,
       designSystemId: designSystemId || null,
       skillIds,
+      card: {
+        goodFor: goodFor.trim() || null,
+        notFor: notFor.trim() || null,
+        delivers: delivers.trim() || null,
+      },
     };
     setBusy(true);
     setError(null);
@@ -549,6 +557,30 @@ function AgentEditor({
           />
           <small className={styles.hint}>{copy.instructionsHint}</small>
         </label>
+
+        <fieldset className={styles.field} data-testid="agent-routing-fields">
+          <legend>{copy.cardTitle}</legend>
+          <small className={styles.hint}>{copy.cardHint}</small>
+          {([
+            ['good-for', copy.goodForLabel, copy.goodForPlaceholder, goodFor, setGoodFor],
+            ['not-for', copy.notForLabel, copy.notForPlaceholder, notFor, setNotFor],
+            ['delivers', copy.deliversLabel, copy.deliversPlaceholder, delivers, setDelivers],
+          ] as const).map(([key, label, placeholder, value, setValue]) => (
+            <label key={key} className={styles.field} htmlFor={`${ids}-${key}`}>
+              <span>{label}</span>
+              <textarea
+                id={`${ids}-${key}`}
+                className={`${styles.input} ${styles.textarea}`}
+                value={value}
+                maxLength={600}
+                rows={2}
+                placeholder={placeholder}
+                data-testid={`agent-routing-${key}`}
+                onChange={(event) => setValue(event.target.value)}
+              />
+            </label>
+          ))}
+        </fieldset>
 
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
