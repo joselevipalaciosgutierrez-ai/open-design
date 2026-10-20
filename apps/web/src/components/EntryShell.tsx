@@ -128,6 +128,7 @@ import {
 } from '../runtime/amr-balance-gate';
 import { cachedHomeAmrFundingBlock, checkAmrFundingFeedback, invalidateAmrFundingFeedback } from '../runtime/amr-funding-feedback';
 import { HomeView, seedHomeComposerPrompt } from './HomeView';
+import { IslandBridge } from './lev/IslandBridge';
 import { entryStrategyRoutingFields } from './entry-strategy-routing';
 import { EntryBlankState } from './EntryBlankState';
 import { RecentProjectsStrip, type ProjectCollectionScope } from './RecentProjectsStrip';
@@ -1997,6 +1998,7 @@ export function EntryShell({
               view === 'home' ? '' : 'entry-main__inner--wide',
             ].filter(Boolean).join(' ')}
           >
+            {levAgent ? <IslandBridge agent={levAgent} /> : null}
             <div className="entry-main__view-home" data-testid="entry-view-home" data-active={view === 'home' ? 'true' : 'false'} {...inactiveViewProps(view === 'home')}>
               <HomeView
                 {...homeViewProps}

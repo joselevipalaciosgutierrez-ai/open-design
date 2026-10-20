@@ -430,6 +430,7 @@ const SUBCOMMAND_MAP = {
   speech: runSpeech,
   access: runAccess,
   lev: runLev,
+  island: runIsland,
   lesson: runLesson,
   mac: runMac,
   daemon: runDaemon,
@@ -12752,6 +12753,54 @@ Home shows the same sessions.`;
   });
   if (flags.json) return process.stdout.write(JSON.stringify(created) + '\n');
   console.log(`[lev] new session ${created.conversation?.id ?? created.id}`);
+}
+
+// `od island`: the notch island's remote, the same `/api/island` routes the
+// island uses. The app does the work (Lev's session, voice); this asks it to.
+async function runIsland(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: new Set(['prompt-file']), boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const positional = positionalArgs(args, new Set(['prompt-file']));
+  const sub = positional[0] ?? 'state';
+  const usage = `Usage:
+  od island state [--json]                          What the island shows now
+  od island voice [--json]                          Like clicking the monkey: listen / stop
+  od island say "<text>" [--prompt-file <path|->]   Write to Lev's current session
+  od island stop [--json]                           Stop listening or talking
+The app must be open: it runs Lev and the voice, the island only shows them.`;
+  if (flags.help || flags.h || !['state', 'voice', 'say', 'stop'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  if (sub === 'state') {
+    const state = await accessCall(flags, '/api/island/state');
+    if (flags.json) return process.stdout.write(JSON.stringify(state) + '\n');
+    console.log(`[island] app ${state.appConnected ? 'connected' : 'not open'} · ${state.phase}${state.reply ? ` · ${state.reply}` : ''}`);
+    return;
+  }
+  let text = positional.slice(1).join(' ');
+  if (sub === 'say' && flags['prompt-file']) {
+    const file = flags['prompt-file'];
+    text = file === '-' ? await new Promise((resolve) => { let d = ''; process.stdin.on('data', (c) => { d += c; }); process.stdin.on('end', () => resolve(d)); }) : readFileSync(file, 'utf8');
+  }
+  if (sub === 'say' && !String(text).trim()) {
+    console.error('Usage: od island say "<text>"');
+    process.exit(2);
+  }
+  const out = await accessCall(flags, '/api/island/command', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(sub === 'say' ? { action: 'say', text } : { action: sub }),
+  });
+  if (flags.json) return process.stdout.write(JSON.stringify(out) + '\n');
+  console.log(out.delivered ? `[island] ${sub} sent` : '[island] the app is not open, nothing was sent');
+  if (!out.delivered) process.exitCode = 1;
 }
 
 // `od lesson`: what agents learned from their own mistakes (lessons.ts). An

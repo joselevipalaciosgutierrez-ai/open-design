@@ -40,6 +40,7 @@ import {
 } from "@open-design/sidecar";
 
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
+import { startLevIsland } from "./lev-island.js";
 import { dispatchInviteDeeplink, registerInviteDeeplink } from "./invite-deeplink.js";
 import { focusDesktopForDeeplink } from "./deeplink-focus.js";
 import { setUpDesktopCrashReporter, writeDesktopGpuInfo } from "./crash-diagnostics.js";
@@ -161,6 +162,10 @@ export function applyOsLocaleSwitch(electronApp: Electron.App): string {
 export function applyLoopbackConnectionLimitSwitch(electronApp: Electron.App): void {
   if (!electronApp.isReady()) {
     electronApp.commandLine.appendSwitch("ignore-connections-limit", "127.0.0.1,localhost");
+    // Lev answers aloud when asked from the notch island, while this window is
+    // in the background and nobody has clicked in it: without this, Chromium's
+    // autoplay policy keeps the audio silent until a click.
+    electronApp.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
     // 关掉内层滚动容器的橡皮筋回弹(产品裁决 2026-09-07:「直接关掉」)。
     //
     // ## 为什么
@@ -1013,6 +1018,8 @@ export async function runDesktopMain(
   });
 
   const discoverDaemonBaseUrl = resolveDaemonBaseUrl(options);
+  // Lev Island talks to the daemon directly: the web proxy would buffer its event stream.
+  startLevIsland(options.discoverDaemonUrl);
   // Report each abnormal exit of a prior run now that the daemon is up to relay
   // it (best-effort; the events carry no user content). Each is dropped from the
   // queue only once the daemon acks it, so a failed report is retried next launch.

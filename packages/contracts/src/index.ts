@@ -24,6 +24,7 @@ export * from './api/run-budget.js';
 export * from './api/orchestrator.js';
 export * from './api/notebook.js';
 export * from './api/lessons.js';
+export * from './api/island.js';
 export * from './api/agent-draft.js';
 export * from './api/community.js';
 export * from './api/context.js';

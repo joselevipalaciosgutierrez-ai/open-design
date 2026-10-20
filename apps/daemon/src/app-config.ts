@@ -121,6 +121,7 @@ export interface AppConfigPrefs {
   telemetry?: TelemetryPrefs;
   privacyDecisionAt?: number | null;
   allowSilentUpdates?: boolean;
+  levIsland?: boolean;
   orbit?: OrbitConfigPrefs;
   customInstructions?: string | null;
   projectLocations?: ProjectLocationPrefs[];
@@ -156,6 +157,7 @@ const ALLOWED_KEYS: ReadonlySet<keyof AppConfigPrefs> = new Set([
   'telemetry',
   'privacyDecisionAt',
   'allowSilentUpdates',
+  'levIsland',
   'orbit',
   'customInstructions',
   'projectLocations',
@@ -598,6 +600,14 @@ function applyConfigValue(
       value === null ||
       (typeof value === 'number' && Number.isFinite(value) && value >= 0)
     ) {
+      target[key] = value;
+    } else {
+      delete target[key];
+    }
+    return;
+  }
+  if (key === 'levIsland') {
+    if (typeof value === 'boolean') {
       target[key] = value;
     } else {
       delete target[key];

@@ -154,6 +154,7 @@ import { DeepSeekV4FlashCampaign } from './DeepSeekV4FlashCampaign';
 import { LevChat } from './lev/LevChat';
 import { LevSessions } from './lev/LevSessions';
 import { useLevChat, type LevAgentChoice } from './lev/use-lev-chat';
+import { LEV_SESSION_UPDATED_EVENT } from './lev/IslandBridge';
 import { fetchLevSpace, forgetCurrentLevSession, levSession, resumeLevSession } from '../state/lev-session';
 import { withViewTransition } from '../runtime/view-transition';
 import type { DeepSeekV4FlashCampaignAudience } from '../campaigns/deepseek-v4-flash';
@@ -967,6 +968,15 @@ export function HomeView({
   const onLevSessionDeleted = useCallback((sessionId: string) => {
     if (levSession().sessionId === null && levChat.messages.length > 0) levChat.clear();
     setLevResumeTarget((target) => (target?.sessionId === sessionId ? null : target));
+  }, [levChat]);
+  // A turn from the notch island lands in the same session: show it here too.
+  useEffect(() => {
+    const onUpdated = () => {
+      const { projectId, sessionId } = levSession();
+      if (projectId && sessionId) void levChat.load(projectId, sessionId);
+    };
+    window.addEventListener(LEV_SESSION_UPDATED_EVENT, onUpdated);
+    return () => window.removeEventListener(LEV_SESSION_UPDATED_EVENT, onUpdated);
   }, [levChat]);
   const newLevSession = useCallback(() => {
     forgetCurrentLevSession();

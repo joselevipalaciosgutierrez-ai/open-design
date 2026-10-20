@@ -60,6 +60,8 @@ export interface AppConfigPrefs {
    */
   privacyDecisionAt?: number | null;
   allowSilentUpdates?: boolean;
+  /** Lev Island: the companion on the Mac's notch (macOS only). Off unless turned on. */
+  levIsland?: boolean;
   orbit?: OrbitConfigPrefs;
   customInstructions?: string | null;
   /** External project library roots. The daemon adds its built-in .od/projects location at read time. */

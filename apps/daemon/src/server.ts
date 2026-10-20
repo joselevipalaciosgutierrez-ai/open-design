@@ -919,6 +919,7 @@ import { registerWhatsNewRoutes } from './routes/whats-new.js';
 import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
 import { registerDeliveryRoutes } from './routes/delivery.js';
 import { registerSpeechRoutes } from './routes/speech.js';
+import { registerIslandRoutes } from './routes/island.js';
 import { registerAgentAccessRoutes } from './routes/agent-access.js';
 import { findOrchestratorProjectId, registerOrchestratorRoutes } from './routes/orchestrator.js';
 import { recordAgentOutcome } from './agent-stats.js';
@@ -9503,6 +9504,7 @@ export async function startServer({
       screensDir: agentScreensDir,
     }),
   });
+  registerIslandRoutes(app, { http: httpDeps });
   registerSpeechRoutes(app, {
     http: httpDeps,
     tts: createTtsService({ tmpDir: path.join(RUNTIME_DATA_DIR, 'speech', 'tmp') }),
