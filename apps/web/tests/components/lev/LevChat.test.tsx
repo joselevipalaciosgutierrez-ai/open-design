@@ -32,6 +32,8 @@ describe('LevChat', () => {
           error={null}
           onNewSession={vi.fn()}
           onFold={onFold}
+          currentSessionId="s1"
+          onPickSession={vi.fn()}
         />
       </I18nProvider>,
     );

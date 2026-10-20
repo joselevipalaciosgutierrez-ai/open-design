@@ -4,7 +4,7 @@ import type { Express, RequestHandler } from 'express';
 
 import type { OrchestratorWorkspaceResponse } from '@open-design/contracts';
 
-import { listConversations, listProjects } from '../db.js';
+import { countMessages, listConversations, listMessages, listProjects } from '../db.js';
 import type { RouteDeps } from '../server-context.js';
 
 type Db = Parameters<typeof listProjects>[0];
@@ -70,11 +70,24 @@ export function registerOrchestratorRoutes(app: Express, ctx: RegisterOrchestrat
     try {
       const projectId = await ensureProject();
       const sessions = (listConversations(ctx.db, projectId) as Array<{ id: string; title?: string | null; updatedAt?: number; createdAt?: number }>)
-        .map((conversation) => ({
-          id: conversation.id,
-          title: conversation.title ?? null,
-          updatedAt: conversation.updatedAt ?? conversation.createdAt ?? 0,
-        }))
+        .map((conversation) => {
+          const messageCount = countMessages(ctx.db, conversation.id);
+          const firstUser = messageCount > 0
+            ? (listMessages(ctx.db, conversation.id) as Array<{ role?: string; content?: string }>).find((m) => m.role === 'user')
+            : undefined;
+          const preview = typeof firstUser?.content === 'string'
+            ? firstUser.content.replace(/\s+/g, ' ').trim().slice(0, 80) || null
+            : null;
+          return {
+            id: conversation.id,
+            title: conversation.title ?? null,
+            preview,
+            messageCount,
+            updatedAt: conversation.updatedAt ?? conversation.createdAt ?? 0,
+          };
+        })
+        // An empty session (opened but never written in) is not worth offering.
+        .filter((session) => session.messageCount > 0)
         .sort((a, b) => b.updatedAt - a.updatedAt);
       const body: OrchestratorWorkspaceResponse = { projectId, sessions };
       res.json(body);

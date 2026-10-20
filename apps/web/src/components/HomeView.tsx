@@ -152,6 +152,7 @@ import type { OnboardingEntry } from '../onboarding/onboarding-entry';
 import { AnimatePresence } from 'motion/react';
 import { DeepSeekV4FlashCampaign } from './DeepSeekV4FlashCampaign';
 import { LevChat } from './lev/LevChat';
+import { LevSessions } from './lev/LevSessions';
 import { useLevChat, type LevAgentChoice } from './lev/use-lev-chat';
 import { fetchLevSpace, forgetCurrentLevSession, levSession, resumeLevSession } from '../state/lev-session';
 import { withViewTransition } from '../runtime/view-transition';
@@ -958,6 +959,11 @@ export function HomeView({
     if (projectId && sessionId && levChat.messages.length === 0) await levChat.load(projectId, sessionId);
     setLevOpenAnimated(true);
   }, [levChat, levResumeTarget, setLevOpenAnimated]);
+  const pickLevSession = useCallback(async (projectId: string, sessionId: string) => {
+    resumeLevSession(projectId, sessionId);
+    await levChat.load(projectId, sessionId);
+    if (!levOpen) setLevOpenAnimated(true);
+  }, [levChat, levOpen, setLevOpenAnimated]);
   const newLevSession = useCallback(() => {
     forgetCurrentLevSession();
     levChat.clear();
@@ -3193,7 +3199,7 @@ export function HomeView({
     <div
       className={`home-view${recentProjectsEmpty ? ' home-view--centered' : ''}${
         variant === 'dock' ? ' home-view--dock' : ''
-      }${levOpen && variant !== 'dock' ? ' home-view--lev' : ''}`}
+      }${levOpen && variant !== 'dock' ? ' home-view--lev' : ''}${levAgent && variant !== 'dock' ? ' home-view--has-lev' : ''}`}
       data-testid="home-view"
       data-variant={variant}
       ref={homeViewRef}
@@ -3219,6 +3225,8 @@ export function HomeView({
           error={levChat.error}
           onNewSession={newLevSession}
           onFold={() => setLevOpenAnimated(false)}
+          currentSessionId={levSession().sessionId}
+          onPickSession={(projectId, sessionId) => void pickLevSession(projectId, sessionId)}
         />
       ) : null}
       <HomeHero
@@ -3361,6 +3369,11 @@ export function HomeView({
           >
             {locale.toLowerCase().startsWith('es') ? 'Retomar la conversación con Lev' : 'Resume the conversation with Lev'}
           </button>
+          <LevSessions
+            quiet
+            currentSessionId={levSession().sessionId}
+            onPick={(projectId, sessionId) => void pickLevSession(projectId, sessionId)}
+          />
         </div>
       )}
 

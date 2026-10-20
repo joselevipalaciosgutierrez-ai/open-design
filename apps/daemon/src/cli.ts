@@ -12594,7 +12594,7 @@ Home shows the same sessions.`;
     console.log(`[lev] project ${space.projectId}`);
     if (space.sessions.length === 0) console.log('  no sessions yet');
     for (const session of space.sessions) {
-      console.log(`  ${session.id}\t${new Date(session.updatedAt).toISOString()}\t${session.title ?? '(untitled)'}`);
+      console.log(`  ${session.id}\t${new Date(session.updatedAt).toISOString()}\t${session.messageCount} msgs\t${session.title ?? session.preview ?? '(untitled)'}`);
     }
     return;
   }

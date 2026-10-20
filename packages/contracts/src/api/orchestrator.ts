@@ -9,8 +9,16 @@ export const ORCHESTRATOR_SYSTEM_TAG = 'orchestrator' as const;
 export interface OrchestratorWorkspaceResponse {
   /** The hidden system project that holds Lev's sessions. */
   projectId: string;
-  /** Lev's sessions, newest first. */
-  sessions: Array<{ id: string; title: string | null; updatedAt: number }>;
+  /** Lev's sessions that have messages, newest first. */
+  sessions: Array<{
+    id: string;
+    /** The title the agent gave the session, when it has one. */
+    title: string | null;
+    /** The first thing the person said, as a fallback name (trimmed). */
+    preview: string | null;
+    messageCount: number;
+    updatedAt: number;
+  }>;
 }
 
 /** Whether a project is a system project the app keeps out of project lists. */

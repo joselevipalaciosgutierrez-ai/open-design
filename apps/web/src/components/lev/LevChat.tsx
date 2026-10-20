@@ -5,6 +5,7 @@ import { renderMarkdown } from '../../runtime/markdown';
 import { stripInternalControlMarkers } from '../../artifacts/internal-markers';
 import { useI18n } from '../../i18n';
 import { reportedUsageFromEvents, TurnMeter } from '../TurnMeter';
+import { LevSessions } from './LevSessions';
 import styles from './LevChat.module.css';
 
 const SELF_CLOSING_MARKER = /<od-(?:done|next|focus)\b[^>]*\/>/g;
@@ -30,10 +31,12 @@ export interface LevChatProps {
   error: string | null;
   onNewSession: () => void;
   onFold: () => void;
+  currentSessionId: string | null;
+  onPickSession: (projectId: string, sessionId: string) => void;
 }
 
 /** Lev's conversation on Home, above the composer. */
-export function LevChat({ messages, streaming, error, onNewSession, onFold }: LevChatProps) {
+export function LevChat({ messages, streaming, error, onNewSession, onFold, currentSessionId, onPickSession }: LevChatProps) {
   const { locale } = useI18n();
   const copy = locale.toLowerCase().startsWith('es') ? COPY.es : COPY.en;
   const endRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,7 @@ export function LevChat({ messages, streaming, error, onNewSession, onFold }: Le
       <header className={styles.bar}>
         <span className={styles.title}>{copy.title}</span>
         <span className={styles.actions}>
+          <LevSessions currentSessionId={currentSessionId} onPick={onPickSession} />
           <Button size="sm" variant="ghost" onClick={onNewSession} data-testid="lev-new-session">
             {copy.newSession}
           </Button>

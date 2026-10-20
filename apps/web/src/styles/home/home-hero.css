@@ -4556,7 +4556,10 @@
 
 .home-view__lev-resume {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+  gap: var(--spacing-8);
 }
 .home-view__lev-resume-button {
   padding: 6px 14px;
@@ -4579,22 +4582,22 @@
 }
 
 ::view-transition-group(od-home-composer) {
-  animation-duration: 320ms;
+  animation-duration: 560ms;
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 ::view-transition-old(od-home-greeting),
 ::view-transition-old(od-home-greeting-sub) {
-  animation: od-lev-fade-up 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: od-lev-fade-up 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 ::view-transition-new(od-home-greeting),
 ::view-transition-new(od-home-greeting-sub) {
-  animation: od-lev-fade-down 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: od-lev-fade-down 460ms cubic-bezier(0.23, 1, 0.32, 1) 120ms both;
 }
 ::view-transition-new(od-lev-chat) {
-  animation: od-lev-fade-in 260ms cubic-bezier(0.23, 1, 0.32, 1) 80ms both;
+  animation: od-lev-fade-in 480ms cubic-bezier(0.23, 1, 0.32, 1) 160ms both;
 }
 ::view-transition-old(od-lev-chat) {
-  animation: od-lev-fade-out 140ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: od-lev-fade-out 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes od-lev-fade-up {
@@ -4625,7 +4628,11 @@
    mode to pick, and no working folder. The mono, attach, model and send stay. */
 .home-view--lev .home-hero__ds-row-picker,
 .home-view--lev .home-hero__template-option,
-.home-view--lev .home-hero__foot-right .composer-mode,
 .home-view--lev .home-hero__working-dir-picker {
+  display: none;
+}
+/* Home is Lev's, folded or open: picking an agent or a mode belongs to a
+   project's chat (Ask / Design), not to the general chat. */
+.home-view--has-lev .home-hero__foot-right .composer-mode {
   display: none;
 }

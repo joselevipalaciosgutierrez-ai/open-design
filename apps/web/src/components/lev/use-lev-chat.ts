@@ -108,6 +108,8 @@ export function useLevChat(agent: LevAgentChoice) {
         clientRequestId: newId(),
         model: agent.model ?? null,
         reasoning: agent.reasoning ?? null,
+        // The first turn names the session, so the session list reads well.
+        titleGeneration: { enabled: true },
         onRunCreated: (runId: string) => update({ runId }),
         handlers: {
           onDelta: (delta) => {

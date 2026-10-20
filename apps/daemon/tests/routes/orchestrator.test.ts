@@ -31,8 +31,19 @@ describe('GET /api/orchestrator', () => {
       body: JSON.stringify({ sessionMode: 'chat', title: 'Plan the week' }),
     });
     expect(created.ok).toBe(true);
-    const after = await (await fetch(`${baseUrl}/api/orchestrator`)).json();
-    expect(after.sessions.some((session) => session.title === 'Plan the week')).toBe(true);
+    const { conversation } = await created.json();
+    // An empty session is not offered.
+    let after = await (await fetch(`${baseUrl}/api/orchestrator`)).json();
+    expect(after.sessions.some((session) => session.id === conversation.id)).toBe(false);
+
+    await fetch(`${baseUrl}/api/projects/${first.projectId}/conversations/${conversation.id}/messages/m1`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: 'm1', role: 'user', content: 'Organiza   mi semana', createdAt: Date.now() }),
+    });
+    after = await (await fetch(`${baseUrl}/api/orchestrator`)).json();
+    const session = after.sessions.find((candidate) => candidate.id === conversation.id);
+    expect(session).toMatchObject({ title: 'Plan the week', preview: 'Organiza mi semana', messageCount: 1 });
   });
 
   it('keeps Lev out of the project list', async () => {
