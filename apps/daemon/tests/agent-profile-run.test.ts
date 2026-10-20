@@ -56,12 +56,15 @@ describe('applyAgentProfileToRunBody', () => {
     expect(body.model).toBe('Gemini 3.1 Pro (High)');
   });
 
-  it('adds the profile’s skills to the requested ones without duplicates', () => {
-    const body: Record<string, unknown> = { skillIds: ['summarize', 'frontend-design', 7] };
+  it('keeps the profile’s skills private, apart from the ones picked for this message', () => {
+    const body: Record<string, unknown> = { skillIds: ['summarize'] };
 
-    applyAgentProfileToRunBody(body, profile({ skillIds: ['frontend-design', 'qa'] }));
+    applyAgentProfileToRunBody(body, profile({ skillIds: ['frontend-design', 'qa', 'qa'] }));
 
-    expect(body.skillIds).toEqual(['frontend-design', 'qa', 'summarize']);
+    // Picked for this message: pasted as before. The agent's own: indexed and
+    // staged for this run only (agent-access/run-skills.ts).
+    expect(body.skillIds).toEqual(['summarize']);
+    expect(body.agentSkillIds).toEqual(['frontend-design', 'qa']);
   });
 
   it('prepends the role instructions to the system prompt', () => {

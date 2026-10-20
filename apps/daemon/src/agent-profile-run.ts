@@ -31,10 +31,11 @@ export function applyAgentProfileToRunBody(
     body.serviceTier = null;
   }
 
-  const requestedSkills = Array.isArray(body.skillIds)
-    ? body.skillIds.filter((id): id is string => typeof id === 'string')
-    : [];
-  body.skillIds = [...new Set([...profile.skillIds, ...requestedSkills])];
+  // The agent's own skills are private to it: they travel apart from the
+  // skills picked for this message, and the daemon lists them in a short index
+  // and stages copies only this run can read (see agent-access/run-skills.ts),
+  // instead of pasting their bodies into every turn.
+  body.agentSkillIds = [...new Set(profile.skillIds)];
 
   if (profile.designSystemId) body.designSystemId = profile.designSystemId;
 

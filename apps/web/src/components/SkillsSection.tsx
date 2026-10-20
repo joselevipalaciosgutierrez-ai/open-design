@@ -25,6 +25,8 @@ import {
   workspaceIdentityCacheKey,
 } from '../collab/useWorkspaceContext';
 import { useWorkspaceInvalidation } from '../collab/workspace-events';
+import { SkillScopesPanel, useSkillScopesCopy } from './SkillScopesPanel';
+import scopeStyles from './SkillScopesPanel.module.css';
 import { useWorkspaceSnapshotActivation } from '../collab/workspace-snapshot-activation';
 
 // Functional skills only — design templates render in EntryView's
@@ -110,6 +112,35 @@ export function SkillsSection({ cfg, setCfg, onSkillsRefresh, onSkillsChanged }:
   const workspaceContextRef = useRef(workspaceContext);
   workspaceContextRef.current = workspaceContext;
   const accountGeneration = currentWorkspaceAccountGeneration();
+  // Global skills: every agent may use them (see SkillScopesPanel).
+  const [globalSkillIds, setGlobalSkillIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let alive = true;
+    void fetch('/api/skill-scopes')
+      .then((r) => (r.ok ? r.json() : { global: [] }))
+      .then((data: { global?: string[] }) => {
+        if (alive) setGlobalSkillIds(new Set(data.global ?? []));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggleGlobal = async (id: string) => {
+    const next = !globalSkillIds.has(id);
+    try {
+      const resp = await fetch('/api/skill-scopes', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, global: next }),
+      });
+      if (!resp.ok) return;
+      const data = (await resp.json()) as { global?: string[] };
+      setGlobalSkillIds(new Set(data.global ?? []));
+    } catch {
+      // Left as it was.
+    }
+  };
   const workspaceReadMode = workspaceContextState.identityChangePending
     || (!workspaceContext && workspaceContextState.loading)
     ? 'pending'
@@ -740,6 +771,8 @@ export function SkillsSection({ cfg, setCfg, onSkillsRefresh, onSkillsChanged }:
         </div>
       </div>
 
+      <SkillScopesPanel onImported={() => void onSkillsRefresh?.()} />
+
       {creating ? (
         <SkillDraftForm
           heading={t('settings.skillsNew')}
@@ -791,6 +824,8 @@ export function SkillsSection({ cfg, setCfg, onSkillsRefresh, onSkillsChanged }:
                 onCommitDelete={() => void commitDelete(skill.id)}
                 onCancelEdit={cancelDraft}
                 onSubmitEdit={() => void submitDraft()}
+                isGlobal={globalSkillIds.has(skill.id)}
+                onToggleGlobal={() => void toggleGlobal(skill.id)}
               />
             );
           })}
@@ -802,6 +837,9 @@ export function SkillsSection({ cfg, setCfg, onSkillsRefresh, onSkillsChanged }:
 
 interface SkillRowProps {
   skill: SkillSummary;
+  /** Every agent may use it. */
+  isGlobal: boolean;
+  onToggleGlobal: () => void;
   enabled: boolean;
   expanded: boolean;
   editing: boolean;
@@ -852,8 +890,11 @@ function SkillRow({
   onCommitDelete,
   onCancelEdit,
   onSubmitEdit,
+  isGlobal,
+  onToggleGlobal,
 }: SkillRowProps) {
   const t = useT();
+  const scopeCopy = useSkillScopesCopy();
   const { locale } = useI18n();
   const summaryName = localizeSkillName(locale, skill) || skill.id;
   const summaryDescription = localizeSkillDescription(locale, skill);
@@ -931,6 +972,17 @@ function SkillRow({
             </span>
           ) : (
             <>
+              <Button
+                size="sm"
+                variant={isGlobal ? 'secondary' : 'ghost'}
+                className={isGlobal ? scopeStyles.globalOn : undefined}
+                aria-pressed={isGlobal}
+                title={scopeCopy.scopes[0]![1]}
+                onClick={onToggleGlobal}
+                data-testid="skills-global"
+              >
+                {scopeCopy.scopes[0]![0]}
+              </Button>
               {!isTeamMirror ? (
                 <Button
                   size="icon"
