@@ -240,6 +240,36 @@ concatenated into the prompt head. Prefer neither when the content is a host
 contract — give it one source in `packages/contracts` and have every path
 consume it, as the deck framework now does.
 
+## Token-saving rules in the tool prompt
+
+`AGENT_TOKEN_RULES` (`apps/daemon/src/server.ts`) is appended to
+`createAgentRuntimeToolPrompt`, which both sides consume, so every CLI run gets
+four short lines on reading narrowly, filtering command output and answering
+briefly (~150 tokens). They replace the person's `zipai-optimizer` skill as a
+global: listed in the skill index, it was read in 2 of 90 runs.
+
+## Ask mode never takes OD Next
+
+OD Next has no Ask variant: it composes its whole design strategy for every
+run, and sends the session mode only as a fact. Measured on a Claude "hola" in
+Ask mode, that was about 21.8K tokens against about 7.2K on the legacy Ask
+stack. So `handleRunCreate` (`apps/daemon/src/routes/runs.ts`) marks an Ask
+turn (`sessionMode: 'chat'`, from the request or else the conversation) as
+`not_applicable` for the rollout, and it composes on the legacy side. Design
+and Plan turns are routed as before; a plugin the user named still claims the
+route (`explicit_user`).
+
+## The active skill in Ask mode
+
+Only the legacy side carries a project's active skill body (`skillBody`); OD
+Next never receives it. In Ask mode (`sessionMode: 'chat'`) the legacy stack
+sends a card instead of the body — the skill's name and where its `SKILL.md`
+is — built by `apps/daemon/src/prompts/skill-card.ts`. The agent reads the file
+when it starts work the skill covers. A skill with no skill root to point at
+(no side files, so short) keeps its full body. Design and Plan mode are
+unchanged. The API/BYOK mirror keeps the body: a BYOK run has no tools to read
+the file with.
+
 ## Known gaps
 
 Verified on `6fb440a86` (2026-08-31).

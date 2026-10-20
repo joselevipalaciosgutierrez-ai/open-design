@@ -29,6 +29,7 @@
  * The composed string is what the daemon sees as `systemPrompt` and what
  * the Anthropic path sends as `system`.
  */
+import { askModeSkillCard } from './skill-card.js';
 import { renderOfficialDesignerPrompt } from './official-system.js';
 import { renderDiscoveryAndPhilosophy, renderSharedFramesBlock } from './discovery.js';
 import {
@@ -270,6 +271,20 @@ const DECK_INTENT_SIGNAL =
   /\b(slides?|deck|keynote|presentation|power\s?point|pitch\s?deck|(?:seed|pre[-\s]?seed|investor|fundraising|startup)\s+pitch|ppt(x)?|slideshow|carousel)\b|幻灯|简报|讲稿|演示|路演|汇报|宣讲|课件|讲解|演讲|提案/i;
 
 /**
+ * Spanish vocabulary for the same three signals. `\b` is ASCII-only in a
+ * JavaScript regex, so it never matches next to an accented letter
+ * ("imágenes", "vídeo"); these use Unicode letter look-arounds instead, and
+ * every accented letter also matches unaccented, the way people type.
+ */
+function spanishWords(words: string): RegExp {
+  return new RegExp(`(?<!\\p{L})(?:${words})(?!\\p{L})`, 'iu');
+}
+
+const DECK_INTENT_SIGNAL_ES = spanishWords(
+  'presentaci[oó]n(?:es)?|diapositivas?|l[aá]minas|carrusel(?:es)?|pitch',
+);
+
+/**
  * Whether the outgoing user request reads as a slide-deck brief. Gates the
  * ~20K maybe-deck framework injection for freeform (kind=other / no
  * metadata) projects: those runs previously carried the full framework on
@@ -284,7 +299,7 @@ export function detectDeckIntentSignal(
   ...texts: Array<string | null | undefined>
 ): boolean {
   return texts.some(
-    (text) => typeof text === 'string' && DECK_INTENT_SIGNAL.test(text),
+    (text) => typeof text === 'string' && (DECK_INTENT_SIGNAL.test(text) || DECK_INTENT_SIGNAL_ES.test(text)),
   );
 }
 
@@ -296,12 +311,20 @@ export function detectDeckIntentSignal(
 const MEDIA_INTENT_SIGNAL =
   /\b(image|images|photo|picture|video|audio|music|voice(over)?|sound|illustration|logo|banner|poster|icon set|wallpaper|avatar|imagen|midjourney|flux|veo|sora|suno)\b|图片|图像|生成图|配图|插画|海报|壁纸|头像|视频|短片|音频|音乐|配音|音效|表情包/i;
 
+const MEDIA_INTENT_SIGNAL_ES = spanishWords(
+  'im[aá]gen(?:es)?|fotos?|fotograf[ií]as?|v[ií]deos?|clips?|m[uú]sica|canci[oó]n(?:es)?|ilustraci[oó]n(?:es)?|dibujos?|audios?|locuci[oó]n|voz en off|efectos? de sonido|carteles|cartel|p[oó]sters?|logotipos?|fondos? de pantalla|avatar(?:es)?|animaci[oó]n(?:es)?',
+);
+
 // Platform vocabulary across English and Chinese briefs. Same generosity
 // policy as the deck/media signals: over-firing injects a ~1K contracts
 // block that classic carried unconditionally, so the failure direction is
 // status quo; under-firing loses per-platform delivery detail.
 const PLATFORM_INTENT_SIGNAL =
   /\b(ios|iphone|ipad|android|tablet|responsive|mobile app|native app|desktop app|cross[- ]platform|multi[- ]platform)\b|移动端|手机端|安卓|苹果|平板|响应式|跨端|多端|双端/i;
+
+const PLATFORM_INTENT_SIGNAL_ES = spanishWords(
+  'm[oó]vil(?:es)?|celular(?:es)?|tabletas?|responsiv[oa]|adaptable a m[oó]vil|app nativa|aplicaci[oó]n nativa|app de escritorio|aplicaci[oó]n de escritorio|multiplataforma',
+);
 
 /**
  * Whether the visible conversation names a delivery platform. Backstops the
@@ -313,7 +336,7 @@ export function detectPlatformIntentSignal(
   ...texts: Array<string | null | undefined>
 ): boolean {
   return texts.some(
-    (text) => typeof text === 'string' && PLATFORM_INTENT_SIGNAL.test(text),
+    (text) => typeof text === 'string' && (PLATFORM_INTENT_SIGNAL.test(text) || PLATFORM_INTENT_SIGNAL_ES.test(text)),
   );
 }
 
@@ -329,7 +352,7 @@ export function detectMediaIntentSignal(
   ...texts: Array<string | null | undefined>
 ): boolean {
   return texts.some(
-    (text) => typeof text === 'string' && MEDIA_INTENT_SIGNAL.test(text),
+    (text) => typeof text === 'string' && (MEDIA_INTENT_SIGNAL.test(text) || MEDIA_INTENT_SIGNAL_ES.test(text)),
   );
 }
 
@@ -1343,7 +1366,12 @@ export function composeSystemPrompt({
     );
   }
 
-  if (skillBody && skillBody.trim().length > 0) {
+  // Ask mode carries a card pointing at SKILL.md instead of the whole body;
+  // the agent reads it when it starts work the skill covers.
+  const askSkillCard = isAskMode && skillBody ? askModeSkillCard(skillName, skillBody) : null;
+  if (askSkillCard) {
+    parts.push(askSkillCard);
+  } else if (skillBody && skillBody.trim().length > 0) {
     const preflight = derivePreflight(skillBody);
     parts.push(
       `\n\n## Active skill${skillName ? ` — ${skillName}` : ''}\n\nFollow this skill's workflow exactly.${preflight}\n\n${skillBody.trim()}`,

@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { runDaemonCliStartup, startDaemonRuntime } from './daemon-startup.js';
 import { runLiveArtifactsMcpServer } from './mcp-live-artifacts-server.js';
+import { applyRunContextFile } from './agent-access/run-context.js';
 import { runArtifactsCli } from './artifacts-cli.js';
 import { runResource } from './resource-cli.js';
 import { runProjectHandoff } from './handoff-cli.js';
@@ -278,6 +279,9 @@ const TEMPLATES_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
 // embeddability contract: external agents can deploy a project file to
 // Vercel or Cloudflare Pages without going through the web UI.
 const DELIVERY_STRING_FLAGS = new Set(['daemon-url', 'workspace', 'workspace-member']);
+const SPEECH_STRING_FLAGS = new Set(['daemon-url', 'voice', 'rate', 'lang', 'prompt-file', 'out']);
+const ACCESS_STRING_FLAGS = new Set(['daemon-url', 'read-all', 'mac-control']);
+const MAC_STRING_FLAGS = new Set(['daemon-url', 'app', 'url', 'prompt-file']);
 const DEPLOY_STRING_FLAGS = new Set([
   'daemon-url', 'file', 'provider', 'target',
   'cf-zone-id', 'cf-zone-name', 'cf-domain-prefix',
@@ -418,6 +422,9 @@ const SUBCOMMAND_MAP = {
   chat: runChat,
   deploy: runDeploy,
   delivery: runDelivery,
+  speech: runSpeech,
+  access: runAccess,
+  mac: runMac,
   daemon: runDaemon,
   atoms: runAtoms,
   skill: runSkills,
@@ -935,6 +942,10 @@ if (argv[0] === 'mcp' && argv[1] === 'live-artifacts') {
     process.exit(1);
   }
 }
+
+// An agent process started before its run reads the run's identity from a
+// file instead of its environment (see agent-access/run-context.ts).
+applyRunContextFile();
 
 const first = argv.find((a) => !a.startsWith('-'));
 if (first && SUBCOMMAND_MAP[first]) {
@@ -2464,6 +2475,9 @@ async function runMcp(args) {
   if (args[0] === 'install') {
     return runMcpInstall(args.slice(1));
   }
+  if (args[0] === 'scope' || args[0] === 'scopes') {
+    return runMcpScope(args);
+  }
   let flags;
   try {
     flags = parseFlags(args, {
@@ -2498,6 +2512,10 @@ async function runMcp(args) {
 
 function printMcpHelp() {
   console.log(`Usage: od mcp [--daemon-url <url>]
+       od mcp scopes [--json]
+       od mcp scope <serverId> --global | --agent <agentId>[,<agentId>…]
+                     Which agents get an external MCP server from Settings.
+                     Global (default): every agent. --agent: only those agents.
 
 Run a stdio MCP (Model Context Protocol) server that proxies project
 tool calls to a running OpenDesign daemon. Wire it into a coding agent
@@ -7978,6 +7996,9 @@ async function runRun(args) {
   od run info   <runId>                     One run's status.
   od run result-package <runId> [--json]    Inspect run outputs and workspace
                                             provenance without applying them.
+  od run budget <runId> [--json]            Token meter: what the run sent its
+                                            agent (rules, skills, history, your
+                                            message) and how long each phase took.
 
 Common options:
   --daemon-url <url>         OpenDesign daemon HTTP base.
@@ -8051,6 +8072,31 @@ Common options:
       for (const artifact of artifacts) {
         console.log(`artifact\t${artifact.file ?? '-'}\t${artifact.kind ?? '-'}\t${artifact.title ?? '-'}`);
       }
+      return;
+    }
+    case 'budget': {
+      const id = positionalArgs(rest, PROJECT_RESOURCE_STRING_FLAGS)[0];
+      if (!id) {
+        console.error('Usage: od run budget <runId> [--json]');
+        process.exit(2);
+      }
+      const resp = await fetch(`${base}/api/runs/${encodeURIComponent(id)}/budget`, {
+        headers: workspaceHeaders,
+      });
+      if (!resp.ok) return structuredHttpFailure(resp, 'run-not-found');
+      const data = await resp.json();
+      if (flags.json) return process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+      const sent = data?.sent ?? {};
+      const k = (n) => (typeof n === 'number' ? `≈${n.toLocaleString('en-US')}` : '-');
+      const ms = (n) => (typeof n === 'number' ? `${(n / 1000).toFixed(1)}s` : '-');
+      console.log(`run\t${data.runId}\t${data.agentId}\tmodel=${data.model ?? 'default'}\tmode=${data.mode ?? '-'}`);
+      console.log(`session\tresumed=${data.resumed}\trulesResent=${data.rulesResent}\thistoryCompacted=${data.historyCompacted}`);
+      console.log(`sent\ttotal=${k(sent.total)}\trules=${k(sent.rules)}\tskills=${k(sent.skills)}\tdesignSystem=${k(sent.designSystem)}\thistory=${k(sent.history)}\tmessage=${k(sent.message)}`);
+      for (const section of Array.isArray(data?.sections) ? data.sections : []) {
+        console.log(`section\t${section.kind}\t${k(section.tokens)}`);
+      }
+      const t = data?.timings ?? {};
+      console.log(`time\tprepare=${ms(t.prepareMs)}\tlaunch=${ms(t.launchMs)}\tfirstToken=${ms(t.firstTokenMs)}\ttotal=${ms(t.totalMs)}`);
       return;
     }
     case 'cancel': {
@@ -9889,13 +9935,132 @@ async function runSkills(args) {
   od skill list [--workspace <id> --workspace-member <id>]
   od skill show <id> [--workspace <id> --workspace-member <id>]
   od skill uninstall <id>
+  od skill global list|add <id>|remove <id> [--json]
+                     Global skills: every agent and the default assistant may use them.
+  od skill discover [--json]
+                     Skills installed straight into your CLIs (Antigravity, Claude, Codex…).
+  od skill import-cli <skill folder> [--global | --agent <agentId>] [--json]
+                     Bring one into the app's library, for everyone or for one agent.
+An agent's own skills are set on the agent (od agent …) and only that agent can read them.
 
 \`od skills …\` remains an alias for compatibility.`);
     process.exit(args[0] ? 0 : 2);
   }
   if (args[0] === 'install' || args[0] === 'add') return runSkillInstall(args.slice(1));
   if (args[0] === 'uninstall' || args[0] === 'remove') return runSkillUninstall(args.slice(1));
+  if (args[0] === 'global' || args[0] === 'discover' || args[0] === 'import-cli') return runSkillScopes(args);
   return runLibraryList('skills', args);
+}
+
+// `od mcp scopes` lists which servers belong to which agents;
+// `od mcp scope <serverId> --global | --agent <id>[,<id>…]` sets it.
+async function runMcpScope(args) {
+  const STRING = new Set(['daemon-url', 'agent']);
+  const flags = parseFlags(args.slice(1), { string: STRING, boolean: new Set(['json', 'global']) });
+  const positionals = positionalArgs(args.slice(1), STRING);
+  const base = (await libraryDaemonUrl(flags)).replace(/\/$/, '');
+  const request = async (init) => {
+    let resp;
+    try {
+      resp = await fetch(`${base}/api/mcp-scopes`, init);
+    } catch (err) {
+      surfaceFetchError(err, base);
+      process.exit(3);
+    }
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error(`[mcp] ${body?.error?.message ?? `request failed (${resp.status})`}`);
+      process.exit(1);
+    }
+    return body;
+  };
+  const print = (data) => {
+    if (flags.json) return console.log(JSON.stringify(data));
+    const entries = Object.entries(data.agentOnly ?? {});
+    if (entries.length === 0) return console.log('[mcp] every server is global');
+    for (const [server, agents] of entries) console.log(`${server}: only for ${agents.join(', ')}`);
+    console.log('[mcp] every other server is global');
+  };
+  if (args[0] === 'scopes') return print(await request());
+  const serverId = positionals[0];
+  if (!serverId || (!flags.global && typeof flags.agent !== 'string')) {
+    console.error('Usage: od mcp scope <serverId> --global | --agent <agentId>[,<agentId>…]');
+    process.exit(2);
+  }
+  const agentIds = flags.global ? null : String(flags.agent).split(',').map((id) => id.trim()).filter(Boolean);
+  return print(await request({
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ serverId, agentIds }),
+  }));
+}
+
+async function runSkillScopes(args) {
+  const STRING = new Set(['daemon-url', 'agent']);
+  const flags = parseFlags(args.slice(1), { string: STRING, boolean: new Set(['json', 'global']) });
+  const positionals = positionalArgs(args.slice(1), STRING);
+  const base = (await libraryDaemonUrl(flags)).replace(/\/$/, '');
+  const call = async (pathName, init) => {
+    let resp;
+    try {
+      resp = await fetch(`${base}${pathName}`, init);
+    } catch (err) {
+      surfaceFetchError(err, base);
+      process.exit(3);
+    }
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const message = body?.error?.message ?? body?.error ?? `request failed (${resp.status})`;
+      if (flags.json) console.log(JSON.stringify({ ok: false, status: resp.status, error: message }));
+      else console.error(`[skill] ${message}`);
+      process.exit(1);
+    }
+    return body;
+  };
+  const json = { 'content-type': 'application/json' };
+  if (args[0] === 'global') {
+    const action = positionals[0] ?? 'list';
+    if (action === 'list') {
+      const data = await call('/api/skill-scopes');
+      if (flags.json) return console.log(JSON.stringify(data));
+      return console.log(data.global.length ? data.global.join('\n') : '[skill] no global skills');
+    }
+    const id = positionals[1];
+    if (!['add', 'remove'].includes(action) || !id) {
+      console.error('Usage: od skill global list|add <id>|remove <id>');
+      process.exit(2);
+    }
+    const data = await call('/api/skill-scopes', {
+      method: 'PUT',
+      headers: json,
+      body: JSON.stringify({ id, global: action === 'add' }),
+    });
+    if (flags.json) return console.log(JSON.stringify(data));
+    return console.log(`[skill] ${id} is ${action === 'add' ? 'now global' : 'no longer global'}`);
+  }
+  if (args[0] === 'discover') {
+    const data = await call('/api/skill-library/discover');
+    if (flags.json) return console.log(JSON.stringify(data));
+    if (data.skills.length === 0) return console.log('[skill] no skills found in your CLIs');
+    for (const s of data.skills) {
+      console.log(`${s.imported ? 'imported ' : '         '}${s.source.padEnd(12)} ${s.name}  ${s.path}`);
+    }
+    return;
+  }
+  const folder = positionals[0];
+  if (!folder) {
+    console.error('Usage: od skill import-cli <skill folder> [--global | --agent <agentId>]');
+    process.exit(2);
+  }
+  const pathMod = await import('node:path');
+  const scope = flags.global ? 'global' : typeof flags.agent === 'string' ? 'agent' : 'library';
+  const data = await call('/api/skill-library/import', {
+    method: 'POST',
+    headers: json,
+    body: JSON.stringify({ path: pathMod.resolve(folder), scope, ...(scope === 'agent' ? { agentId: flags.agent } : {}) }),
+  });
+  if (flags.json) return console.log(JSON.stringify(data));
+  console.log(`[skill] imported ${data.id} (${scope === 'agent' ? `for agent ${data.agentId}` : scope})`);
 }
 
 async function runSkillInstall(rest) {
@@ -12369,4 +12534,255 @@ stage, a blocked stage, and edits that deleted or reworded a stage.`);
   if (data.finished) console.log('  everything is done');
   else if (data.next) console.log(`  next: ${data.next.id}`);
   for (const v of data.violations ?? []) console.log(`  ! ${v}`);
+}
+
+// ---------------------------------------------------------------------------
+// Subcommand: od speech
+// ---------------------------------------------------------------------------
+
+/**
+ * `od speech status|voices|say|transcribe` — the assistant's voice, from a shell.
+ * Same `/api/speech/*` the app uses: `say` speaks with the Mac's voices,
+ * `transcribe <file.wav>` turns audio into text with whisper.cpp if installed.
+ */
+async function accessCall(flags, pathName, init) {
+  const base = await cliDaemonBaseUrl(flags);
+  let resp;
+  try {
+    resp = await fetch(`${base}${pathName}`, init);
+  } catch (err) {
+    surfaceFetchError(err, base);
+    process.exit(3);
+  }
+  if (!resp.ok && resp.status !== 409) return structuredHttpFailure(resp);
+  return resp.json();
+}
+
+function onOff(value, name) {
+  if (value === 'on' || value === 'true') return true;
+  if (value === 'off' || value === 'false') return false;
+  console.error(`--${name} takes on or off`);
+  process.exit(2);
+}
+
+async function runAccess(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: ACCESS_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const positionals = positionalArgs(args, ACCESS_STRING_FLAGS);
+  const sub = positionals[0] ?? 'show';
+  const usage = `Usage:
+  od access show [--json]                 What agents may touch on this Mac
+  od access allow <folder> [--json]       Let agents write in a folder too
+  od access forget <folder> [--json]      Take a folder back
+  od access set [--read-all on|off] [--mac-control on|off] [--json]
+Agents cannot run these: their sandbox only reaches the daemon through a
+gateway that refuses them. A person changes access, from the app or here.`;
+  if (flags.help || flags.h || !['show', 'allow', 'forget', 'set'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  const emit = (data) => {
+    if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+    const a = data.access;
+    console.log(`[access] ${data.enforced ? 'enforced by the macOS sandbox' : 'NOT enforced here'}`);
+    console.log(`  write in: the project${a.allowedDirs.length ? `, ${a.allowedDirs.join(', ')}` : ''}`);
+    console.log(`  read the whole Mac: ${a.readWholeMac ? 'yes (secrets never)' : 'no (only the project and allowed folders)'}`);
+    console.log(`  Mac control: ${a.macControl ? 'on' : 'off'}`);
+    for (const r of data.refused ?? []) console.log(`  refused ${r.path}: ${r.reason}`);
+  };
+  if (sub === 'show') {
+    const data = await accessCall(flags, '/api/agent-access');
+    return data && emit(data);
+  }
+  const current = await accessCall(flags, '/api/agent-access');
+  if (!current) return;
+  const body = {};
+  if (sub === 'allow' || sub === 'forget') {
+    const folder = positionals[1];
+    if (!folder) {
+      console.error(`a folder is required: od access ${sub} <folder>`);
+      process.exit(2);
+    }
+    const pathMod = await import('node:path');
+    const abs = pathMod.resolve(folder);
+    body.allowedDirs = sub === 'allow'
+      ? [...current.access.allowedDirs, abs]
+      : current.access.allowedDirs.filter((d) => d !== abs);
+  } else {
+    if (typeof flags['read-all'] === 'string') body.readWholeMac = onOff(flags['read-all'], 'read-all');
+    if (typeof flags['mac-control'] === 'string') body.macControl = onOff(flags['mac-control'], 'mac-control');
+  }
+  const data = await accessCall(flags, '/api/agent-access', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return data && emit(data);
+}
+
+async function runMac(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: MAC_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const positionals = positionalArgs(args, MAC_STRING_FLAGS);
+  const sub = positionals[0] ?? '';
+  const usage = `Usage:
+  od mac status [--json]
+  od mac open [--app "<App>"] [--url <https://...>]
+  od mac type "<text>" | --prompt-file <path|->
+  od mac key <combo>                e.g. enter, cmd+t, cmd+shift+l
+  od mac click <x> <y>              screen points
+  od mac screenshot [--json]        prints the PNG's path
+  od mac front-app
+Only while the person has Mac control on. Typing, keys and clicks never go
+into terminals, System Settings, keychains or script editors.`;
+  if (flags.help || flags.h || !['status', 'open', 'type', 'key', 'click', 'screenshot', 'front-app'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  if (sub === 'status') {
+    const data = await accessCall(flags, '/api/mac/status');
+    if (!data) return;
+    if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+    return console.log(`[mac] control ${data.enabled ? 'on' : 'off'}; accessibility ${data.accessibility === null ? 'unknown' : data.accessibility ? 'allowed' : 'not allowed'}`);
+  }
+  let action;
+  if (sub === 'open') action = { action: 'open', app: flags.app, url: flags.url };
+  else if (sub === 'type') {
+    let text = positionals.slice(1).join(' ');
+    if (!text && typeof flags['prompt-file'] === 'string') {
+      const fsMod = await import('node:fs');
+      text = flags['prompt-file'] === '-' ? fsMod.readFileSync(0, 'utf8') : fsMod.readFileSync(flags['prompt-file'], 'utf8');
+    }
+    action = { action: 'type', text };
+  } else if (sub === 'key') action = { action: 'key', combo: positionals[1] ?? '' };
+  else if (sub === 'click') action = { action: 'click', x: Number(positionals[1]), y: Number(positionals[2]) };
+  else action = { action: sub };
+  const data = await accessCall(flags, '/api/mac/act', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(action),
+  });
+  if (!data) return;
+  if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+  if (!data.ok) {
+    console.error(`[mac] ${data.error}`);
+    process.exit(1);
+  }
+  console.log(data.value ?? '[mac] done');
+}
+
+async function runSpeech(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: SPEECH_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const positionals = positionalArgs(args, SPEECH_STRING_FLAGS);
+  const sub = positionals[0] ?? '';
+  const usage = `Usage:
+  od speech status [--json]
+  od speech voices [--json]
+  od speech say "<text>" | --prompt-file <path|-> [--voice <id>] [--rate 0.7-1.4] [--lang es-MX]
+                  [--out <file.wav>]   write the speech to a WAV file instead of the speakers
+  od speech transcribe <file.wav> [--lang es-MX] [--json]
+  od speech stop`;
+  if (flags.help || flags.h || !['status', 'voices', 'say', 'transcribe', 'stop'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  const base = await cliDaemonBaseUrl(flags);
+  const call = async (path, init) => {
+    let resp;
+    try {
+      resp = await fetch(`${base}${path}`, init);
+    } catch (err) {
+      surfaceFetchError(err, base);
+      process.exit(3);
+    }
+    if (!resp.ok) return structuredHttpFailure(resp);
+    return resp.json();
+  };
+  const emit = (data, text) => (flags.json ? process.stdout.write(JSON.stringify(data) + '\n') : console.log(text));
+
+  if (sub === 'status') {
+    const data = await call('/api/speech/status');
+    if (!data) return;
+    return emit(data, `[speech] voices: ${data.tts.supported ? data.tts.voices : 'unsupported here'}; listening: ${data.stt.available ? data.stt.engine : `not set up (${data.stt.reason})`}`);
+  }
+  if (sub === 'voices') {
+    const data = await call('/api/speech/voices');
+    if (!data) return;
+    return emit(data, data.voices.map((v) => `${v.quality.padEnd(8)} ${v.lang}  ${v.id}`).join('\n') || '[speech] no voices');
+  }
+  if (sub === 'stop') {
+    const data = await call('/api/speech/stop', { method: 'POST' });
+    return data && emit(data, data.wasSpeaking ? '[speech] stopped' : '[speech] nothing was playing');
+  }
+  if (sub === 'say') {
+    let text = positionals.slice(1).join(' ');
+    if (!text && typeof flags['prompt-file'] === 'string') {
+      const fsMod = await import('node:fs');
+      text = flags['prompt-file'] === '-' ? fsMod.readFileSync(0, 'utf8') : fsMod.readFileSync(flags['prompt-file'], 'utf8');
+    }
+    if (!text.trim()) {
+      console.error('text is required: od speech say "<text>"');
+      process.exit(2);
+    }
+    const body = { text };
+    if (typeof flags.voice === 'string') body.voiceId = flags.voice;
+    if (typeof flags.lang === 'string') body.lang = flags.lang;
+    if (typeof flags.rate === 'string') body.rate = Number(flags.rate);
+    if (typeof flags.out === 'string') {
+      let resp;
+      try {
+        resp = await fetch(`${base}/api/speech/render`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        surfaceFetchError(err, base);
+        process.exit(3);
+      }
+      if (!resp.ok) return structuredHttpFailure(resp);
+      const fsMod = await import('node:fs');
+      const wav = Buffer.from(await resp.arrayBuffer());
+      fsMod.writeFileSync(flags.out, wav);
+      return emit({ ok: true, out: flags.out, bytes: wav.length }, `[speech] wrote ${flags.out}`);
+    }
+    const data = await call('/api/speech/speak', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return data && emit(data, `[speech] said it with ${data.voice ?? 'the default voice'}`);
+  }
+  const file = positionals[1] ?? '';
+  if (!file) {
+    console.error('a WAV file is required: od speech transcribe <file.wav>');
+    process.exit(2);
+  }
+  const fsMod = await import('node:fs');
+  const lang = typeof flags.lang === 'string' ? flags.lang : 'es-MX';
+  const data = await call(`/api/speech/transcribe?lang=${encodeURIComponent(lang)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'audio/wav' },
+    body: fsMod.readFileSync(file),
+  });
+  return data && emit(data, data.text);
 }

@@ -1193,6 +1193,11 @@ const hardcodedColorAllowlist: StylePolicyAllowlistEntry[] = [
     reason: "sketch/canvas data and SVG illustrations keep narrow hardcoded color exceptions until their migration slice",
   },
   {
+    pathPattern: /^apps\/web\/src\/components\/assistant\/AssistantMonkey\.tsx$/,
+    valuePattern: /^(?:#[0-9a-fA-F]{3,8}\b)$/,
+    reason: "the assistant monkey is an illustration: its fur, eyes and tongue are fixed art colors, not theme colors",
+  },
+  {
     pathPattern: /^apps\/web\/src\/components\/(?:FileViewer|ManualEditPanel)\.tsx$/,
     valuePattern: /^(?:#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\))$/,
     reason: "user-authored file, inspect, and editable style colors are handled by the file/viewer migration slice",

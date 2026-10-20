@@ -634,7 +634,7 @@ import { importClaudeDesignZip } from './design/index.js';
 import { buildDocumentPreview } from './document-preview.js';
 import { lintArtifact, renderFindingsForAgent } from './lint-artifact.js';
 import { loadCraftSections, resolveCraftRequirements } from './craft.js';
-import { skillCwdAliasSegment, stageActiveSkill } from './cwd-aliases.js';
+import { skillCwdAliasSegment, SKILLS_CWD_ALIAS, stageActiveSkill } from './cwd-aliases.js';
 import { buildDesktopArtifactExportInput, buildDesktopPdfExportInput } from './pdf-export.js';
 import { generateMedia } from './media/index.js';
 import { resolveHyperFramesCliPath } from './media/hyperframes-runtime.js';
@@ -662,6 +662,9 @@ import {
   buildAcpMcpServers,
   buildClaudeMcpJson,
   buildOpenCodeMcpConfigContent,
+  buildCodexMcpConfigArgs,
+  buildAntigravityMcpPlugin,
+  ANTIGRAVITY_OD_MCP_PLUGIN_DIR,
   isManagedProjectCwd,
   readMcpConfig,
   writeMcpConfig,
@@ -830,11 +833,13 @@ import {
   userRequestBeforeAssistantMessage,
 } from './db.js';
 import { resolveOrchestratorForRun } from './orchestrator-context.js';
+import { defaultReasoningForRun } from './runtimes/ask-reasoning.js';
 import {
   createPhysicalAgentSessionUsageTracker,
   computeIncludeStable,
   hashStableInstructions,
   persistCapturedAgentSession,
+  withoutResumeAfterQuestionForm,
   resolveAgentResumeContext,
   resolveAgentResumeFailurePolicy,
   resolveAgentResumePromptPolicy,
@@ -913,6 +918,23 @@ import { registerOpenDesignPublicMetadataRoutes } from './routes/open-design-pub
 import { registerWhatsNewRoutes } from './routes/whats-new.js';
 import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
 import { registerDeliveryRoutes } from './routes/delivery.js';
+import { registerSpeechRoutes } from './routes/speech.js';
+import { registerAgentAccessRoutes } from './routes/agent-access.js';
+import { createAgentAccessStore } from './agent-access/access-store.js';
+import { createMacControl } from './agent-access/mac-control.js';
+import { startAgentGateway, type AgentGateway } from './agent-access/agent-gateway.js';
+import { buildAgentSandboxProfile, instructionDirsAbove, isInsideDir, sandboxInvocation } from './agent-access/sandbox-profile.js';
+import { createSkillScopesStore } from './agent-access/skill-scopes.js';
+import { prepareRunSkills, type RunSkills } from './agent-access/run-skills.js';
+import { compactTranscriptForRun } from './conversation-history.js';
+import { WarmAgentPool, warmLaunchKey } from './runtimes/warm-agents.js';
+import { RUN_CONTEXT_ENV, RUN_CONTEXT_FILE, writeRunContextFileSync } from './agent-access/run-context.js';
+import { buildRunBudget, recordRunBudgetTimings, writeRunBudget } from './run-budget.js';
+import { registerSkillLibraryRoutes } from './routes/skill-library.js';
+import { createMcpScopesStore, mcpServersForAgent } from './agent-access/mcp-scopes.js';
+import { registerMcpScopeRoutes } from './routes/mcp-scopes.js';
+import { createTtsService } from './speech/tts.js';
+import { createSttService } from './speech/stt.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import {
   createCollabPresenceCloudClient,
@@ -1887,6 +1909,39 @@ export function createAgentRuntimeEnv(
   return env;
 }
 
+/**
+ * What every agent is told about the Mac it runs on, in both prompt paths
+ * (this tool prompt feeds the legacy stack and OD Next alike). The limits
+ * themselves are enforced by the macOS sandbox; this text only explains them
+ * and adds the rule the sandbox cannot see: do only what was asked.
+ */
+export const AGENT_MAC_RULES = [
+  '## This Mac',
+  '',
+  '- You run inside a sandbox the person set in Settings. You can write only in this project and the folders they allowed; their secrets (keys, browser data, mail, messages) are never readable. A write that fails with "operation not permitted" is that limit: do not try to get around it. Say which folder you need and ask them to allow it in Settings, or to do that step themself.',
+  '- Do only what the person asked. Before deleting or overwriting their work, sending anything (messages, email, posts), buying, installing software, changing system settings, or publishing, ask first and name exactly what and where; act only on a clear yes.',
+  '- To control the Mac (only while they have Mac control on): `"$OD_NODE_BIN" "$OD_BIN" mac open --app "<App>" --url <https://...>`, `mac type "<text>"`, `mac key <combo>` (e.g. `cmd+t`, `enter`), `mac click <x> <y>`, `mac screenshot` (prints a PNG path you can open to see the screen), `mac front-app`. Look before you click: take a screenshot first. Typing, keys and clicks never go into terminals, System Settings or keychains; ask the person for those steps.',
+  '- Build and run the work inside this project folder: code, installs, dev servers and builds belong here, so the person sees everything in the app.',
+];
+
+/**
+ * The always-on part of the person's token-saving skill (zipai-optimizer),
+ * in every agent's tool prompt for both prompt paths. As a skill it was read
+ * in 2 of 90 runs (an agent never decides it "needs" a behaviour rule) and
+ * cost ~1.1K tokens when it was; these lines cost ~150 and apply every turn.
+ */
+/** `OD_ANTIGRAVITY_WARM=off` turns off starting Antigravity ahead of a turn. */
+const ANTIGRAVITY_WARM = process.env.OD_ANTIGRAVITY_WARM !== 'off';
+
+export const AGENT_TOKEN_RULES = [
+  '## Spend tokens on the work, not around it',
+  '',
+  '- Read narrowly: search with grep or a file listing before opening files, read the part you need of a large file, and do not re-read a file already in this conversation unless it changed.',
+  '- Filter command output: for builds, installs and tests keep the error and warning lines with a little context (`grep -iE "error|fail|warn" -A 10 -B 5`); cap `git log` at 20 entries and read a large diff by hunks.',
+  '- Answer plainly and briefly: lead with the answer, do not restate the request or pad with openers ("Great question", "Let me…"), and do not re-summarize earlier turns.',
+  '- When a request reads two different ways, ask one short question instead of building both.',
+];
+
 export function createAgentRuntimeToolPrompt(
   daemonUrl: string,
   toolTokenGrant: { token?: string } | null = null,
@@ -1906,6 +1961,10 @@ export function createAgentRuntimeToolPrompt(
     tokenLine,
     '- Prefer project wrapper commands through `OD_NODE_BIN` + `OD_BIN` over raw HTTP. The wrappers read these environment values automatically.',
     '- For dynamic Skill reads pass --workspace "$OD_WORKSPACE_ID" --workspace-member "$OD_WORKSPACE_MEMBER_ID" (use the corresponding environment-variable syntax on other shells). This pair is pinned to this run, not the UI\'s current Workspace. Both values are empty for unbound local runs; never substitute a different Workspace or member when either is missing.',
+    '',
+    ...AGENT_MAC_RULES,
+    '',
+    ...AGENT_TOKEN_RULES,
   ].join('\n');
 }
 
@@ -3584,6 +3643,16 @@ export async function startServer({
     getLatestRun: (routineId) => getLatestRoutineRun(db, routineId),
   });
   let daemonUrl = `http://127.0.0.1:${port}`;
+  // Agents reach the daemon only through this gateway: their sandbox cannot
+  // connect to the daemon's own port (see agent-access/agent-gateway.ts).
+  let agentGateway: AgentGateway | null = null;
+  const agentDaemonUrl = () => agentGateway?.url ?? daemonUrl;
+  // Antigravity processes started ahead of a conversation's next turn.
+  const warmAgents = new WarmAgentPool({ log: (message) => console.log(message) });
+  const agentAccess = createAgentAccessStore({ dataDir: RUNTIME_DATA_DIR, home: os.homedir() });
+  const agentScreensDir = path.join(RUNTIME_DATA_DIR, 'mac-screens');
+  const skillScopes = createSkillScopesStore({ dataDir: RUNTIME_DATA_DIR });
+  const mcpScopes = createMcpScopesStore({ dataDir: RUNTIME_DATA_DIR });
 
   // Boot reconcile: any critique_runs row left in 'running' state by a prior
   // daemon crash gets flipped to 'interrupted' with rounds_json.recoveryReason
@@ -9338,6 +9407,28 @@ export async function startServer({
     projectStore: projectStoreDeps,
     authorizeProjectRequest,
   });
+  registerMcpScopeRoutes(app, { http: httpDeps, scopes: mcpScopes });
+  registerSkillLibraryRoutes(app, {
+    http: httpDeps,
+    db,
+    scopes: skillScopes,
+    userSkillsDir: USER_SKILLS_DIR,
+    home: os.homedir(),
+    listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
+  });
+  registerAgentAccessRoutes(app, {
+    http: httpDeps,
+    access: agentAccess,
+    mac: createMacControl({
+      enabled: async () => (await agentAccess.read()).macControl,
+      screensDir: agentScreensDir,
+    }),
+  });
+  registerSpeechRoutes(app, {
+    http: httpDeps,
+    tts: createTtsService({ tmpDir: path.join(RUNTIME_DATA_DIR, 'speech', 'tmp') }),
+    stt: createSttService({ dataDir: RUNTIME_DATA_DIR }),
+  });
   registerDeliveryRoutes(app, {
     db,
     http: httpDeps,
@@ -10912,7 +11003,10 @@ export async function startServer({
     db,
     projectsDir: PROJECTS_DIR,
     runtimeDataDir: RUNTIME_DATA_DIR,
-    daemonUrl,
+    // Read at prompt time: the agent-facing URL is the gateway, known after listen.
+    get daemonUrl() {
+      return agentDaemonUrl();
+    },
     sandboxEnabled: SANDBOX_RUNTIME.enabled,
     getAgentDef,
     createAgentRuntimeToolPrompt,
@@ -11458,7 +11552,7 @@ export async function startServer({
         activeChatRunHandles.delete(sinkRunId);
       };
     }
-    const runtimeToolPrompt = createAgentRuntimeToolPrompt(daemonUrl, toolTokenGrant);
+    const runtimeToolPrompt = createAgentRuntimeToolPrompt(agentDaemonUrl(), toolTokenGrant);
     const commentHint = renderCommentAttachmentHint(safeCommentAttachments);
 
     // Resolve external MCP config + stored OAuth tokens up-front so the
@@ -11482,13 +11576,20 @@ export async function startServer({
       ? run.toolBundle.mcpServers
       : [];
     const {
-      enabledServers: enabledExternalMcp,
+      enabledServers: enabledExternalMcpForEveryone,
       persistedTokenServerIds,
     } = resolveExternalMcpServersForRun({
       persistedServers: externalMcpConfig.servers,
       runScopedServers: runScopedMcpServers,
       sandboxMode: SANDBOX_RUNTIME.enabled,
     });
+    // An MCP server set to "only for" some agents reaches only their runs;
+    // the rest are global (see agent-access/mcp-scopes.ts).
+    const enabledExternalMcp = mcpServersForAgent(
+      enabledExternalMcpForEveryone,
+      await mcpScopes.read(),
+      typeof chatBody?.agentProfileId === 'string' ? chatBody.agentProfileId : null,
+    );
     const oauthTokensForSpawn = {};
     if (persistedTokenServerIds.size > 0) {
       try {
@@ -11705,6 +11806,66 @@ export async function startServer({
             `[od] skill-stage skipped: ${result.reason ?? 'unknown reason'}; falling back to absolute paths`,
           );
         }
+      }
+    }
+    // The project's `.od-skills/` is shared by every agent working there, so
+    // it holds only the skills active for this turn. Copies left by earlier
+    // turns (an agent's private skills used to be staged here) are removed.
+    if (cwd && !strategyTaskAtStart?.frozenSkillPackage) {
+      const keep = new Set(activeSkillDirs.map((dir) => skillCwdAliasSegment(dir)));
+      const aliasRoot = path.join(cwd, SKILLS_CWD_ALIAS);
+      try {
+        for (const entry of await fs.promises.readdir(aliasRoot)) {
+          if (!keep.has(entry)) await fs.promises.rm(path.join(aliasRoot, entry), { recursive: true, force: true });
+        }
+      } catch {
+        // No staged skills in this project.
+      }
+    }
+    // Global skills and the agent's own, as a short per-turn index with copies
+    // only this run can read. Not on the OD Next path, which sends its own
+    // persisted final text.
+    // Where this run's agent-readable files live (staged skills, the full
+    // conversation, the run context). Its own run folder, except for an
+    // Antigravity conversation: there one folder per conversation, so a
+    // process started before the next turn (see runtimes/warm-agents.ts) can
+    // already be sandboxed to it. Either way no other agent can read it.
+    const warmEligible =
+      def.id === 'antigravity'
+      && ANTIGRAVITY_WARM
+      && !strategyTaskAtStart
+      && typeof run.conversationId === 'string'
+      && /^[A-Za-z0-9_-]{6,80}$/.test(run.conversationId);
+    const agentDir = warmEligible
+      ? path.join(RUNTIME_DATA_DIR, 'runs', `agent-antigravity-${run.conversationId}`)
+      : path.join(RUNTIME_DATA_DIR, 'runs', run.id);
+    let runSkills: RunSkills | null = null;
+    if (!strategyTaskAtStart) {
+      try {
+        const library = (await listAllSkills())
+          .filter((skill) => typeof skill.dir === 'string' && skill.dir)
+          .map((skill) => ({
+            id: skill.id,
+            name: skill.name,
+            description: skill.description,
+            triggers: skill.triggers,
+            dir: skill.dir as string,
+          }));
+        const activeDirs = new Set(activeSkillDirs.map((dir) => path.resolve(dir)));
+        runSkills = await prepareRunSkills({
+          globalIds: (await skillScopes.read()).global,
+          agentIds: Array.isArray(chatBody?.agentSkillIds)
+            ? chatBody.agentSkillIds.filter((id: unknown): id is string => typeof id === 'string')
+            : [],
+          activeIds: library.filter((skill) => activeDirs.has(path.resolve(skill.dir))).map((skill) => skill.id),
+          library,
+          message: typeof currentPrompt === 'string' && currentPrompt.trim()
+            ? currentPrompt
+            : typeof message === 'string' ? message : '',
+          runDir: agentDir,
+        });
+      } catch (error) {
+        console.warn('[od] skill index skipped:', error instanceof Error ? error.message : String(error));
       }
     }
     // Resolve the agent's effective working directory once and use it
@@ -12096,7 +12257,12 @@ export async function startServer({
         : null;
     const agentOptions = {
       model: safeModel,
-      reasoning: safeReasoning,
+      reasoning: defaultReasoningForRun({
+        chosen: safeReasoning,
+        sessionMode: runSessionMode,
+        delegated: Boolean(run?.delegation),
+        options: def.reasoningOptions,
+      }),
       serviceTier: safeServiceTier,
     };
     const agentLaunch = resolveAgentLaunch(def, configuredAgentEnv);
@@ -12153,6 +12319,7 @@ export async function startServer({
             currentModel: safeModel ?? null,
             currentCwd: effectiveCwd,
             currentAssistantMessageId: run.assistantMessageId ?? null,
+            ...(def.sessionStillExists ? { sessionStillExists: def.sessionStillExists } : {}),
           })
         : { storedSessionId: null as string | null, resumeSessionId: null as string | null, newSessionId: undefined as string | undefined, isResuming: false, storedStablePromptHash: null as string | null, storedInputTokens: null as number | null, storedStableSections: null as StableSectionHashes | null, invalidationReason: null };
     // A same-run post-tool recovery resumes the exact session id captured from
@@ -12178,7 +12345,14 @@ export async function startServer({
             pendingNativeSessionContinue.lastInputTokens ?? null,
           invalidationReason: null,
         }
-      : resolvedAgentResumeCtx;
+      : def.resumeSkipsAfterQuestionForm && resolvedAgentResumeCtx.isResuming && run.conversationId
+        ? withoutResumeAfterQuestionForm(
+            resolvedAgentResumeCtx,
+            'storedLastMessageId' in resolvedAgentResumeCtx && resolvedAgentResumeCtx.storedLastMessageId
+              ? (getMessage(db, resolvedAgentResumeCtx.storedLastMessageId, run.conversationId)?.content ?? null)
+              : null,
+          )
+        : resolvedAgentResumeCtx;
     if (
       strategyTaskAtStart
       && !isOdNextInitialRun
@@ -12278,6 +12452,14 @@ export async function startServer({
             resumeContinuationSeed.anchorAssistantMessageId,
           )
         : null;
+    // A CLI that cannot resume gets the whole transcript every turn. Past a
+    // budget it gets a state note plus the latest turns instead, with the full
+    // text in the run's own folder to read when it needs a detail.
+    const compactedTranscript =
+      !isOdNextInitialRun && !agentResumePromptPolicy.skipTranscript && typeof message === 'string'
+        ? await compactTranscriptForRun(message, agentDir)
+        : null;
+    const transcriptForAgent = compactedTranscript ? compactedTranscript.prompt : message;
     const userRequestPrompt = isOdNextInitialRun
       ? resolveOdNextRequestUserPrompt({
           message,
@@ -12285,7 +12467,7 @@ export async function startServer({
           hasCurrentPrompt: hasExplicitCurrentPrompt,
         })
       : composeChatUserRequestForAgent(
-          message,
+          transcriptForAgent,
           currentPrompt,
           // Only trim to the latest turn when we are actually resuming an
           // existing session. A create turn still sends the full transcript so
@@ -12516,6 +12698,9 @@ export async function startServer({
         hostProtocol.doneMarker,
         hostProtocol.nextSteps,
         hostProtocol.artifactFocus,
+        // Per turn on purpose: it changes with the message, so it must stay
+        // out of the stable slice a resumed session skips.
+        runSkills?.indexPrompt ?? '',
         includeStableForPayload ? systemPrompt : '',
       ]
         .map((part) => (typeof part === 'string' ? part.trim() : ''))
@@ -12624,6 +12809,32 @@ export async function startServer({
         'OD_NEXT_TASK_STATE_INVALID',
         error.message,
       );
+    }
+    // The token meter for this turn (see run-budget.ts).
+    void writeRunBudget(
+      path.join(RUNTIME_DATA_DIR, 'runs', run.id),
+      buildRunBudget({
+        runId: run.id,
+        agentId: def.id,
+        model: typeof safeModel === 'string' ? safeModel : null,
+        mode: typeof runSessionMode === 'string' ? runSessionMode : null,
+        resumed: agentResumeCtx.isResuming === true,
+        rulesResent: includeStableForPayload,
+        historyCompacted: compactedTranscript?.filePath != null,
+        composedPrompt: composed,
+        userRequest: typeof userRequestPrompt === 'string' ? userRequestPrompt : '',
+        currentMessage: typeof currentPrompt === 'string' ? currentPrompt : null,
+        skills: [runSkills?.indexPrompt, includeStableForPayload ? promptTelemetryParts?.skillPrompt : null],
+        designSystem: includeStableForPayload ? promptTelemetryParts?.designSystemPrompt : null,
+        sections: promptTelemetry.sections,
+      }),
+    );
+    // `OD_PROMPT_DUMP=1`: the exact prompt next to the meter, to see what a
+    // section holds before trimming it. Off by default.
+    if (process.env.OD_PROMPT_DUMP === '1') {
+      void fs.promises
+        .writeFile(path.join(RUNTIME_DATA_DIR, 'runs', run.id, 'prompt.txt'), composed, 'utf8')
+        .catch(() => {});
     }
     lifecycle.mark('prompt_build_end');
     lifecycle.mark('launch_preflight_start');
@@ -13447,6 +13658,53 @@ export async function startServer({
         }
       }
     }
+    // Claude Code: the servers in a file in the run's own folder (closed to
+    // other agents by the sandbox), passed with `--mcp-config`. A `.mcp.json`
+    // an earlier version wrote into the shared project folder is removed.
+    let claudeMcpConfigPath: string | null = null;
+    if (def.externalMcpInjection === 'claude-mcp-config-file') {
+      if (isManagedProjectCwd(cwd, PROJECTS_DIR)) {
+        await fs.promises.unlink(path.join(cwd, '.mcp.json')).catch(() => {});
+      }
+      const claudeMcp = buildClaudeMcpJson(enabledExternalMcp, oauthTokensForSpawn);
+      if (claudeMcp) {
+        try {
+          const runDir = path.join(RUNTIME_DATA_DIR, 'runs', run.id);
+          await fs.promises.mkdir(runDir, { recursive: true });
+          claudeMcpConfigPath = path.join(runDir, 'mcp.json');
+          await fs.promises.writeFile(claudeMcpConfigPath, JSON.stringify(claudeMcp, null, 2), { encoding: 'utf8', mode: 0o600 });
+        } catch (err) {
+          claudeMcpConfigPath = null;
+          console.warn('[mcp-config] failed to write run mcp.json:', err && err.message ? err.message : err);
+        }
+      }
+    }
+    // Codex: the servers as `-c mcp_servers.…` flags, handed to buildArgs.
+    const codexMcpConfigArgs = def.externalMcpInjection === 'codex-config-overrides'
+      ? buildCodexMcpConfigArgs(enabledExternalMcp, oauthTokensForSpawn)
+      : [];
+    // Antigravity: a workspace plugin in the managed project folder, which
+    // agy loads for runs there. Removed when no server is left, so turning
+    // one off takes effect on the next run. Never in a linked folder (the
+    // person's own repo).
+    if (
+      def.externalMcpInjection === 'antigravity-workspace-plugin' &&
+      isManagedProjectCwd(cwd, PROJECTS_DIR)
+    ) {
+      const pluginDir = path.join(cwd, ANTIGRAVITY_OD_MCP_PLUGIN_DIR);
+      const plugin = buildAntigravityMcpPlugin(enabledExternalMcp, oauthTokensForSpawn);
+      try {
+        if (plugin) {
+          await fs.promises.mkdir(pluginDir, { recursive: true });
+          await fs.promises.writeFile(path.join(pluginDir, 'plugin.json'), JSON.stringify(plugin.pluginJson, null, 2), 'utf8');
+          await fs.promises.writeFile(path.join(pluginDir, 'mcp_config.json'), JSON.stringify(plugin.mcpConfig, null, 2), 'utf8');
+        } else {
+          await fs.promises.rm(pluginDir, { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.warn('[mcp-config] antigravity plugin write failed:', err && err.message ? err.message : err);
+      }
+    }
     if (
       enabledExternalMcp.length > 0 &&
       def.externalMcpInjection === 'acp-merge'
@@ -13545,7 +13803,7 @@ export async function startServer({
             spawnEnvForAgent(
               def.id,
               {
-                ...createAgentRuntimeEnv(process.env, daemonUrl, toolTokenGrant, OD_NODE_BIN, inheritedEnvironment),
+                ...createAgentRuntimeEnv(process.env, agentDaemonUrl(), toolTokenGrant, OD_NODE_BIN, inheritedEnvironment),
                 ...(def.env || {}),
               },
               configuredAgentEnv,
@@ -13700,7 +13958,7 @@ export async function startServer({
     // allocate a per-run temp path and pipe agy's log to it via buildArgs:
     // the model lock below waits there for agy to confirm it read the
     // settings.json model override. Other adapters ignore this field.
-    const agentLogFilePath =
+    let agentLogFilePath =
       def.id === 'antigravity'
         ? path.join(os.tmpdir(), `od-agy-${run.id}.log`)
         : undefined;
@@ -13845,6 +14103,8 @@ export async function startServer({
           promptFilePath: promptFile?.path,
           resumeSessionId: agentResumePromptPolicy.resumeSessionId,
           newSessionId: agentResumeCtx.newSessionId,
+          ...(codexMcpConfigArgs.length > 0 ? { mcpConfigArgs: codexMcpConfigArgs } : {}),
+          ...(claudeMcpConfigPath ? { mcpConfigPath: claudeMcpConfigPath } : {}),
           disablePlugins:
             def.id === 'codex'
             && run.externalPluginAnalytics?.externalPluginId
@@ -14367,7 +14627,7 @@ export async function startServer({
     const agentSpawnEnv = spawnEnvForAgent(
       def.id,
       {
-        ...createAgentRuntimeEnv(process.env, daemonUrl, toolTokenGrant, OD_NODE_BIN, inheritedEnvironment),
+        ...createAgentRuntimeEnv(process.env, agentDaemonUrl(), toolTokenGrant, OD_NODE_BIN, inheritedEnvironment),
         ...(def.env || {}),
         ...browserUseRuntimeEnv,
       },
@@ -14390,7 +14650,7 @@ export async function startServer({
       }
     }
     const odMediaEnv = createOpenDesignToolEnv({
-      daemonUrl,
+      daemonUrl: agentDaemonUrl(),
       projectDir: cwd,
       projectId: typeof projectId === 'string' ? projectId : null,
       runId: run.id,
@@ -14564,6 +14824,9 @@ export async function startServer({
           console.warn('[opencode] optional tool previews unavailable:', error instanceof Error ? error.message : String(error));
         }
       }
+      // Read before the cancellation check below, so no await sits between
+      // that check and the spawn.
+      const access = await agentAccess.read();
       // Version detection and plugin staging above can yield while a cancel
       // request arrives. Never spawn a child after that cancellation.
       if (run.cancelRequested || design.runs.isTerminal(run.status)) {
@@ -14574,11 +14837,48 @@ export async function startServer({
         return;
       }
       spawnedAgentEnv = env;
-      const invocation = createCommandInvocation({
+      const plainInvocation = createCommandInvocation({
         command: agentLaunch.launchPath,
         args,
         env,
       });
+      // Every agent runs inside the macOS sandbox built from the person's
+      // access settings: writes only where allowed, no secrets, and the
+      // daemon's own port out of reach (agents use the gateway).
+      const webPort = Number(process.env.OD_WEB_PORT);
+      const sandboxProfile = buildAgentSandboxProfile({
+          home: os.homedir(),
+          workDirs: [effectiveCwd, agentDir],
+          allowedDirs: access.allowedDirs,
+          // Skills, templates and design systems are read on demand (Ask mode
+          // points at SKILL.md), so they stay readable with personal folders closed.
+          readableDirs: [agentScreensDir, DESIGN_TEMPLATES_DIR, DESIGN_SYSTEMS_DIR, USER_DESIGN_SYSTEMS_DIR, CRAFT_DIR, BUNDLED_PLUGINS_DIR],
+          // Skills lock: the skill libraries and every run's folder are closed;
+          // this run reads its own staged skills and the project's active ones.
+          lockedDirs: [SKILLS_DIR, USER_SKILLS_DIR, path.join(RUNTIME_DATA_DIR, 'runs')],
+          unlockedDirs: [agentDir, ...activeSkillDirs],
+          readWholeMac: access.readWholeMac,
+          // A managed project's CLI must not load the guides of the folders
+          // that hold the data root (in development, this repository's own).
+          hiddenInstructionDirs: isInsideDir(PROJECTS_DIR, effectiveCwd)
+            ? instructionDirsAbove(PROJECTS_DIR)
+            : [],
+          blockedPorts: agentGateway
+            ? [Number(new URL(daemonUrl).port), ...(Number.isFinite(webPort) && webPort > 0 ? [webPort] : [])]
+            : [],
+        });
+      // The same launch for any argv: this run's, or the next turn's when it
+      // is started ahead of time.
+      const launchFor = (launchArgs: string[], launchEnv: NodeJS.ProcessEnv) => {
+        const plain = createCommandInvocation({ command: agentLaunch.launchPath, args: launchArgs, env: launchEnv });
+        const wrapped = sandboxInvocation({ command: plain.command, args: [...plain.args] }, sandboxProfile);
+        return { ...plain, command: wrapped.command, args: wrapped.args };
+      };
+      const sandboxed = sandboxInvocation(
+        { command: plainInvocation.command, args: [...plainInvocation.args] },
+        sandboxProfile,
+      );
+      const invocation = { ...plainInvocation, command: sandboxed.command, args: sandboxed.args };
       if (def.streamFormat === CODEX_APP_SERVER_STREAM_FORMAT) {
         codexCleanupInvocation = {
           command: invocation.command, args: [...invocation.args], env: { ...env }, cwd: effectiveCwd,
@@ -14593,24 +14893,96 @@ export async function startServer({
       // stdin protocols (Claude stream-json, JSON-RPC) keep the pipe. The
       // agent stays on record until its process group is gone, so a daemon
       // started after this one dies can reap it. See runtimes/agent-process.ts.
-      const spawnedAgent = spawnAgentProcess({
-        command: invocation.command,
-        args: invocation.args,
-        env,
-        cwd: effectiveCwd,
-        windowsVerbatimArguments: invocation.windowsVerbatimArguments,
-        stdin: stdinMode === 'pipe' && runtimeReadsPlainTextPromptFromStdin(def)
-          ? { prompt: agentStdinPromptPayload(def, composed) }
-          : stdinMode,
-        runDir: path.join(RUNTIME_DATA_DIR, 'runs', run.id),
-        runId: run.id,
-      });
+      // A process this conversation's previous turn started ahead of time is
+      // adopted when its launch is exactly this one; otherwise it is ended and
+      // this run starts cold (see runtimes/warm-agents.ts). No await between
+      // the cancellation check above and either path.
+      const warmAgent = warmEligible
+        ? warmAgents.take(
+            run.conversationId,
+            warmLaunchKey({ command: invocation.command, args: invocation.args, env, cwd: effectiveCwd }),
+          )
+        : null;
+      let spawnedAgent: { child: any; processGroupId: number | null; promptDeliveredAtSpawn: boolean };
+      if (warmAgent?.child.stdin) {
+        writeRunContextFileSync(agentDir, { runId: run.id, toolToken: toolTokenGrant?.token ?? null });
+        warmAgent.child.stdin.on('error', () => {});
+        warmAgent.child.stdin.end(agentStdinPromptPayload(def, composed));
+        if (warmAgent.logFilePath) agentLogFilePath = warmAgent.logFilePath;
+        spawnedAgent = { child: warmAgent.child, processGroupId: warmAgent.processGroupId, promptDeliveredAtSpawn: true };
+        run.warmStart = true;
+        console.log(`[warm-agents] run ${run.id} adopted a warm Antigravity process (${Date.now() - warmAgent.startedAt} ms old)`);
+      } else {
+        spawnedAgent = spawnAgentProcess({
+          command: invocation.command,
+          args: invocation.args,
+          env,
+          cwd: effectiveCwd,
+          windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+          stdin: stdinMode === 'pipe' && runtimeReadsPlainTextPromptFromStdin(def)
+            ? { prompt: agentStdinPromptPayload(def, composed) }
+            : stdinMode,
+          runDir: path.join(RUNTIME_DATA_DIR, 'runs', run.id),
+          runId: run.id,
+        });
+      }
       child = spawnedAgent.child;
       promptDeliveredAtSpawn = spawnedAgent.promptDeliveredAtSpawn;
       lifecycle.mark('process_spawned');
       run.child = child;
       run.childPid = typeof child.pid === 'number' ? child.pid : null;
       run.processGroupId = spawnedAgent.processGroupId;
+      // After a clean turn, start the CLI for the conversation's next turn
+      // and park it, so that turn skips the CLI's own start-up. Not with a
+      // concrete model: its settings.json write is serialised per spawn.
+      if (warmEligible && !antigravityConcreteModel) {
+        const warmGeneration = warmAgents.generation(run.conversationId);
+        const conversationId = run.conversationId;
+        child.once('close', (exitCode: number | null) => {
+          if (exitCode !== 0 || run.cancelRequested || daemonShuttingDown) return;
+          const nextSessionId = agentResumeCtx.isResuming ? agentResumeCtx.resumeSessionId : capturedSessionId;
+          if (typeof nextSessionId !== 'string' || !nextSessionId) return;
+          setImmediate(() => {
+            try {
+              const warmLogFilePath = path.join(os.tmpdir(), `od-agy-warm-${randomUUID()}.log`);
+              const warmArgs = def.buildArgs('', [], extraAllowedDirs, agentOptions, {
+                cwd: effectiveCwd,
+                hasPriorAssistantTurn: true,
+                agentLogFilePath: warmLogFilePath,
+                resumeSessionId: nextSessionId,
+              });
+              const warmEnv: NodeJS.ProcessEnv = {
+                ...env,
+                OD_RUN_ID: '',
+                OD_TOOL_TOKEN: '',
+                [RUN_CONTEXT_ENV]: path.join(agentDir, RUN_CONTEXT_FILE),
+              };
+              fs.rmSync(path.join(agentDir, RUN_CONTEXT_FILE), { force: true });
+              const launch = launchFor(warmArgs, warmEnv);
+              const warm = spawnAgentProcess({
+                command: launch.command,
+                args: launch.args,
+                env: warmEnv,
+                cwd: effectiveCwd,
+                windowsVerbatimArguments: launch.windowsVerbatimArguments,
+                stdin: 'pipe',
+                runDir: agentDir,
+                runId: `warm-${conversationId}`,
+              });
+              warm.child.on('error', () => {});
+              warmAgents.park(conversationId, warmGeneration, {
+                key: warmLaunchKey({ command: launch.command, args: launch.args, env: warmEnv, cwd: effectiveCwd }),
+                child: warm.child,
+                processGroupId: warm.processGroupId,
+                logFilePath: warmLogFilePath,
+                startedAt: Date.now(),
+              });
+            } catch (error) {
+              console.warn('[warm-agents] could not start ahead:', error instanceof Error ? error.message : String(error));
+            }
+          });
+        });
+      }
       // Schedule release of the antigravity model lock once agy's
       // --log-file confirms the chosen model was propagated to the
       // backend (the upstream signal that settings.json was read).
@@ -16172,6 +16544,7 @@ export async function startServer({
       finishWithRetryDecision('failed', 1, null);
     });
     child.on('close', async (code, signal) => {
+      void recordRunBudgetTimings(path.join(RUNTIME_DATA_DIR, 'runs', run.id), run.analyticsTelemetry);
       try {
       clearInactivityWatchdog();
       clearFirstOutputWatchdog();
@@ -18012,6 +18385,7 @@ export async function startServer({
       if (daemonShutdownPromise) return daemonShutdownPromise;
       daemonShutdownPromise = (async () => {
         daemonShuttingDown = true;
+        warmAgents.closeAll();
         await velaRoutesLifecycle.close();
         amrTerminalReportDelivery.stop();
         clearTerminalTelemetryFallbackTimers();
@@ -18095,6 +18469,12 @@ export async function startServer({
           console.log(`[od] daemon listening on ${url}`);
         }
         daemonUrl = url;
+        void startAgentGateway({ host: reportHost, port: Number(resolvedPort) })
+          .then((gateway) => {
+            agentGateway = gateway;
+            server.once('close', () => void gateway.close());
+          })
+          .catch((error) => console.warn('[od] agent gateway unavailable:', error instanceof Error ? error.message : String(error)));
         resolve(returnServer ? {
           url,
           server,

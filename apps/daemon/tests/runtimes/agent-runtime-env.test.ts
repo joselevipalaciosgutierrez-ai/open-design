@@ -333,6 +333,14 @@ describe('agent runtime tool environment', () => {
     expect(prompt).toContain('`OD_TOOL_TOKEN` is not available');
     expect(prompt).not.toContain('Bearer');
   });
+
+  it('carries the always-on token-saving rules, short', () => {
+    const prompt = createAgentRuntimeToolPrompt('http://127.0.0.1:7456', null);
+    const rules = prompt.slice(prompt.indexOf('## Spend tokens on the work'));
+    expect(rules).toContain('do not re-read a file already in this conversation');
+    expect(rules).toContain('ask one short question');
+    expect(rules.length / 4).toBeLessThan(200);
+  });
 });
 
 describe('applyAgentLaunchEnv', () => {

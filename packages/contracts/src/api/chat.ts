@@ -1365,6 +1365,8 @@ export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
+  /** True when the request this answers was said out loud to the voice assistant (live session only). */
+  spoken?: boolean;
   agentId?: string;
   agentName?: string;
   events?: PersistedAgentEvent[];

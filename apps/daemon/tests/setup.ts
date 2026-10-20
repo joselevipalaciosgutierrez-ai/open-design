@@ -5,6 +5,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The agent sandbox (agent-access/sandbox-profile.ts) wraps real agent spawns
+// in macOS's sandbox-exec. Suites spawn fake CLIs and assert their exact argv,
+// and CI runs on Linux where there is no sandbox: keep both worlds equal. The
+// sandbox's own suites pass platform and env explicitly.
+process.env.OD_AGENT_SANDBOX ??= 'off';
+// Tests start each agent cold; warm-agents tests opt in on their own.
+process.env.OD_ANTIGRAVITY_WARM ??= 'off';
+
 const daemonRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const daemonCliDist = path.join(daemonRoot, 'dist', 'cli.js');
 

@@ -215,6 +215,7 @@ import {
   UPLOAD_DIR,
 } from '../runtimes/chat-prompt-inputs.js';
 import { createRunAnalyticsLifecycle } from '../services/run-analytics-lifecycle.js';
+import { readRunBudget } from '../run-budget.js';
 import {
   runTouchedArtifactPaths,
   validateChatProjectDeliverable,
@@ -1439,10 +1440,17 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
     // A conversation opened with an agent profile runs as that agent. Applied
     // here, before the run records its agent, so the run, its task and the
     // request all agree (see agent-profile-run.ts).
+    // Only an agent profile grants private skills and agent-only MCP servers;
+    // a caller cannot name them.
+    delete requestBody.agentSkillIds;
+    delete requestBody.agentProfileId;
     if (typeof requestBody.conversationId === 'string' && requestBody.conversationId) {
       const profileId = getConversation(db, requestBody.conversationId)?.agentProfileId;
       const agentProfile = profileId ? getAgentProfile(db, profileId) : null;
-      if (agentProfile) applyAgentProfileToRunBody(requestBody, agentProfile);
+      if (agentProfile) {
+        applyAgentProfileToRunBody(requestBody, agentProfile);
+        requestBody.agentProfileId = agentProfile.id;
+      }
     }
     let authorizedBoundMutation = false;
     if (typeof requestBody.projectId === 'string' && requestBody.projectId) {
@@ -1715,9 +1723,19 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
       const rolloutTaskType = previousStrategyTask
         ? getSnapshot(db, previousStrategyTask.snapshotId)?.strategy?.selectedTaskProfile.taskType ?? null
         : odNextTaskTypeForProjectScenarioBinding(verifiedStrategyBinding ?? verifiedScenarioBinding);
+      // Ask mode is the bare conversation: it builds no artifact, and its
+      // classic prompt is a few thousand tokens. OD Next has no Ask variant, so
+      // taking it would send the whole design strategy (~20K tokens, measured)
+      // to answer "hola". An Ask turn therefore never takes the OD Next route.
+      const requestSessionMode =
+        requestBody.sessionMode === 'chat' || requestBody.sessionMode === 'design' || requestBody.sessionMode === 'plan'
+          ? requestBody.sessionMode
+          : snapshotConversationId
+            ? normalizeConversationSessionMode(getConversation(db, snapshotConversationId)?.sessionMode)
+            : null;
       const routeApplicability = explicitUserPlugin
         ? 'explicit_user' as const
-        : rolloutTaskType && snapshotConversationId
+        : rolloutTaskType && snapshotConversationId && requestSessionMode !== 'chat'
           ? 'eligible' as const
           : 'not_applicable' as const;
       const rolloutMayObserve = routeApplicability === 'eligible'
@@ -3272,6 +3290,19 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
       artifacts,
     };
     res.json(body);
+  });
+
+  // The token meter: what this run sent its agent, by part, and how long each
+  // phase took (see run-budget.ts). It is read from the run's folder, so it
+  // outlives the in-memory run.
+  app.get('/api/runs/:id/budget', async (req: ApiRequest, res: ApiResponse) => {
+    const runId = routeParamId(req);
+    if (!runId || !/^[A-Za-z0-9_-]{6,80}$/.test(runId)) return sendApiError(res, 400, 'BAD_REQUEST', 'run id missing');
+    const run = design.runs.get(runId);
+    if (run && !await authorizeRunProject(req, res, run, { mode: 'read' })) return;
+    const budget = await readRunBudget(path.join(RUNTIME_DATA_DIR, 'runs', runId));
+    if (!budget) return sendApiError(res, 404, 'NOT_FOUND', 'this run left no token meter');
+    res.json(budget);
   });
 
   app.get('/api/runs/:id', async (req: ApiRequest, res: ApiResponse) => {

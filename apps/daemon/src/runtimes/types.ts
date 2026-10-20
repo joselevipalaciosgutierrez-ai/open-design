@@ -65,6 +65,12 @@ export type RuntimeContext = {
   // adapters may use `newSessionId` (a freshly minted UUID the daemon also
   // persists), while capture-style transports report their own id.
   resumeSessionId?: string | null;
+  // External MCP servers as CLI config flags, for adapters whose
+  // `externalMcpInjection` is 'codex-config-overrides'.
+  mcpConfigArgs?: string[];
+  // A per-run MCP config file in the run's private folder, for adapters
+  // whose `externalMcpInjection` is 'claude-mcp-config-file'.
+  mcpConfigPath?: string;
   newSessionId?: string;
   // Per-run plugin isolation for agent subprocesses. External Plugin entry
   // points use this for Local Codex so the child cannot recursively load the
@@ -229,11 +235,22 @@ export type RuntimeAgentDef = {
   // is not forwarded to <agent>; configure servers in <agent>'s own
   // config file instead" hint, replacing the previous silent-failure
   // UX from issue #2142.
+  //   'codex-config-overrides'       — `-c mcp_servers.<id>.…` flags the
+  //                                    adapter appends (RuntimeContext
+  //                                    `mcpConfigArgs`); no file written.
+  //   'antigravity-workspace-plugin' — a `.agents/plugins/od-mcp/` plugin
+  //                                    in the managed project cwd.
+  //   'claude-mcp-config-file'       — the servers in the run's private
+  //                                    folder, passed with `--mcp-config`;
+  //                                    no shared `.mcp.json` in the project.
   externalMcpInjection?:
     | 'claude-mcp-json'
     | 'acp-merge'
     | 'opencode-env-content'
-    | 'mimo-env-content';
+    | 'mimo-env-content'
+    | 'codex-config-overrides'
+    | 'antigravity-workspace-plugin'
+    | 'claude-mcp-config-file';
   installUrl?: string;
   docsUrl?: string;
   // When `false`, the Settings model picker hides the "Custom (fill below)"
@@ -267,6 +284,16 @@ export type RuntimeAgentDef = {
   // path and `agent-cli-session-resume.md`. Profile-stdio transports can also
   // capture the id from a validated protocol status frame.
   capturesSessionIdFromStream?: boolean;
+  // Whether a stored session can still be continued, checked before the
+  // daemon decides to send only the latest turn. For CLIs that, given an id
+  // they no longer have, silently open a NEW session instead of failing
+  // (Antigravity does): without this check the turn would run with no
+  // context at all. Returning false falls back to a full transcript.
+  sessionStillExists?: (sessionId: string) => boolean;
+  // Start a full-transcript turn instead of continuing the session when the
+  // last assistant message the session produced was a `<question-form>`.
+  // Antigravity, continued after its own form, re-emitted that same form.
+  resumeSkipsAfterQuestionForm?: boolean;
   // ACP-runtime analogue of capture-style resume: the agent talks `acp-json-rpc`
   // (today only AMR/vela) and supports resuming via `session/load`. The daemon
   // captures the durable upstream session handle from the ACP session

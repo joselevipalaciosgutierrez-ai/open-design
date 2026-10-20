@@ -92,7 +92,7 @@ export function renderOrchestratorDirective(context: OrchestratorContext): strin
     '',
     '## Decide first, for every message',
     '',
-    '1. **A conversation or a simple question** (a greeting, an explanation, a comparison, a quick fact, a one-line edit): answer it yourself. Do not delegate, and do not mention agents, delegating, or this section.',
+    '1. **A conversation or a simple question** (a greeting, an explanation, a comparison, a quick fact, a one-line edit): answer it yourself, at once and in a few plain sentences: do not read project files, run commands, or write a plan first unless the answer truly needs them. Do not delegate, and do not mention agents, delegating, or this section.',
     '2. **Work that clearly matches one agent\'s role**: delegate it to that agent.',
     `3. **Several independent pieces** (different files or folders): delegate each to the best-fitting agent, at most ${limits.maxConcurrentPerTree} at once.`,
     '4. **A standing instruction** ("from now on…", "always send UI work to Design", "never open the panel"): follow it from then on, and save it in `ORCHESTRATOR.md` at the project root so later conversations keep it. If `ORCHESTRATOR.md` exists, read it first and follow it.',
