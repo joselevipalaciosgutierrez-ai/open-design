@@ -149,6 +149,34 @@ describe('LexicalComposerInput', () => {
     await waitFor(() => expect(ref.current?.getText()).toBe(''));
   });
 
+  it('empties when the host resets the draft to "" after the person typed (send clears the composer)', async () => {
+    const { ref, rerender, container } = setup({ draft: '' });
+    const host = container.querySelector('[contenteditable="true"]') as HTMLElement;
+    const editor = (host as HTMLElement & { __lexicalEditor?: LexicalEditor }).__lexicalEditor!;
+    // The person types; the host echoes it back as the draft, as HomeView does.
+    act(() => {
+      editor.update(() => {
+        $getRoot().selectEnd().insertText('hola Lev');
+      }, { discrete: true });
+    });
+    const base = { placeholder: 'Message', knownEntities: KNOWN, onChange: vi.fn(), onTrigger: vi.fn(), onEnterSend: vi.fn(), onPopoverKey: vi.fn(() => false), popoverOpen: false };
+    rerender(<LexicalComposerInput ref={ref} {...base} draft="hola Lev" />);
+    await waitFor(() => expect(ref.current?.getText()).toBe('hola Lev'));
+    // Sent: the host clears its prompt.
+    rerender(<LexicalComposerInput ref={ref} {...base} draft="" />);
+    await waitFor(() => expect(ref.current?.getText()).toBe(''));
+    // A second message: typed, echoed, sent. The clear must work again.
+    act(() => {
+      editor.update(() => {
+        $getRoot().selectEnd().insertText('otra cosa');
+      }, { discrete: true });
+    });
+    rerender(<LexicalComposerInput ref={ref} {...base} draft="otra cosa" />);
+    await waitFor(() => expect(ref.current?.getText()).toBe('otra cosa'));
+    rerender(<LexicalComposerInput ref={ref} {...base} draft="" />);
+    await waitFor(() => expect(ref.current?.getText()).toBe(''));
+  });
+
   // Reach the live editor instance Lexical attaches to the contenteditable
   // root, so the gesture below runs through the real React-mounted pipeline
   // (reconciler createDOM/updateDOM on the cloned node + the OnChange/Trigger

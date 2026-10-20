@@ -694,7 +694,14 @@ function SeedingPlugin({
   entitiesRef.current = entities;
   useEffect(() => {
     const current = serializeComposer(editor.getEditorState()).text;
-    if (draft === current) return; // user-typed → no reseed → caret preserved
+    if (draft === current) {
+      // User-typed → no reseed → caret preserved. Remember it as the text in
+      // the editor, so a later reset to the last seeded value (often '', the
+      // composer clearing after a send) still reseeds instead of being taken
+      // for a repeat.
+      lastSeeded.current = draft;
+      return;
+    }
     if (draft === lastSeeded.current) return; // StrictMode double-invoke guard
     lastSeeded.current = draft;
     setComposerFromText(editor, draft, entitiesRef.current);
