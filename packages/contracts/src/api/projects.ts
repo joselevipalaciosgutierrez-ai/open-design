@@ -336,6 +336,8 @@ export interface ProjectMetadata {
   // real hub content lands on disk. See the daemon's
   // collab/shared-project-placeholder.ts for the invariant.
   sharedProjectPlaceholderAt?: number;
+  /** A system project the app keeps out of project lists (`orchestrator`: Lev's sessions). */
+  system?: 'orchestrator';
 }
 
 export interface Project {

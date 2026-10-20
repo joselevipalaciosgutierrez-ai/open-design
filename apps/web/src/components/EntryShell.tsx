@@ -1854,7 +1854,18 @@ export function EntryShell({
   // must submit through the SAME handlers — a docked composer that created
   // projects down a second path would drift from Home's the first time either
   // changed.
+  // Lev answers on Home with the app's default agent and its model choice.
+  // A plain object (this sits after early returns, so no hook): HomeView keys
+  // its effects on the fields, not on the object.
+  // Only for local CLI agents: AMR (hosted) sends go through Home's sign-in,
+  // team and balance gates, which belong to the project-creation pipeline.
+  const levAgent = config.mode === 'daemon' && config.agentId && config.agentId !== 'amr' ? {
+    agentId: config.agentId ?? null,
+    model: config.agentId ? config.agentModels?.[config.agentId]?.model ?? null : null,
+    reasoning: config.agentId ? config.agentModels?.[config.agentId]?.reasoning ?? null : null,
+  } : undefined;
   const homeViewProps = {
+    levAgent,
     projects: homeProjectsList,
     projectsLoading,
     designSystems,

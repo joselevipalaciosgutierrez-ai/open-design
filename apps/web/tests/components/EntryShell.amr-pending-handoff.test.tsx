@@ -296,16 +296,15 @@ describe('OPEND-2614 · Home send hands off before the AMR gate', () => {
     }
   });
 
-  it('local agent: same hand-off, no gate', async () => {
+  it('local agent: plain words go to Lev on Home, with no project and no gate', async () => {
     const h = harness('codex');
     await submitHome('Draft a landing page locally.');
-    await waitFor(() => expect(h.onCreateProject).toHaveBeenCalledTimes(1));
-    expect(h.calls).toEqual(['begin', 'create']);
+    await waitFor(() =>
+      expect(vi.mocked(globalThis.fetch).mock.calls.some(([url]) => String(url).endsWith('/api/orchestrator'))).toBe(true),
+    );
+    expect(h.onCreateProject).not.toHaveBeenCalled();
+    expect(h.calls).toEqual([]);
     expect(mockedCheckAmrBalanceGate).not.toHaveBeenCalled();
-    expect(h.onCreateProject.mock.calls[0]?.[0]).toMatchObject({
-      optimisticProjectId: 'optimistic-2614',
-    });
-    expect(h.onCreateProject.mock.calls[0]?.[0]).not.toHaveProperty('amrGatePrecheckWitness');
   });
 });
 

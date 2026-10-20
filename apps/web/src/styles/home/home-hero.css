@@ -4513,3 +4513,119 @@
 .home-view:not(.home-view--dock) > .home-hero {
   padding-top: var(--spacing-4);
 }
+
+/* ============================================================
+   Lev, the general chat on Home (owner: components/lev/)
+   Folded: greeting and composer, centred. Open: Lev's conversation fills the
+   column and the same composer sits at the bottom. The switch runs inside a
+   view transition (runtime/view-transition.ts): the composer keeps its
+   `view-transition-name`, so the browser moves it; the greeting fades out and
+   the conversation fades in.
+   ============================================================ */
+.home-view:not(.home-view--dock) .home-hero__composer-card {
+  view-transition-name: od-home-composer;
+}
+.home-view:not(.home-view--dock) .home-hero__title {
+  view-transition-name: od-home-greeting;
+}
+.home-view:not(.home-view--dock) .home-hero__subtitle {
+  view-transition-name: od-home-greeting-sub;
+}
+
+.home-view.home-view--lev {
+  block-size: 100%;
+  min-height: 0;
+  justify-content: flex-end;
+  padding-block-end: var(--spacing-16);
+}
+.home-view--lev > .home-hero {
+  flex: none;
+  padding-top: 0;
+}
+.home-view--lev .home-hero__title,
+.home-view--lev .home-hero__subtitle {
+  display: none;
+}
+/* Everything else on Home steps aside while Lev's conversation is open. */
+.home-view--lev > :not(.home-hero):not([data-testid='lev-chat']) {
+  display: none;
+}
+.home-view--lev > [data-testid='lev-chat'] {
+  padding-inline: var(--spacing-16);
+}
+
+.home-view__lev-resume {
+  display: flex;
+  justify-content: center;
+}
+.home-view__lev-resume-button {
+  padding: 6px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.home-view__lev-resume-button:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+.home-view__lev-resume-button:focus-visible {
+  outline: 2px solid var(--border-selected);
+  outline-offset: 2px;
+}
+
+::view-transition-group(od-home-composer) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+::view-transition-old(od-home-greeting),
+::view-transition-old(od-home-greeting-sub) {
+  animation: od-lev-fade-up 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+::view-transition-new(od-home-greeting),
+::view-transition-new(od-home-greeting-sub) {
+  animation: od-lev-fade-down 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+::view-transition-new(od-lev-chat) {
+  animation: od-lev-fade-in 260ms cubic-bezier(0.23, 1, 0.32, 1) 80ms both;
+}
+::view-transition-old(od-lev-chat) {
+  animation: od-lev-fade-out 140ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes od-lev-fade-up {
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes od-lev-fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes od-lev-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes od-lev-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The open general chat is Lev's: no project type, design system, agent or
+   mode to pick, and no working folder. The mono, attach, model and send stay. */
+.home-view--lev .home-hero__ds-row-picker,
+.home-view--lev .home-hero__template-option,
+.home-view--lev .home-hero__foot-right .composer-mode,
+.home-view--lev .home-hero__working-dir-picker {
+  display: none;
+}

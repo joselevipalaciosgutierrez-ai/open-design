@@ -281,6 +281,7 @@ const TEMPLATES_BOOLEAN_FLAGS = new Set(['help', 'h', 'json']);
 const DELIVERY_STRING_FLAGS = new Set(['daemon-url', 'workspace', 'workspace-member']);
 const SPEECH_STRING_FLAGS = new Set(['daemon-url', 'voice', 'rate', 'lang', 'prompt-file', 'out']);
 const ACCESS_STRING_FLAGS = new Set(['daemon-url', 'read-all', 'mac-control']);
+const LEV_STRING_FLAGS = new Set(['daemon-url', 'title']);
 const MAC_STRING_FLAGS = new Set(['daemon-url', 'app', 'url', 'prompt-file']);
 const DEPLOY_STRING_FLAGS = new Set([
   'daemon-url', 'file', 'provider', 'target',
@@ -424,6 +425,7 @@ const SUBCOMMAND_MAP = {
   delivery: runDelivery,
   speech: runSpeech,
   access: runAccess,
+  lev: runLev,
   mac: runMac,
   daemon: runDaemon,
   atoms: runAtoms,
@@ -12563,6 +12565,46 @@ function onOff(value, name) {
   if (value === 'off' || value === 'false') return false;
   console.error(`--${name} takes on or off`);
   process.exit(2);
+}
+
+// `od lev`: Lev's own space (the orchestrator's sessions), the same
+// `/api/orchestrator` and conversation routes the app's general chat uses.
+async function runLev(args) {
+  let flags;
+  try {
+    flags = parseFlags(args, { string: LEV_STRING_FLAGS, boolean: new Set(['json', 'help', 'h']) });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const sub = positionalArgs(args, LEV_STRING_FLAGS)[0] ?? 'sessions';
+  const usage = `Usage:
+  od lev sessions [--json]                Lev's sessions, newest first
+  od lev new [--title "<title>"] [--json]  Start a new session
+Lev's sessions live in a hidden system project; the app's general chat on
+Home shows the same sessions.`;
+  if (flags.help || flags.h || !['sessions', 'new'].includes(sub)) {
+    console.log(usage);
+    if (!(flags.help || flags.h)) process.exit(2);
+    return;
+  }
+  const space = await accessCall(flags, '/api/orchestrator');
+  if (sub === 'sessions') {
+    if (flags.json) return process.stdout.write(JSON.stringify(space) + '\n');
+    console.log(`[lev] project ${space.projectId}`);
+    if (space.sessions.length === 0) console.log('  no sessions yet');
+    for (const session of space.sessions) {
+      console.log(`  ${session.id}\t${new Date(session.updatedAt).toISOString()}\t${session.title ?? '(untitled)'}`);
+    }
+    return;
+  }
+  const created = await accessCall(flags, `/api/projects/${encodeURIComponent(space.projectId)}/conversations`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sessionMode: 'chat', ...(flags.title ? { title: flags.title } : {}) }),
+  });
+  if (flags.json) return process.stdout.write(JSON.stringify(created) + '\n');
+  console.log(`[lev] new session ${created.conversation?.id ?? created.id}`);
 }
 
 async function runAccess(args) {

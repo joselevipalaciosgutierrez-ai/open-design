@@ -704,7 +704,9 @@ describe('EntryShell Home submit handoff', () => {
     const onCreateProject = vi.fn(
       (_input: { pluginId?: string }) => new Promise<boolean>((resolve) => { resolveCreate = resolve; }),
     );
-    renderHome({ onCreateProject });
+    // API mode: Home creates a project from plain words (with a local agent
+    // they go to Lev, the general chat, instead).
+    renderHome({ onCreateProject, config: baseConfig({ onboardingCompleted: true, mode: 'api' }) });
 
     await screen.findByTestId('home-hero-input');
     setHomeHeroPrompt('Build a landing page');

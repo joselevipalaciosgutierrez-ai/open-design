@@ -9,6 +9,7 @@ import {
 } from '../../chat-artifacts/store.js';
 import type { Express, Request, Response } from 'express';
 import type { LintArtifactRequest, LintArtifactResponse } from '@open-design/contracts';
+import { isSystemProject } from '@open-design/contracts';
 import {
   PREVIEW_OBSERVABILITY_BRIDGE_MARKER,
   buildPreviewBaseHrefBridge,
@@ -3371,6 +3372,8 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
       const body = {
         projects: listUnboundProjects(db)
           .filter((project: any) => projectVisibleForLocations(project, locations))
+          // System projects (Lev's sessions) are not the person's projects.
+          .filter((project: any) => !isSystemProject(project))
           .map((project: any) => ({
             ...project,
             workspaceId: null,
@@ -3454,6 +3457,7 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
         ...(remoteMerge?.remoteSummaries ?? []),
       ];
       const projects = mergedProjects
+        .filter((project: any) => !isSystemProject(project))
         .filter((project: any) => {
           const createdByCurrentMember = workspaceProjectCreatedByCurrentMember(project, ctx);
           // Personal projects are private to their recorded creator, even when

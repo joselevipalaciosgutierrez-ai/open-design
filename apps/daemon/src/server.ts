@@ -920,6 +920,7 @@ import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
 import { registerDeliveryRoutes } from './routes/delivery.js';
 import { registerSpeechRoutes } from './routes/speech.js';
 import { registerAgentAccessRoutes } from './routes/agent-access.js';
+import { registerOrchestratorRoutes } from './routes/orchestrator.js';
 import { createAgentAccessStore } from './agent-access/access-store.js';
 import { createMacControl } from './agent-access/mac-control.js';
 import { startAgentGateway, type AgentGateway } from './agent-access/agent-gateway.js';
@@ -9416,6 +9417,7 @@ export async function startServer({
     home: os.homedir(),
     listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
   });
+  registerOrchestratorRoutes(app, { http: httpDeps, db, daemonUrl: () => daemonUrl });
   registerAgentAccessRoutes(app, {
     http: httpDeps,
     access: agentAccess,

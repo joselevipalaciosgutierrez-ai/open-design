@@ -151,6 +151,10 @@ import type { Recommendation } from '../onboarding/recommendation';
 import type { OnboardingEntry } from '../onboarding/onboarding-entry';
 import { AnimatePresence } from 'motion/react';
 import { DeepSeekV4FlashCampaign } from './DeepSeekV4FlashCampaign';
+import { LevChat } from './lev/LevChat';
+import { useLevChat, type LevAgentChoice } from './lev/use-lev-chat';
+import { fetchLevSpace, forgetCurrentLevSession, levSession, resumeLevSession } from '../state/lev-session';
+import { withViewTransition } from '../runtime/view-transition';
 import type { DeepSeekV4FlashCampaignAudience } from '../campaigns/deepseek-v4-flash';
 
 export interface ActivePlugin {
@@ -270,6 +274,8 @@ const AUTHORING_DEFAULT_SCENARIO_INPUTS = {
 
 interface Props {
   isActive?: boolean;
+  /** The agent Lev answers with on Home (the app's default agent). Absent: Home only creates projects. */
+  levAgent?: LevAgentChoice;
   projects: Project[];
   projectsLoading?: boolean;
   designSystems?: DesignSystemSummary[];
@@ -498,6 +504,7 @@ export function seedHomeComposerPrompt(
 
 export function HomeView({
   isActive = true,
+  levAgent,
   projects,
   projectsLoading,
   designSystems = EMPTY_DESIGN_SYSTEMS,
@@ -915,6 +922,46 @@ export function HomeView({
     [analytics.track],
   );
   const inputRef = useRef<HomeHeroHandle | null>(null);
+  // ---- Lev, the general chat on Home -------------------------------------
+  // Folded: the greeting and the composer. Open: Lev's conversation above the
+  // composer. Leaving Home folds it; writing while folded starts a new session.
+  const levChat = useLevChat(levAgent ?? { agentId: null });
+  const levAgentId = levAgent?.agentId ?? null;
+  const [levOpen, setLevOpen] = useState(false);
+  const setLevOpenAnimated = useCallback((open: boolean) => {
+    withViewTransition(() => setLevOpen(open));
+  }, []);
+  useEffect(() => {
+    if (!isActive) setLevOpen(false);
+  }, [isActive]);
+  // The session to offer for resuming after the app was reopened: Lev's latest.
+  const [levResumeTarget, setLevResumeTarget] = useState<{ projectId: string; sessionId: string } | null>(null);
+  useEffect(() => {
+    if (!levAgentId || variant === 'dock') return;
+    let alive = true;
+    void fetchLevSpace()
+      .then((space) => {
+        const latest = space.sessions[0];
+        if (alive && latest) setLevResumeTarget({ projectId: space.projectId, sessionId: latest.id });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [levAgentId, variant]);
+  const resumeLev = useCallback(async () => {
+    let { projectId, sessionId } = levSession();
+    if ((!projectId || !sessionId) && levResumeTarget) {
+      resumeLevSession(levResumeTarget.projectId, levResumeTarget.sessionId);
+      ({ projectId, sessionId } = levResumeTarget);
+    }
+    if (projectId && sessionId && levChat.messages.length === 0) await levChat.load(projectId, sessionId);
+    setLevOpenAnimated(true);
+  }, [levChat, levResumeTarget, setLevOpenAnimated]);
+  const newLevSession = useCallback(() => {
+    forgetCurrentLevSession();
+    levChat.clear();
+  }, [levChat]);
   const homeViewRef = useRef<HTMLDivElement | null>(null);
   const consumedHandoffIdRef = useRef<number | null>(null);
   const pendingPromptFocusEndRef = useRef(false);
@@ -2823,6 +2870,23 @@ export function HomeView({
     if (sending || defaultTypePending) return;
     const trimmed = prompt.trim();
     if (!trimmed && stagedFiles.length === 0) return;
+    // Plain words go to Lev, the general chat. A project is created as before
+    // only when the person picked a project type or a plugin, or attached files.
+    if (
+      levAgent
+      && variant !== 'dock'
+      && trimmed
+      && !active?.explicitPick
+      && stagedFiles.length === 0
+      && selectedPluginContexts.length === 0
+      && contextWorkspaceItems.length === 0
+    ) {
+      const fresh = !levOpen;
+      setPrompt('');
+      if (!levOpen) setLevOpenAnimated(true);
+      void levChat.send(trimmed, { fresh });
+      return;
+    }
     // P0 ui_click area=chat_composer element=send_button. Fires before the
     // async plugin-apply roundtrip so the click count reflects user intent
     // even when the run is rejected (missing inputs, apply failure). The
@@ -3129,7 +3193,7 @@ export function HomeView({
     <div
       className={`home-view${recentProjectsEmpty ? ' home-view--centered' : ''}${
         variant === 'dock' ? ' home-view--dock' : ''
-      }`}
+      }${levOpen && variant !== 'dock' ? ' home-view--lev' : ''}`}
       data-testid="home-view"
       data-variant={variant}
       ref={homeViewRef}
@@ -3148,6 +3212,15 @@ export function HomeView({
           installationId={deepSeekV4FlashCampaignInstallationId}
         />
       )}
+      {levOpen && variant !== 'dock' ? (
+        <LevChat
+          messages={levChat.messages}
+          streaming={levChat.streaming}
+          error={levChat.error}
+          onNewSession={newLevSession}
+          onFold={() => setLevOpenAnimated(false)}
+        />
+      ) : null}
       <HomeHero
         variant={variant}
         collapseSignal={collapseSignal}
@@ -3278,6 +3351,18 @@ export function HomeView({
         // only this mount point is gone.
         recommendationSlot={artifactUpgradeSlot}
       />
+      {levOpen || variant === 'dock' || !levAgent || !((levSession().sessionId && levChat.messages.length > 0) || levResumeTarget) ? null : (
+        <div className="home-view__lev-resume">
+          <button
+            type="button"
+            className="home-view__lev-resume-button"
+            data-testid="lev-resume"
+            onClick={() => void resumeLev()}
+          >
+            {locale.toLowerCase().startsWith('es') ? 'Retomar la conversación con Lev' : 'Resume the conversation with Lev'}
+          </button>
+        </div>
+      )}
 
       {/* No 最近项目 grid under the hero on EITHER branch (OPEND-2683, per
           product: 最近项目统一在左侧栏展示; OPEND-3140 closed the local half):
