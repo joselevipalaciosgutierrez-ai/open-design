@@ -170,6 +170,9 @@ export function TurnMeter({ runId, usage }: { runId: string | null | undefined; 
   const { locale } = useI18n();
   const copy = locale.toLowerCase().startsWith('es') ? ES : EN;
   const [open, setOpen] = useState(false);
+  // The panel lives in a portal, which only exists on the client: never in a server render.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [budget, setBudget] = useState<RunPromptBudget | null | 'missing'>(null);
   const rootRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -268,7 +271,7 @@ export function TurnMeter({ runId, usage }: { runId: string | null | undefined; 
         <span aria-hidden className={styles.glyph}>◔</span>
         {headline ? <span className={styles.value}>{headline}</span> : null}
       </button>
-      {typeof document === 'undefined' ? null : createPortal(
+      {!mounted ? null : createPortal(
       <div
         ref={panelRef}
         className={styles.panel}
