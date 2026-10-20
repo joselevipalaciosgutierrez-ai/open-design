@@ -964,6 +964,10 @@ export function HomeView({
     await levChat.load(projectId, sessionId);
     if (!levOpen) setLevOpenAnimated(true);
   }, [levChat, levOpen, setLevOpenAnimated]);
+  const onLevSessionDeleted = useCallback((sessionId: string) => {
+    if (levSession().sessionId === null && levChat.messages.length > 0) levChat.clear();
+    setLevResumeTarget((target) => (target?.sessionId === sessionId ? null : target));
+  }, [levChat]);
   const newLevSession = useCallback(() => {
     forgetCurrentLevSession();
     levChat.clear();
@@ -3227,6 +3231,7 @@ export function HomeView({
           onFold={() => setLevOpenAnimated(false)}
           currentSessionId={levSession().sessionId}
           onPickSession={(projectId, sessionId) => void pickLevSession(projectId, sessionId)}
+          onSessionDeleted={onLevSessionDeleted}
         />
       ) : null}
       <HomeHero
@@ -3373,6 +3378,7 @@ export function HomeView({
             quiet
             currentSessionId={levSession().sessionId}
             onPick={(projectId, sessionId) => void pickLevSession(projectId, sessionId)}
+            onDeleted={onLevSessionDeleted}
           />
         </div>
       )}

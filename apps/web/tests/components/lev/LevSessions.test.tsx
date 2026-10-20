@@ -45,3 +45,28 @@ describe('LevSessions', () => {
     expect(onPick).toHaveBeenCalledWith('lev', 's1');
   });
 });
+
+describe('deleting a session', () => {
+  it('asks first, then deletes and tells the chat', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (init?.method === 'DELETE') return new Response('{}', { status: 200 });
+      return new Response(JSON.stringify(space), { status: 200 });
+    }));
+    const onDeleted = vi.fn();
+    render(
+      <I18nProvider initial="es-ES">
+        <LevSessions currentSessionId="s2" onPick={vi.fn()} onDeleted={onDeleted} />
+      </I18nProvider>,
+    );
+    fireEvent.click(screen.getByTestId('lev-sessions'));
+    await waitFor(() => expect(screen.getAllByTestId('lev-session-delete')).toHaveLength(2));
+    fireEvent.click(screen.getAllByTestId('lev-session-delete')[1]!);
+    expect(calls.some((c) => c.startsWith('DELETE'))).toBe(false);
+    fireEvent.click(screen.getByTestId('lev-session-delete-confirm'));
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledWith('s1'));
+    expect(calls).toContain('DELETE /api/projects/lev/conversations/s1');
+    expect(screen.getAllByTestId('lev-session-item')).toHaveLength(1);
+  });
+});

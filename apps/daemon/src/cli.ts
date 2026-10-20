@@ -12581,9 +12581,10 @@ async function runLev(args) {
   const usage = `Usage:
   od lev sessions [--json]                Lev's sessions, newest first
   od lev new [--title "<title>"] [--json]  Start a new session
+  od lev delete <sessionId> [--json]      Delete a session for good
 Lev's sessions live in a hidden system project; the app's general chat on
 Home shows the same sessions.`;
-  if (flags.help || flags.h || !['sessions', 'new'].includes(sub)) {
+  if (flags.help || flags.h || !['sessions', 'new', 'delete'].includes(sub)) {
     console.log(usage);
     if (!(flags.help || flags.h)) process.exit(2);
     return;
@@ -12596,6 +12597,19 @@ Home shows the same sessions.`;
     for (const session of space.sessions) {
       console.log(`  ${session.id}\t${new Date(session.updatedAt).toISOString()}\t${session.messageCount} msgs\t${session.title ?? session.preview ?? '(untitled)'}`);
     }
+    return;
+  }
+  if (sub === 'delete') {
+    const sessionId = positionalArgs(args, LEV_STRING_FLAGS)[1];
+    if (!sessionId) {
+      console.error('Usage: od lev delete <sessionId>');
+      process.exit(2);
+    }
+    const base = await cliDaemonBaseUrl(flags);
+    const resp = await fetch(`${base}/api/projects/${encodeURIComponent(space.projectId)}/conversations/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+    if (!resp.ok) return structuredHttpFailure(resp, 'session-not-found');
+    if (flags.json) return process.stdout.write(JSON.stringify({ deleted: sessionId }) + '\n');
+    console.log(`[lev] deleted session ${sessionId}`);
     return;
   }
   const created = await accessCall(flags, `/api/projects/${encodeURIComponent(space.projectId)}/conversations`, {

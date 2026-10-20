@@ -67,3 +67,13 @@ export function forgetCurrentLevSession(): void {
 export function resetLevSessionForTests(): void {
   set({ projectId: null, sessionId: null });
 }
+
+/** Delete one of Lev's sessions for good. Deleting the current one starts fresh. */
+export async function deleteLevSession(projectId: string, sessionId: string): Promise<void> {
+  const resp = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(sessionId)}`,
+    { method: 'DELETE' },
+  );
+  if (!resp.ok && resp.status !== 404) throw new Error(`The session could not be deleted (${resp.status})`);
+  if (state.sessionId === sessionId) set({ sessionId: null });
+}

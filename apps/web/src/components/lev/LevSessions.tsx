@@ -2,14 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { createPortal } from 'react-dom';
 import type { OrchestratorWorkspaceResponse } from '@open-design/contracts';
 import { useI18n } from '../../i18n';
-import { fetchLevSpace } from '../../state/lev-session';
+import { deleteLevSession, fetchLevSpace } from '../../state/lev-session';
 import styles from './LevSessions.module.css';
 
 type Session = OrchestratorWorkspaceResponse['sessions'][number];
 
 const COPY = {
-  es: { open: 'Sesiones', title: 'Sesiones anteriores', empty: 'Aún no hay sesiones.', current: 'Actual', untitled: 'Sesión sin título', loading: 'Cargando…' },
-  en: { open: 'Sessions', title: 'Earlier sessions', empty: 'No sessions yet.', current: 'Current', untitled: 'Untitled session', loading: 'Loading…' },
+  es: { open: 'Sesiones', title: 'Sesiones anteriores', empty: 'Aún no hay sesiones.', current: 'Actual', untitled: 'Sesión sin título', loading: 'Cargando…', remove: 'Eliminar sesión', confirm: '¿Eliminar?', yes: 'Eliminar', no: 'Cancelar', failed: 'No se pudo eliminar.' },
+  en: { open: 'Sessions', title: 'Earlier sessions', empty: 'No sessions yet.', current: 'Current', untitled: 'Untitled session', loading: 'Loading…', remove: 'Delete session', confirm: 'Delete?', yes: 'Delete', no: 'Cancel', failed: 'It could not be deleted.' },
 };
 
 export function sessionLabel(session: Session, untitled: string): string {
@@ -30,19 +30,34 @@ export interface LevSessionsProps {
   onPick: (projectId: string, sessionId: string) => void;
   /** Rendered as a quiet text button (folded Home) instead of the chat bar's button. */
   quiet?: boolean;
+  /** A session was deleted (the chat clears itself when it was the open one). */
+  onDeleted?: (sessionId: string) => void;
 }
 
 /**
  * Lev's earlier sessions, newest first. The list is read when it opens; a
  * session is named by the title the agent gave it, or by its first message.
  */
-export function LevSessions({ currentSessionId, onPick, quiet = false }: LevSessionsProps) {
+export function LevSessions({ currentSessionId, onPick, quiet = false, onDeleted }: LevSessionsProps) {
   const { locale } = useI18n();
   const copy = locale.toLowerCase().startsWith('es') ? COPY.es : COPY.en;
   const [open, setOpen] = useState(false);
   const [space, setSpace] = useState<OrchestratorWorkspaceResponse | null>(null);
   const [place, setPlace] = useState<CSSProperties>({ left: 0, top: 0 });
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const remove = async (projectId: string, sessionId: string) => {
+    setFailed(false);
+    try {
+      await deleteLevSession(projectId, sessionId);
+      setSpace((current) => current && { ...current, sessions: current.sessions.filter((s) => s.id !== sessionId) });
+      onDeleted?.(sessionId);
+    } catch {
+      setFailed(true);
+    }
+    setConfirming(null);
+  };
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,6 +133,7 @@ export function LevSessions({ currentSessionId, onPick, quiet = false }: LevSess
               data-testid="lev-sessions-panel"
             >
               <strong className={styles.title}>{copy.title}</strong>
+              {failed ? <p className={styles.note} role="status">{copy.failed}</p> : null}
               {space === null ? (
                 <p className={styles.note}>{copy.loading}</p>
               ) : space.sessions.length === 0 ? (
@@ -125,7 +141,7 @@ export function LevSessions({ currentSessionId, onPick, quiet = false }: LevSess
               ) : (
                 <ul className={styles.list}>
                   {space.sessions.map((session) => (
-                    <li key={session.id}>
+                    <li key={session.id} className={styles.row}>
                       <button
                         type="button"
                         className={styles.item}
@@ -141,6 +157,33 @@ export function LevSessions({ currentSessionId, onPick, quiet = false }: LevSess
                           {session.id === currentSessionId ? copy.current : formatWhen(session.updatedAt, locale)}
                         </span>
                       </button>
+                      {confirming === session.id ? (
+                        <span className={styles.confirm}>
+                          <span>{copy.confirm}</span>
+                          <button
+                            type="button"
+                            className={styles.danger}
+                            data-testid="lev-session-delete-confirm"
+                            onClick={() => void remove(space.projectId, session.id)}
+                          >
+                            {copy.yes}
+                          </button>
+                          <button type="button" className={styles.plain} onClick={() => setConfirming(null)}>
+                            {copy.no}
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.remove}
+                          aria-label={copy.remove}
+                          title={copy.remove}
+                          data-testid="lev-session-delete"
+                          onClick={() => setConfirming(session.id)}
+                        >
+                          ×
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>

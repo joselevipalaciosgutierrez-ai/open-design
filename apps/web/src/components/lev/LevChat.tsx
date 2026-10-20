@@ -34,10 +34,11 @@ export interface LevChatProps {
   onFold: () => void;
   currentSessionId: string | null;
   onPickSession: (projectId: string, sessionId: string) => void;
+  onSessionDeleted?: (sessionId: string) => void;
 }
 
 /** Lev's conversation on Home, above the composer. */
-export function LevChat({ messages, streaming, error, onNewSession, onFold, currentSessionId, onPickSession }: LevChatProps) {
+export function LevChat({ messages, streaming, error, onNewSession, onFold, currentSessionId, onPickSession, onSessionDeleted }: LevChatProps) {
   const { locale } = useI18n();
   const copy = locale.toLowerCase().startsWith('es') ? COPY.es : COPY.en;
   const endRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,7 @@ export function LevChat({ messages, streaming, error, onNewSession, onFold, curr
       <header className={styles.bar}>
         <span className={styles.title}>{copy.title}</span>
         <span className={styles.actions}>
-          <LevSessions currentSessionId={currentSessionId} onPick={onPickSession} />
+          <LevSessions currentSessionId={currentSessionId} onPick={onPickSession} onDeleted={onSessionDeleted} />
           <Button size="sm" variant="ghost" onClick={onNewSession} data-testid="lev-new-session">
             {copy.newSession}
           </Button>
