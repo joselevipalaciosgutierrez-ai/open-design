@@ -342,6 +342,9 @@ import { buildStatusPanelState } from '../runtime/chat/status-panel';
 import { useConversationDelegates } from '../state/run-delegates';
 import { useProjectDelivery } from '../state/delivery';
 import { DeliveryStrip } from './delivery/DeliveryStrip';
+import { AssistantVoiceControl } from './assistant/AssistantVoiceControl';
+import { takeSpokenTurn } from '../state/assistant-voice-store';
+import { takeHomeHandoff } from '../state/home-handoff';
 import { useStatusPanelPreference } from '../state/status-panel-pref';
 import { isChatOnlyLayout, shouldOpenPreviewForFile } from '../runtime/chat/chat-layout';
 import { ChatPane, foldStrategyTaskTurns } from './ChatPane';
@@ -2659,6 +2662,20 @@ export function ProjectView({
       handleLostAnchors,
     ],
   );
+  // Opened from Home's composer: everything but the composer (already in place)
+  // fades in around it.
+  useEffect(() => {
+    if (!takeHomeHandoff()) return undefined;
+    const root = document.documentElement;
+    root.dataset.odEnter = 'from-home';
+    const done = window.setTimeout(() => {
+      delete root.dataset.odEnter;
+    }, 900);
+    return () => {
+      window.clearTimeout(done);
+      delete root.dataset.odEnter;
+    };
+  }, []);
   const activeSessionMode = activeConversation?.sessionMode ?? 'design';
   // Layout only: before the conversation list arrives there is no mode to read,
   // so fall back to the project's remembered mode instead of assuming Design
@@ -8846,6 +8863,7 @@ export function ProjectView({
         id: assistantId,
         role: 'assistant',
         content: '',
+        ...(takeSpokenTurn() ? { spoken: true } : {}),
         agentId: assistantAgentId,
         agentName: assistantAgentName,
         events: [],
@@ -13822,6 +13840,18 @@ export function ProjectView({
     statusRunIds,
     currentConversationStreaming,
   );
+  // The newest finished reply, for the assistant to read aloud when it answers a
+  // request that was spoken.
+  const assistantReply = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const message = messages[i];
+      if (message?.role !== 'assistant') continue;
+      // Read while it is written; a failed or stopped run still says what it had.
+      const writing = message.runStatus === 'running' || message.runStatus === 'queued';
+      return { id: message.id, text: message.content ?? '', done: !writing };
+    }
+    return null;
+  }, [messages]);
   const projectDelivery = useProjectDelivery(
     project?.id ?? null,
     currentConversationStreaming || statusDelegates.some((d) => d.status === 'queued' || d.status === 'running'),
@@ -14293,6 +14323,16 @@ export function ProjectView({
               collapseControlLifted={!workspaceFocused}
               backLabel={t('project.backToProjects')}
               composerFooterAccessory={executionControls}
+              composerStartAccessory={(
+                <AssistantVoiceControl
+                  thinking={currentConversationStreaming}
+                  reply={assistantReply}
+                  stageMode={layoutSessionMode === 'chat' && !chatPreviewOpen ? 'chat' : 'off'}
+                  onTranscript={(text) => {
+                    void handleSend(text, []);
+                  }}
+                />
+              )}
               deliveryStrip={
                 projectDelivery && !statusPanelVisible ? (
                   <DeliveryStrip

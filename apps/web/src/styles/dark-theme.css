@@ -101,12 +101,31 @@
 
 /* macOS desktop: the window is translucent glass over the wallpaper, and the
    shell's scrim (`--app-wash`, app-wash.css) is a thin 20% veil of the base
-   colour. Over a dark wallpaper that reads as a mid-gray rail and page, not the
-   app's black. In dark the scrim is nearly opaque so Home, Agents and Settings
-   sit on the same ground as the workspace; a sliver of the glass still shows. */
+   colour. Over a dark wallpaper that reads as a mid-gray rail and page, and it
+   leaves the strips beside the chat column a different shade from the (opaque)
+   chat itself, so the chat looks cut out of the window. In dark the scrim is the
+   app's own black, fully opaque: one ground everywhere. */
 html[data-theme='dark']:has(.workspace-shell--desktop[data-host-platform='darwin']) {
-  --app-wash: linear-gradient(
-    color-mix(in srgb, var(--bg-app) 90%, transparent),
-    color-mix(in srgb, var(--bg-app) 90%, transparent)
-  );
+  --app-wash: linear-gradient(var(--bg-app), var(--bg-app));
+}
+
+/* The desktop pet is a transparent, click-through overlay window. A document
+   with `color-scheme: dark` makes Chromium paint its canvas opaque dark even
+   with transparent html/body, which turned the whole overlay (the full-screen
+   window) into a black screen. The pet keeps the dark colours of its bubble
+   (they come from the tokens) but not the dark canvas. */
+html[data-theme='dark']:has(body.desktop-pet-shell) {
+  color-scheme: light;
+}
+
+/* The modal scrim (material.css) is a 60% white veil with a heavy blur, made
+   for light. In dark it read as an opaque grey sheet over the app. Here it is a
+   light dark veil with a soft blur: the app stays visible, a little out of
+   focus, behind the dialog — as in light. Reduced transparency keeps the
+   opaque fallback material.css gives it. */
+@media not (prefers-reduced-transparency: reduce) {
+  html[data-theme='dark'] {
+    --scrim-tint: color-mix(in srgb, var(--bg-app) 45%, transparent);
+    --scrim-backdrop: blur(14px);
+  }
 }

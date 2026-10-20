@@ -27,9 +27,10 @@ describe('ComposerModePicker', () => {
 
     fireEvent.click(trigger);
 
-    expect(screen.getAllByRole('menuitemradio')).toHaveLength(3);
+    // Plan is hidden from the menu: two modes per project, Design and Ask.
+    expect(screen.getAllByRole('menuitemradio')).toHaveLength(2);
     expect(screen.getByTestId('composer-mode-menu-design').getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByTestId('composer-mode-menu-plan').getAttribute('aria-checked')).toBe('false');
+    expect(screen.queryByTestId('composer-mode-menu-plan')).toBeNull();
     expect(screen.getByTestId('composer-mode-menu-chat').getAttribute('aria-checked')).toBe('false');
   });
 
@@ -59,12 +60,14 @@ describe('ComposerModePicker', () => {
 
   it('switches mode from the menu', () => {
     const onModeChange = vi.fn();
-    render(<ComposerModePicker mode="design" onModeChange={onModeChange} />);
+    render(<ComposerModePicker mode="plan" onModeChange={onModeChange} />);
 
+    // A conversation already in the hidden Plan mode still lists it, and can leave it.
     fireEvent.click(screen.getByTestId('composer-mode-trigger'));
-    fireEvent.click(screen.getByTestId('composer-mode-menu-plan'));
+    expect(screen.getAllByRole('menuitemradio')).toHaveLength(3);
+    fireEvent.click(screen.getByTestId('composer-mode-menu-design'));
 
-    expect(onModeChange).toHaveBeenCalledWith('plan');
+    expect(onModeChange).toHaveBeenCalledWith('design');
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
@@ -119,7 +122,7 @@ describe('ComposerModePicker', () => {
     fireEvent.click(screen.getByTestId('composer-mode-trigger'));
 
     const menu = screen.getByRole('menu');
-    expect(menu.textContent).toContain('Creates an editable plan document first');
+    expect(menu.textContent).not.toContain('Creates an editable plan document first');
     expect(menu.textContent).toContain('For creating or changing concrete outputs');
     expect(menu.textContent).toContain('For quick answers, edits, planning, and discussion');
   });

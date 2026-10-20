@@ -4504,3 +4504,12 @@
 .home-hero--dock .home-hero__lexical .composer-input-editor {
   max-height: calc(var(--home-hero-line) * 4.5);
 }
+
+/* Home is the greeting and the composer, centred on the page. */
+.home-view:not(.home-view--dock) {
+  min-height: 100%;
+  justify-content: safe center;
+}
+.home-view:not(.home-view--dock) > .home-hero {
+  padding-top: var(--spacing-4);
+}

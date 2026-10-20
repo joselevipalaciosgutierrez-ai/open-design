@@ -93,7 +93,8 @@ import { Icon, type IconName } from "./Icon";
 import { NextStepActions, type NextStepActionsVariant } from "./NextStepActions";
 import type { DesignToolboxActionId } from "../runtime/design-toolbox";
 import { copyToClipboard } from "../lib/copy-to-clipboard";
-import { useT } from "../i18n";
+import { reportedUsageFromEvents, TurnMeter } from "./TurnMeter";
+import { useI18n, useT } from "../i18n";
 import { deriveFileOps, type FileOpEntry } from "../runtime/file-ops";
 import { dedupeToolUsesById, dropSupersededInFlightToolUses } from "../runtime/tool-events";
 import {
@@ -104,6 +105,8 @@ import {
 import type { Dict } from "../i18n/types";
 import { agentDisplayName, agentIconId, exactAgentDisplayName } from "../utils/agentLabels";
 import { AgentIcon } from "./AgentIcon";
+import { AssistantMonkey } from "./assistant/AssistantMonkey";
+import { getAssistantCopy } from "./assistant/assistant-copy";
 import { filterImplicitProducedFiles } from "../produced-files";
 import type {
   AgentEvent,
@@ -450,6 +453,7 @@ function AssistantMessageImpl({
   nextStepVariant = 'default',
 }: Props) {
   const t = useT();
+  const { locale } = useI18n();
   const { workspaceContext } = useProjectCollabContext();
   const imageSrc = useCallback(
     (path: string) => projectId ? projectFileUrl(projectId, path, workspaceContext) : path,
@@ -904,6 +908,7 @@ function AssistantMessageImpl({
     | Extract<AgentEvent, { kind: "usage" }>
     | undefined;
   const roleName = assistantRoleName(message, t);
+  const spokenWorking = message.spoken === true && streaming;
   const roleIconId = agentIconId(message.agentId, message.agentName);
   const hasEmptyResponse = events.some(
     (e) => e.kind === "status" && e.label === "empty_response"
@@ -960,6 +965,8 @@ function AssistantMessageImpl({
    * 那也是内容(用户 2026-08-27:「thought 也算能复制的吧?」)。
    */
   const copyMarkdown = copyableTurnText(message.content, nextTurn.shells);
+  const turnUsage = reportedUsageFromEvents(message.events);
+  const turnMeter = message.runId || turnUsage ? <TurnMeter runId={message.runId} usage={turnUsage} /> : null;
   const showFeedback =
     !!onFeedback &&
     isFeedbackEligible({
@@ -1308,10 +1315,24 @@ function AssistantMessageImpl({
       data-continuation={showRole ? 'false' : 'true'}
       data-assistant-message-id={message.id}
     >
+      {/* The model's name stays out of the thread (the composer already shows it);
+          only a spoken request's working state shows the assistant here. The
+          row stays in the tree, hidden by `data-quiet`. */}
       {showRole ? (
-        <div className="role" data-testid="assistant-role">
-          <AgentIcon id={roleIconId} size={20} className="role-agent-icon" />
-          <span className="role-name">{roleName}</span>
+        <div className="role" data-testid="assistant-role" data-quiet={spokenWorking ? undefined : 'true'}>
+          {spokenWorking ? (
+            // A request said to the voice assistant is answered by the assistant
+            // while it works, not by whichever agent runs behind it.
+            <>
+              <AssistantMonkey state="think" size={20} className="role-agent-icon" label="" />
+              <span className="role-name">{getAssistantCopy(locale).thinking}</span>
+            </>
+          ) : (
+            <>
+              <AgentIcon id={roleIconId} size={20} className="role-agent-icon" />
+              <span className="role-name">{roleName}</span>
+            </>
+          )}
         </div>
       ) : null}
       <div className="assistant-flow" data-testid="assistant-flow">
@@ -1441,6 +1462,7 @@ function AssistantMessageImpl({
                   forceVisible: true,
                   isLast: !!isLast,
                   createdAt: message.createdAt,
+                  meter: turnMeter,
                   // 判据与三条理由都在上面 `hideRunStatus` 的定义处。
                   hideRunStatus,
                   onContinueRemaining: continueRemaining,
@@ -1460,6 +1482,7 @@ function AssistantMessageImpl({
                 forking={forking}
                 isLast={!!isLast}
                 createdAt={message.createdAt}
+                meter={turnMeter}
                 hideRunStatus={hideRunStatus}
                 onContinueRemaining={continueRemaining}
               />
@@ -2144,6 +2167,8 @@ interface AssistantFooterProps {
   onContinueRemaining?: () => void;
   /** 这一轮的时间,靠右端(设计稿 15-1 的 `.tm`)。拿不到就不显示,不估算 */
   createdAt?: number;
+  /** The token meter, at the right end next to the time, once the turn has settled. */
+  meter?: ReactNode;
 }
 
 /** 导出只为验收:镜像陈列页要单挂这一行去对第 34–39 格。产品里的消费方仍是
@@ -2165,6 +2190,7 @@ export function AssistantFooter({
   hideRunStatus = false,
   onContinueRemaining,
   createdAt,
+  meter,
 }: AssistantFooterProps) {
   const t = useT();
   if (
@@ -2264,9 +2290,11 @@ export function AssistantFooter({
       {/* 弹簧 + 时间:稿子里这一行是满宽的,时间贴右端。拿不到时间就两样都不出。
           **跑的过程中不出时间** —— 那一刻这一行只该留复制 / Fork 这类动作;
           状态由壳头报,时间等落定了再说(用户 2026-08-26 真机指认「运行中没有这个了」)。 */}
+      {meter && !streaming && createdAt == null ? <span className="assistant-footer-gap" /> : null}
+      {meter && !streaming ? meter : null}
       {createdAt != null && !streaming ? (
         <>
-          <span className="assistant-footer-gap" />
+          {meter ? null : <span className="assistant-footer-gap" />}
           <time className="assistant-footer-time" dateTime={new Date(createdAt).toISOString()}>
             {formatClock(createdAt)}
           </time>

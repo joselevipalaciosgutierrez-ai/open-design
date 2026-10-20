@@ -91,6 +91,8 @@ import { ComposerPlusMenu, PLUS_SUBMENU_RESOURCE_KIND } from './ComposerPlusMenu
 import { ContextChipHoverCard } from './ContextChipHoverCard';
 import { workspaceContextDetailLine, workspaceContextKindLabel } from './workspace-context';
 import { hasHomeGreeting, homeGreeting } from '../runtime/home-greeting';
+import { markHomeHandoff } from '../state/home-handoff';
+import { AssistantVoiceControl } from './assistant/AssistantVoiceControl';
 import { FigmaHelpModal } from './FigmaHelpModal';
 import { TemplatePicker } from './home-hero/TemplatePicker';
 import { LibraryPicker } from './LibraryPicker';
@@ -636,16 +638,30 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
     carouselScenario !== null &&
     carouselScenarios.some((scenario) => scenario.id === carouselScenario.id);
   const sendEnabled = canSubmit || carouselSubmittable;
+  // A request said out loud is sent as soon as it has landed in the field.
+  const voiceSubmitRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (voiceSubmitRef.current === null || prompt !== voiceSubmitRef.current) return;
+    voiceSubmitRef.current = null;
+    handleSend();
+  });
+  // Sending from Home: no travelling composer, the project that opens fades
+  // itself in instead of appearing at once (see `state/home-handoff.ts`).
+  function leaveThen(go: () => void) {
+    if (variant !== 'dock') markHomeHandoff();
+    go();
+  }
   function handleSend() {
     if (submitting || submitDisabled) return;
     if (canSubmit) {
       notifyCompletionFeedbackGesture();
-      onSubmit();
+      leaveThen(onSubmit);
       return;
     }
     if (carouselSubmittable && carouselScenario) {
       notifyCompletionFeedbackGesture();
-      onSubmitScenario(carouselScenario);
+      const scenario = carouselScenario;
+      leaveThen(() => onSubmitScenario(scenario));
     }
   }
   const fileMatches = useMemo(
@@ -2211,6 +2227,17 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
                 below into the head of this one (per product) but keeping that
                 row's leading position. Sized and filled like the model chip
                 across the row. */}
+            <AssistantVoiceControl
+              thinking={false}
+              reply={null}
+              stageMode="home"
+              onTranscript={(text) => {
+                voiceSubmitRef.current = text;
+                // A request said out loud opens the chat, not the design workspace.
+                onSessionModeChange?.('chat');
+                onPromptChange(text);
+              }}
+            />
             <ComposerPlusMenu
               workspaceContext={workspaceContext}
               triggerTestId="home-hero-plus-trigger"
@@ -2606,6 +2633,10 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
           question the pill had just answered. The examples below now show the
           picked type's full set. */}
 
+      {/* Home is the greeting and the composer, centred. The recommended rows
+          (template presets and example prompts) stay mounted but hidden: the
+          page no longer shows them, and the rows come back by dropping `hidden`. */}
+      <div hidden data-testid="home-hero-recommended">
       {isDock ? null : recommendationSlot}
 
       {isDock ? null : examplePluginPresets.length > 0 && activeChipId ? (
@@ -2651,6 +2682,8 @@ export const HomeHero = forwardRef<HomeHeroHandle, Props>(function HomeHero(
           </div>
         </div>
       ) : null}
+
+      </div>
 
       {error ? (
         <div role="alert" className="home-hero__error">

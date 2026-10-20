@@ -442,6 +442,8 @@ interface Props {
   // "+" menu. Hosts the working-directory pill so the folder selector sits by
   // the composer (mirroring the home input) instead of the file-panel header.
   leadingAccessory?: ReactNode;
+  // Slot at the very start of the toolbar, before the "+" menu (the assistant).
+  startAccessory?: ReactNode;
   // Design-system picker slot rendered at the top of the composer (above
   // the textarea). The former standalone chrome header row was removed;
   // ProjectView owns the project record so it renders the picker as a slot.
@@ -646,6 +648,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       footerAccessory,
       agentPicker,
       leadingAccessory,
+      startAccessory,
       designSystemPicker,
       onShowToast,
       quotes,
@@ -3740,6 +3743,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
                 e.target.value = '';
               }}
             />
+            {startAccessory}
             <ComposerPlusMenu
               workspaceContext={workspaceContext}
               triggerTestId="chat-plus-trigger"

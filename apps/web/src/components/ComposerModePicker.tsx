@@ -123,12 +123,20 @@ const MODES: ModeDef[] = [
   },
 ];
 
+/**
+ * Modes kept in the code but left out of the menu. Plan is hidden while the
+ * app settles on two modes per project (Ask to talk, Design to build); a plan
+ * is asked for in words instead. A conversation already in a hidden mode still
+ * lists it, so the person can see it and leave it.
+ */
+const HIDDEN_MODES: ReadonlySet<ChatSessionMode> = new Set(['plan']);
+
 const MENU_WIDTH = 300;
 const MENU_MARGIN = 12;
 const MENU_GAP = 8;
 // Natural height of the 3-mode list; used to decide whether the menu fits
 // below the trigger before flipping it above.
-const MENU_EST_HEIGHT = 290;
+const MENU_EST_HEIGHT = 200;
 
 export interface ComposerModePickerProps {
   /** The conversation's real session mode. `design` (the app default) renders
@@ -266,7 +274,7 @@ export function ComposerModePicker({ mode, onModeChange, labelHidden = false }: 
               style={pos ?? undefined}
               data-testid="composer-mode-menu"
             >
-              {MODES.map((m) => (
+              {MODES.filter((m) => !HIDDEN_MODES.has(m.id) || m.id === mode).map((m) => (
                 <button
                   key={m.id}
                   type="button"
