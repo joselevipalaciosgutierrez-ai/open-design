@@ -1924,14 +1924,51 @@ export function createAgentRuntimeEnv(
  * themselves are enforced by the macOS sandbox; this text only explains them
  * and adds the rule the sandbox cannot see: do only what was asked.
  */
-export const AGENT_MAC_RULES = [
-  '## This Mac',
-  '',
-  '- You run inside a sandbox the person set in Settings. You can write only in this project and the folders they allowed; their secrets (keys, browser data, mail, messages) are never readable. A write that fails with "operation not permitted" is that limit: do not try to get around it. Say which folder you need and ask them to allow it in Settings, or to do that step themself.',
-  '- Do only what the person asked. Before deleting or overwriting their work, sending anything (messages, email, posts), buying, installing software, changing system settings, or publishing, ask first and name exactly what and where; act only on a clear yes.',
-  '- To control the Mac (only while they have Mac control on): `"$OD_NODE_BIN" "$OD_BIN" mac open --app "<App>" --url <https://...>`, `mac type "<text>"`, `mac key <combo>` (e.g. `cmd+t`, `enter`), `mac click <x> <y>`, `mac screenshot` (prints a PNG path you can open to see the screen), `mac front-app`. Look before you click: take a screenshot first. Typing, keys and clicks never go into terminals, System Settings or keychains; ask the person for those steps.',
-  '- Build and run the work inside this project folder: code, installs, dev servers and builds belong here, so the person sees everything in the app.',
-];
+/** What the agents may do on this Mac right now (Settings → Privacy), as the prompt states it. */
+export interface MacAccessFacts {
+  readWholeMac: boolean;
+  macControl: boolean;
+  /** macOS Accessibility permission for typing, keys and clicks; null when unknown. */
+  accessibility: boolean | null;
+  allowedDirs: string[];
+}
+
+let macAccessFacts: MacAccessFacts | null = null;
+/** Kept current by the daemon (agent-access store + Mac status) so every prompt states the real access. */
+export function setMacAccessFacts(facts: MacAccessFacts | null): void {
+  macAccessFacts = facts;
+}
+
+export function renderAgentMacRules(facts: MacAccessFacts | null = macAccessFacts): string[] {
+  const reading = facts?.readWholeMac
+    ? 'You may READ files anywhere on this Mac (Desktop, Documents, Downloads...); only secrets (keys, browser data, passwords, mail, messages) stay unreadable.'
+    : 'You may read only this project and the folders the person allowed.';
+  const writing = facts && facts.allowedDirs.length > 0
+    ? `You may WRITE in this project and in: ${facts.allowedDirs.join(', ')}.`
+    : 'You may WRITE only in this project.';
+  const control = !facts
+    ? '- To control the Mac (only while they have Mac control on): `"$OD_NODE_BIN" "$OD_BIN" mac open --app "<App>" --url <https://...>`, `mac type "<text>"`, `mac key <combo>` (e.g. `cmd+t`, `enter`), `mac click <x> <y>`, `mac screenshot` (prints a PNG path you can open to see the screen), `mac front-app`. Look before you click: take a screenshot first. Typing, keys and clicks never go into terminals, System Settings or keychains; ask the person for those steps.'
+    : facts.macControl
+      ? [
+          '- Mac control is ON: when the person asks you to open an app or page, look at the screen, type, press keys or click, DO it with these commands (never answer that you cannot): `"$OD_NODE_BIN" "$OD_BIN" mac open --app "<App>" --url <https://...>`, `mac screenshot` (prints a PNG path; open it to see the screen), `mac front-app`, `mac type "<text>"`, `mac key <combo>` (e.g. `cmd+t`, `enter`), `mac click <x> <y>`. Look before you click: take a screenshot first. Typing, keys and clicks never go into terminals, System Settings or keychains; ask the person for those steps.',
+          facts.accessibility === false
+            ? '- macOS has not yet given this app the Accessibility permission: opening apps works, but typing, keys and clicks will fail until the person turns it on in System Settings → Privacy & Security → Accessibility (and Screen Recording for screenshots). If a command fails for that reason, tell them exactly that.'
+            : '',
+        ].filter(Boolean).join('\n')
+      : '- Mac control is OFF: you cannot open apps, look at the screen, type or click. If the person asks for that, tell them to turn on "Mac control" in Settings → Privacy.';
+  return [
+    '## This Mac',
+    '',
+    `- You run inside a sandbox the person set in Settings. ${reading} ${writing} A write that fails with "operation not permitted" is that limit: do not try to get around it. Say which folder you need and ask them to allow it in Settings, or to do that step themself.`,
+    '- When the person asks what you can access on their Mac, answer from these lines exactly, not from general assumptions.',
+    '- Do only what the person asked. Before deleting or overwriting their work, sending anything (messages, email, posts), buying, installing software, changing system settings, or publishing, ask first and name exactly what and where; act only on a clear yes.',
+    control,
+    '- Build and run the work inside this project folder: code, installs, dev servers and builds belong here, so the person sees everything in the app.',
+  ];
+}
+
+/** The rules as they read without any known access (tests and fallbacks). */
+export const AGENT_MAC_RULES = renderAgentMacRules(null);
 
 /**
  * The always-on part of the person's token-saving skill (zipai-optimizer),
@@ -1982,7 +2019,7 @@ export function createAgentRuntimeToolPrompt(
     '- Prefer project wrapper commands through `OD_NODE_BIN` + `OD_BIN` over raw HTTP. The wrappers read these environment values automatically.',
     '- For dynamic Skill reads pass --workspace "$OD_WORKSPACE_ID" --workspace-member "$OD_WORKSPACE_MEMBER_ID" (use the corresponding environment-variable syntax on other shells). This pair is pinned to this run, not the UI\'s current Workspace. Both values are empty for unbound local runs; never substitute a different Workspace or member when either is missing.',
     '',
-    ...AGENT_MAC_RULES,
+    ...renderAgentMacRules(),
     '',
     ...AGENT_TOKEN_RULES,
     '',
@@ -9496,14 +9533,33 @@ export async function startServer({
     runsDir: path.join(RUNTIME_DATA_DIR, 'runs'),
     dataDir: RUNTIME_DATA_DIR,
   });
+  const macControl = createMacControl({
+    enabled: async () => (await agentAccess.read()).macControl,
+    screensDir: agentScreensDir,
+  });
   registerAgentAccessRoutes(app, {
     http: httpDeps,
     access: agentAccess,
-    mac: createMacControl({
-      enabled: async () => (await agentAccess.read()).macControl,
-      screensDir: agentScreensDir,
-    }),
+    mac: macControl,
   });
+  // Every prompt states the access the person actually set; refreshed often
+  // so a change in Settings or in macOS permissions shows up on the next turn.
+  const refreshMacAccessFacts = async () => {
+    try {
+      const access = await agentAccess.read();
+      const status = await macControl.status();
+      setMacAccessFacts({
+        readWholeMac: access.readWholeMac,
+        macControl: access.macControl,
+        accessibility: status.supported ? status.accessibility : null,
+        allowedDirs: access.allowedDirs,
+      });
+    } catch {
+      // Keep the last known facts.
+    }
+  };
+  void refreshMacAccessFacts();
+  setInterval(() => void refreshMacAccessFacts(), 15_000).unref?.();
   registerIslandRoutes(app, { http: httpDeps });
   registerSpeechRoutes(app, {
     http: httpDeps,
