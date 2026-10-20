@@ -941,18 +941,18 @@ const MAC_WINDOW_CHROME_CSS = `
 // exists (see `splash-pixel-scan.ts`). The sweep LOOPS: boots vary from two
 // seconds to a cold minute, and a clip that plays once leaves the rest of that
 // wait on a frozen frame.
-function createPendingHtml(): string {
+function createPendingHtml(dark = false): string {
   const start = splashStagePayload("starting");
   const initialPct = Math.max(0, Math.min(100, Math.round((start.step / start.total) * 100)));
   return `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>OpenDesign</title>
+    <title>Lev Design</title>
     <style>
       html,
       body {
-        background: #f2f4f5;
+        background: ${dark ? "#000000" : "#f2f4f5"};
         height: 100%;
         margin: 0;
         overflow: hidden;
@@ -1023,7 +1023,7 @@ ${SPLASH_PIXEL_SCAN_MARKUP}
       <span class="boot-stage-step" id="boot-stage-step">${start.step}/${start.total}</span><span id="boot-stage-text">${start.label}</span><span class="boot-dots" aria-hidden="true"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
     </div>
     <script>
-${splashPixelScanScript()}
+${splashPixelScanScript({ dark })}
       // Accepts the structured { step, total, label } payload (and tolerates a
       // bare label string for back-compat). The step counter + progress bar give
       // a slow cold boot a sense of how far along it is; the bar only ever grows
@@ -1152,7 +1152,7 @@ function buildCrashReportUrl(ctx: RendererCrashScreenContext): string {
   const title = `Desktop app keeps crashing (renderer ${ctx.reason})`;
   const body = [
     "**What happened**",
-    "The OpenDesign desktop window crashed several times in a row and showed the recovery screen.",
+    "The Lev Design desktop window crashed several times in a row and showed the recovery screen.",
     "",
     "**What I was doing when it started** (please add any detail):",
     "",
@@ -1171,9 +1171,9 @@ function buildCrashReportUrl(ctx: RendererCrashScreenContext): string {
 // Prefilled mailto for the "Email us" action — same auto-filled diagnostics as
 // the issue, for users who'd rather email than open a GitHub account.
 function buildCrashMailtoUrl(ctx: RendererCrashScreenContext): string {
-  const subject = `OpenDesign keeps crashing (renderer ${ctx.reason})`;
+  const subject = `Lev Design keeps crashing (renderer ${ctx.reason})`;
   const body = [
-    "The OpenDesign desktop app crashed several times in a row on my device.",
+    "The Lev Design desktop app crashed several times in a row on my device.",
     "",
     "(If possible, attach the diagnostics file you saved with the “Save logs…” button.)",
     "",
@@ -1191,7 +1191,7 @@ function createRendererCrashHtml(ctx: RendererCrashScreenContext): string {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>OpenDesign</title>
+    <title>Lev Design</title>
     <style>
       /* Palette mirrors the app's neutral design tokens (apps/web tokens.css):
          warm off-white + near-black, no accent color — matching the black/white
@@ -1287,7 +1287,7 @@ function createRendererCrashHtml(ctx: RendererCrashScreenContext): string {
   </head>
   <body>
     <div class="panel">
-      <p class="title">OpenDesign keeps closing on this device</p>
+      <p class="title">Lev Design keeps closing on this device</p>
       <p class="body">The app window crashed several times in a row, so it has paused to avoid getting stuck reloading.</p>
       <p class="body">It will try to recover on its own in a few minutes.</p>
       <div class="actions">
@@ -1297,7 +1297,7 @@ function createRendererCrashHtml(ctx: RendererCrashScreenContext): string {
       <p class="hint" id="diag-note">Saved logs include a crash memory snapshot so we can find the cause. Nothing is sent unless you choose to share it.</p>
       <p class="status" id="status" aria-live="polite"></p>
       <p class="email" id="email-line">Prefer email? <a href="#" id="email">Contact ${SUPPORT_EMAIL}</a></p>
-      <p class="hint">If this keeps happening, quitting and reinstalling OpenDesign usually resolves it.</p>
+      <p class="hint">If this keeps happening, quitting and reinstalling Lev Design usually resolves it.</p>
     </div>
     <script>
       (function () {
@@ -1385,7 +1385,7 @@ const SPLASH_STAGE_SEQUENCE: readonly SplashBootStage[] = [
 ];
 
 const SPLASH_STAGE_LABELS: Record<SplashBootStage, string> = {
-  starting: "Starting OpenDesign",
+  starting: "Starting Lev Design",
   engine: "Starting the local engine",
   engineReady: "Local engine ready",
   interface: "Preparing the interface",
@@ -1517,17 +1517,19 @@ export function createSplashWindow(): SplashWindowHandle {
   // `themeSource` to `system`, which paints the macOS vibrancy glass and the
   // native chrome dark on a dark-mode Mac — visible on the splash and again in
   // the gap before the renderer's `od:appearance:set-theme` lands.
+  // The splash follows the Mac's light or dark mode: read it before the pin.
+  const dark = nativeTheme.shouldUseDarkColors;
   pinNativeAppearanceToLight();
   // Stamp creation time at the instant the window appears (see SplashWindowHandle).
   const startedAt = Date.now();
   const splash = new BrowserWindow({
     autoHideMenuBar: true,
-    backgroundColor: "#f2f4f5",
+    backgroundColor: dark ? "#000000" : "#f2f4f5",
     frame: false,
     height: 900,
     resizable: false,
     show: true,
-    title: "OpenDesign",
+    title: "Lev Design",
     width: 1280,
     webPreferences: {
       contextIsolation: true,
@@ -1539,7 +1541,7 @@ export function createSplashWindow(): SplashWindowHandle {
   // page loads is deferred and replayed rather than dropped (see
   // `registerSplashStageTracking`).
   registerSplashStageTracking(splash);
-  void splash.loadURL(createPendingHtml());
+  void splash.loadURL(createPendingHtml(dark));
   return { startedAt, window: splash };
 }
 
@@ -2244,7 +2246,7 @@ export async function createDesktopRuntime(options: DesktopRuntimeOptions): Prom
 
   const consoleEntries: DesktopConsoleEntry[] = [];
   const petWindow = createDesktopPetWindow(preloadPath, options.osLocale);
-  const windowTitle = options.windowTitle ?? "OpenDesign";
+  const windowTitle = options.windowTitle ?? "Lev Design";
   const window = new BrowserWindow({
     height: 900,
     icon: resolveDesktopIconPath(),

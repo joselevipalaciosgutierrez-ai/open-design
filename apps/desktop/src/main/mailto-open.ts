@@ -243,7 +243,7 @@ const defaultDeps: OpenFirstPartyMailtoDeps = {
     const notice = noMailClientNotice(address, app.getLocale());
     const options = {
       type: "info" as const,
-      title: "OpenDesign",
+      title: "Lev Design",
       message: notice.message,
       detail: notice.detail,
       buttons: [notice.button],

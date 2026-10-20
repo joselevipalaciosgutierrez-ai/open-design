@@ -26,7 +26,7 @@ test('[P1] owner device silences page-entry and SSE prompts without automatic re
       await page.request.get(`/api/workspace/billing?scope=workspace&workspaceId=${workspaceId}`, { headers });
     }
     await b.goto('/');
-    await expect(b.getByText('Loading OpenDesign…')).toHaveCount(0, { timeout: 60_000 });
+    await expect(b.getByText('Loading Lev Design…')).toHaveCount(0, { timeout: 60_000 });
     const created = await a.request.post('/api/projects', { headers, data: { id, name: 'Owner device cloud update', skillId: null, designSystemId: null, metadata: { kind: 'prototype' } } });
     expect(created.ok(), await created.text()).toBeTruthy();
     async function writeAndPublish(heading: string, publish = true) {

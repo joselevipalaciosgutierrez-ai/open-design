@@ -21,7 +21,7 @@ function lookup(dict: Dict, key: string): string | undefined {
 }
 
 const PRODUCT_ZH: Record<string, string> = {
-  // S04 发送前·Open Design 智能体没登录
+  // S04 发送前·Lev Design 智能体没登录
   'chat.amrBalanceGate.signedOutTitle': 'Open Design 尚未登录',
   'chat.amrBalanceGate.signedOutMessage': '请先登录，以便查看项目和继续对话。',
   // S06 发送前·额度不足
@@ -41,8 +41,8 @@ const PRODUCT_ZH: Record<string, string> = {
   'assistant.canceledLabel': '任务已停止',
   'assistant.canceledDetail': '本次运行已按你的操作停止。',
   // S03(首页建项目被拒:未登录)· S28a 本地服务断开 —— 首页错误块是一个文本块,标题\n正文
-  'entry.authExpiredBody': 'Open Design 尚未登录\n请先登录，以便查看项目和继续对话。',
-  'home.daemonRecovering': '本地连接已断开\n暂时无法连接这台电脑上的 Open Design 服务，请重启客户端。',
+  'entry.authExpiredBody': 'Lev Design 尚未登录\n请先登录，以便查看项目和继续对话。',
+  'home.daemonRecovering': '本地连接已断开\n暂时无法连接这台电脑上的 Lev Design 服务，请重启客户端。',
   // S31c 下载更新失败
   'updater.dialogDownloadFailed': '更新下载未完成\n请确认网络连接正常后再试。',
   'updater.downloadFailedTitle': '更新下载未完成',

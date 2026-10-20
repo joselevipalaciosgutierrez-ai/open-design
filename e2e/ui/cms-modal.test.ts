@@ -249,7 +249,7 @@ async function installProductionFixture(
 
 async function gotoModal(page: Page) {
 	await page.goto("/", { waitUntil: "domcontentloaded" });
-	await expect(page.getByText("Loading OpenDesign…")).toHaveCount(0, {
+	await expect(page.getByText("Loading Lev Design…")).toHaveCount(0, {
 		timeout: T.long,
 	});
 	await expect(page.getByRole("dialog", { name: "Campaign" })).toBeVisible({
@@ -324,7 +324,7 @@ test("[P1] production modal leaves no dialog or backdrop behind when the mounted
 	});
 	await installProductionFixture(page, { mode: "failed" });
 	await page.goto("/", { waitUntil: "domcontentloaded" });
-	await expect(page.getByText("Loading OpenDesign…")).toHaveCount(0, {
+	await expect(page.getByText("Loading Lev Design…")).toHaveCount(0, {
 		timeout: T.long,
 	});
 	// The mount was attempted and failed: only then is "no dialog" evidence.

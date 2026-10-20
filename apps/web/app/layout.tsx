@@ -15,7 +15,7 @@ import '../src/components/ProductionCampaignBadge.module.css';
 import '../src/components/OnboardingWelcome.module.css';
 
 export const metadata: Metadata = {
-  title: 'OpenDesign',
+  title: 'Lev Design',
   icons: {
     icon: '/app-icon.png',
     apple: '/app-icon.png',

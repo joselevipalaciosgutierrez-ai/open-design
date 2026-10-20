@@ -408,10 +408,10 @@ function renderSettingsDialog(
 }
 
 // The signed-out banner carries its own "Sign up / Sign in"; card-level
-// assertions scope to the OpenDesign card so they don't match the banner.
+// assertions scope to the Lev Design card so they don't match the banner.
 function amrCardElement(): HTMLElement {
   const card = screen.getByTestId('settings-agent-select-amr').closest('.agent-card');
-  if (!(card instanceof HTMLElement)) throw new Error('missing OpenDesign card');
+  if (!(card instanceof HTMLElement)) throw new Error('missing Lev Design card');
   return card;
 }
 
@@ -2751,7 +2751,7 @@ describe('SettingsDialog execution settings Local CLI interactions', () => {
     vi.unstubAllGlobals();
   });
 
-  it('pins OpenDesign to the top of the installed CLI list', () => {
+  it('pins Lev Design to the top of the installed CLI list', () => {
     const claudeAgent: AgentInfo = {
       id: 'claude',
       name: 'Claude Code',
@@ -3423,7 +3423,7 @@ describe('SettingsDialog execution settings Local CLI interactions', () => {
     expect(screen.queryByRole('button', { name: 'Test' })).toBeNull();
   });
 
-  it('selects the signed-out OpenDesign row in place and only then offers sign-up', async () => {
+  it('selects the signed-out Lev Design row in place and only then offers sign-up', async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = input.toString();
       if (url === '/api/workspace/context') {
@@ -3474,7 +3474,7 @@ describe('SettingsDialog execution settings Local CLI interactions', () => {
     ).toBeTruthy();
   });
 
-  it('commits OpenDesign as the CLI once sign-in from its selected card succeeds', async () => {
+  it('commits Lev Design as the CLI once sign-in from its selected card succeeds', async () => {
     let loginStarted = false;
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString();
@@ -3538,7 +3538,7 @@ describe('SettingsDialog execution settings Local CLI interactions', () => {
     fireEvent.click(
       await within(amrCard).findByRole('button', { name: 'Sign up / Sign in' }),
     );
-    // Selected in Settings only: committing a signed-out OpenDesign would
+    // Selected in Settings only: committing a signed-out Lev Design would
     // send the user back to onboarding.
     expect(
       onPersist.mock.calls.some(([config]) => (config as AppConfig).agentId === 'amr'),
@@ -3554,7 +3554,7 @@ describe('SettingsDialog execution settings Local CLI interactions', () => {
     );
   }, 15_000);
 
-  it('keeps a DeepSeek Harness choice made after a pending OpenDesign pick when sign-in lands later', async () => {
+  it('keeps a DeepSeek Harness choice made after a pending Lev Design pick when sign-in lands later', async () => {
     let loginStarted = false;
     let companionInstalled = false;
     const dshAgent: AgentInfo = {
@@ -5065,12 +5065,12 @@ describe('SettingsDialog MCP server interactions', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/api/mcp/install-info');
     });
-    expect(screen.getByRole('heading', { name: /Connect OpenDesign to your coding agent/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Connect Lev Design to your coding agent/i })).toBeTruthy();
     expect(screen.queryByText(/Run this command in your terminal/i)).toBeNull();
     await waitFor(() => {
       expect(screen.getByText(/claude mcp add-json --scope user open-design/i)).toBeTruthy();
     });
-    expect(screen.getByText(/Keep OpenDesign running\. Restart your coding agent after setup\./i)).toBeTruthy();
+    expect(screen.getByText(/Keep Lev Design running\. Restart your coding agent after setup\./i)).toBeTruthy();
     expect(screen.getByText(/What your agent can do/i)).toBeTruthy();
   });
 
@@ -6122,7 +6122,7 @@ describe('SettingsDialog about interactions', () => {
     });
     const downloaded = updateStatus({
       artifact: {
-        name: 'Open Design Beta.dmg',
+        name: 'Lev Design Beta.dmg',
         platformKey: 'macAppleSilicon',
         type: 'dmg',
         url: 'https://fixture.test/Open Design Beta.dmg',

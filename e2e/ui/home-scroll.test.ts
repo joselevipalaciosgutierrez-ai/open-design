@@ -29,7 +29,7 @@ for (const mode of ['daemon', 'api'] as const) {
     });
     await page.setViewportSize({ width: 1200, height: 480 });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.getByText('Loading OpenDesign…').waitFor({ state: 'hidden', timeout: T.long });
+    await page.getByText('Loading Lev Design…').waitFor({ state: 'hidden', timeout: T.long });
     await expect(page.getByTestId('home-view')).toHaveClass(/home-view--centered/);
     await ensureRailOpen(page);
 

@@ -291,7 +291,7 @@ async function installCmsFixture(page: Page) {
 
 async function gotoCmsHome(page: Page) {
 	await page.goto("/", { waitUntil: "domcontentloaded" });
-	await expect(page.getByText("Loading OpenDesign…")).toHaveCount(0, {
+	await expect(page.getByText("Loading Lev Design…")).toHaveCount(0, {
 		timeout: T.long,
 	});
 	await expect(page.getByTestId("home-hero")).toBeVisible({ timeout: T.long });
