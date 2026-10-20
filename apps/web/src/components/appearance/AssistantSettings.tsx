@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Button, Select } from '@open-design/components';
 import { useVoicePrefs, writeVoicePrefs } from '../../state/assistant-prefs';
 import {
   fetchSpeechStatus,
@@ -28,8 +29,8 @@ function sortVoices(voices: readonly SpeechVoiceInfo[], lang: string): SpeechVoi
 }
 
 /**
- * Settings → Appearance → Assistant: the voice and its
- * speed, whether replies are read aloud, and whether the assistant can hear.
+ * Settings → Lev → Voice: the voice and its speed, whether replies are read
+ * aloud, and whether Lev can hear. Built from the app's own controls.
  */
 export function AssistantSettings({ lang }: { lang: string }) {
   const copy = useAppearanceCopy();
@@ -73,15 +74,30 @@ export function AssistantSettings({ lang }: { lang: string }) {
         <p className="hint">{copy.assistantHint}</p>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="assistant-voice">{copy.voiceTitle}</label>
+      <div className="settings-privacy-toggles">
+      <button
+        type="button"
+        className={`toggle-row${prefs.speakReplies ? ' on' : ''}`}
+        role="switch"
+        aria-checked={prefs.speakReplies}
+        data-testid="assistant-speak-replies"
+        onClick={() => set({ speakReplies: !prefs.speakReplies })}
+      >
+        <span className="toggle-row-text">
+          <span className="toggle-row-label">{copy.speakReplies}</span>
+        </span>
+        <span className="toggle-row-switch" aria-hidden="true" />
+      </button>
+      </div>
+
+      <div className={`field ${styles.field}`}>
+        <label className="field-label" htmlFor="assistant-voice">{copy.voiceTitle}</label>
         {status && !status.tts.supported ? (
-          <p className={styles.hint}>{copy.voiceNone}</p>
+          <p className="hint">{copy.voiceNone}</p>
         ) : (
           <>
-            <select
+            <Select
               id="assistant-voice"
-              className={styles.select}
               data-testid="assistant-voice-select"
               value={prefs.voiceId ?? ''}
               onChange={(e) => set({ voiceId: e.target.value || null })}
@@ -92,18 +108,18 @@ export function AssistantSettings({ lang }: { lang: string }) {
                   {[v.name, v.lang, QUALITY_LABEL[v.quality]].filter(Boolean).join(' · ')}
                 </option>
               ))}
-            </select>
-            <p className={styles.hint}>{copy.voiceHint}</p>
-            {!premiumFound ? <p className={styles.hint} data-testid="assistant-voice-tip">{copy.voicePremiumTip}</p> : null}
-            <button type="button" className={styles.test} data-testid="assistant-voice-test" onClick={() => void test()} disabled={testing}>
+            </Select>
+            <p className="hint">{copy.voiceHint}</p>
+            {!premiumFound ? <p className="hint" data-testid="assistant-voice-tip">{copy.voicePremiumTip}</p> : null}
+            <Button variant="ghost" size="sm" className={styles.test} data-testid="assistant-voice-test" onClick={() => void test()} disabled={testing}>
               {copy.voiceTest}
-            </button>
+            </Button>
           </>
         )}
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="assistant-rate">{copy.rateTitle}</label>
+      <div className={`field ${styles.field}`}>
+        <label className="field-label" htmlFor="assistant-rate">{copy.rateTitle}</label>
         <div className={styles.row}>
           <input
             id="assistant-rate"
@@ -120,19 +136,9 @@ export function AssistantSettings({ lang }: { lang: string }) {
         </div>
       </div>
 
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={prefs.speakReplies}
-          data-testid="assistant-speak-replies"
-          onChange={(e) => set({ speakReplies: e.target.checked })}
-        />
-        <span>{copy.speakReplies}</span>
-      </label>
-
-      <div className={styles.field}>
-        <span className={styles.label}>{copy.listenTitle}</span>
-        <p className={styles.status} data-testid="assistant-listen-status">
+      <div className={`field ${styles.field}`}>
+        <span className="field-label">{copy.listenTitle}</span>
+        <p className="hint" data-testid="assistant-listen-status">
           {status?.stt.available ? copy.listenReady(status.stt.engine ?? 'whisper') : copy.listenMissing}
         </p>
       </div>

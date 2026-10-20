@@ -1,8 +1,7 @@
 .block {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  max-width: 560px;
+  gap: 16px;
 }
 
 .field {
@@ -97,14 +96,6 @@
 
 .test {
   align-self: flex-start;
-  height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--bg-panel);
-  color: var(--text);
-  font-size: 13px;
-  cursor: pointer;
 }
 
 .test:hover {

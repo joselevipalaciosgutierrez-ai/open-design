@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { useAnalytics } from '../analytics/provider';
 import { trackSettingsPrivacyClick } from '../analytics/events';
 import { useT } from '../i18n';
@@ -8,6 +8,8 @@ import type { AppConfig, TelemetryConfig } from '../types';
 interface Props {
   cfg: AppConfig;
   setCfg: Dispatch<SetStateAction<AppConfig>>;
+  /** More privacy blocks below the sharing ones (what agents may touch on this Mac). */
+  children?: ReactNode;
 }
 
 function generateInstallationId(): string {
@@ -19,7 +21,7 @@ function generateInstallationId(): string {
   return `inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function PrivacySection({ cfg, setCfg }: Props): JSX.Element {
+export function PrivacySection({ cfg, setCfg, children }: Props): JSX.Element {
   const t = useT();
   const analytics = useAnalytics();
   const telemetry: TelemetryConfig = cfg.telemetry ?? {};
@@ -146,6 +148,7 @@ export function PrivacySection({ cfg, setCfg }: Props): JSX.Element {
           </div>
         </>
       )}
+      {children ? <div className="settings-subsection">{children}</div> : null}
     </section>
   );
 }

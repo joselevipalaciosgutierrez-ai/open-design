@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@open-design/components';
+import { Button, Input } from '@open-design/components';
 import type { AgentAccessResponse, AgentAccessSettings as Access, MacControlStatus } from '@open-design/contracts';
 import { useI18n } from '../../i18n';
-import base from './AssistantSettings.module.css';
 import styles from './AgentAccessSettings.module.css';
 
 interface Copy {
@@ -78,7 +77,7 @@ const EN: Copy = {
   loadFailed: 'The assistant access could not be read.',
 };
 
-/** Settings → Appearance → Assistant access: folders, reading, Mac control. */
+/** Settings → Privacy → Assistant access: folders, reading, Mac control. */
 export function AgentAccessSettings() {
   const { locale } = useI18n();
   const copy = locale.toLowerCase().startsWith('es') ? ES : EN;
@@ -133,8 +132,27 @@ export function AgentAccessSettings() {
   };
 
   const access = state?.access;
+  const toggle = (on: boolean, label: string, hint: string, testId: string, onClick: () => void, extra?: string | null) => (
+    <button
+      type="button"
+      className={`toggle-row${on ? ' on' : ''}`}
+      role="switch"
+      aria-checked={on}
+      data-testid={testId}
+      onClick={onClick}
+    >
+      <span className="toggle-row-text">
+        <span className="toggle-row-label">{label}</span>
+        <span className="toggle-row-hint">{hint}</span>
+        {extra ? <span className="toggle-row-hint" data-testid="agent-access-accessibility">{extra}</span> : null}
+      </span>
+      <span className="toggle-row-switch" aria-hidden="true" />
+    </button>
+  );
+
+  // Laid out like the rest of Settings: subsections with a section head, switch rows, fields.
   return (
-    <div className={base.block} data-testid="agent-access-settings">
+    <div className={styles.root} data-testid="agent-access-settings">
       <div className="settings-general-block-head">
         <h3>{copy.title}</h3>
         <p className="hint">{copy.hint}</p>
@@ -143,11 +161,11 @@ export function AgentAccessSettings() {
 
       {access ? (
         <>
-          <div className={base.field}>
-            <span className={base.label}>{copy.foldersTitle}</span>
-            <p className={base.hint}>{copy.foldersHint}</p>
+          <div className="settings-subsection">
+            <h4 className={styles.subhead}>{copy.foldersTitle}</h4>
+            <p className="hint">{copy.foldersHint}</p>
             {access.allowedDirs.length === 0 ? (
-              <p className={base.status}>{copy.onlyProject}</p>
+              <p className="hint">{copy.onlyProject}</p>
             ) : (
               <ul className={styles.list}>
                 {access.allowedDirs.map((dir) => (
@@ -166,7 +184,7 @@ export function AgentAccessSettings() {
               </ul>
             )}
             <form
-              className={base.row}
+              className={styles.addRow}
               onSubmit={(e) => {
                 e.preventDefault();
                 const dir = draft.trim();
@@ -175,53 +193,33 @@ export function AgentAccessSettings() {
                 void save({ allowedDirs: [...access.allowedDirs, dir] });
               }}
             >
-              <input
-                className={base.select}
+              <Input
                 value={draft}
                 placeholder={copy.addPlaceholder}
                 aria-label={copy.add}
                 data-testid="agent-access-folder-input"
                 onChange={(e) => setDraft(e.target.value)}
               />
-              <Button type="submit" size="sm" data-testid="agent-access-add">
+              <Button type="submit" variant="ghost" data-testid="agent-access-add">
                 {copy.add}
               </Button>
             </form>
           </div>
 
-          <div className={base.field}>
-            <label className={base.check}>
-              <input
-                type="checkbox"
-                checked={access.readWholeMac}
-                data-testid="agent-access-read-all"
-                onChange={(e) => void save({ readWholeMac: e.target.checked })}
-              />
-              <span>{copy.readAll}</span>
-            </label>
-            <p className={base.hint}>{copy.readAllHint}</p>
+          <div className="settings-subsection settings-privacy-toggles">
+            {toggle(access.readWholeMac, copy.readAll, copy.readAllHint, 'agent-access-read-all', () => void save({ readWholeMac: !access.readWholeMac }))}
+            {toggle(
+              access.macControl,
+              copy.macControl,
+              copy.macControlHint,
+              'agent-access-mac-control',
+              () => void save({ macControl: !access.macControl }),
+              access.macControl && mac?.supported ? (mac.accessibility ? copy.accessibilityOn : copy.accessibilityOff) : null,
+            )}
           </div>
 
-          <div className={base.field}>
-            <label className={base.check}>
-              <input
-                type="checkbox"
-                checked={access.macControl}
-                data-testid="agent-access-mac-control"
-                onChange={(e) => void save({ macControl: e.target.checked })}
-              />
-              <span>{copy.macControl}</span>
-            </label>
-            <p className={base.hint}>{copy.macControlHint}</p>
-            {access.macControl && mac?.supported ? (
-              <p className={base.status} data-testid="agent-access-accessibility">
-                {mac.accessibility ? copy.accessibilityOn : copy.accessibilityOff}
-              </p>
-            ) : null}
-          </div>
-
-          <div className={base.field}>
-            <span className={base.label}>{copy.rulesTitle}</span>
+          <div className="settings-subsection">
+            <h4 className={styles.subhead}>{copy.rulesTitle}</h4>
             <ul className={styles.rules}>
               {copy.rules.map((rule) => (
                 <li key={rule}>{rule}</li>
@@ -232,7 +230,7 @@ export function AgentAccessSettings() {
       ) : null}
 
       {error ? (
-        <p className={base.hint} role="status" data-testid="agent-access-error">
+        <p className="hint" role="status" data-testid="agent-access-error">
           {error}
         </p>
       ) : null}

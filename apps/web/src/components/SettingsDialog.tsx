@@ -213,6 +213,8 @@ import {
   resolveAppTheme,
 } from '../state/appearance';
 import { AppearanceSection } from './appearance/AppearanceSection';
+import { AgentAccessSettings } from './appearance/AgentAccessSettings';
+import { LevSettings } from './lev/LevSettings';
 import { useAppearanceCopy } from './appearance/use-appearance-copy';
 import { isAutosaveDraftOnlyChange } from '../App';
 import {
@@ -238,6 +240,7 @@ export type SettingsSection =
   | 'mcpClient'
   | 'language'
   | 'appearance'
+  | 'lev'
   | 'critiqueTheater'
   | 'notifications'
   | 'pet'
@@ -3908,6 +3911,7 @@ export function SettingsDialog({
   // as the section heading — there is no inner h3 inside the Local CLI /
   // BYOK content so "Local CLI" only renders once (in the seg-control tab),
   // not twice (heading + tab).
+  const levNavHint = locale.toLowerCase().startsWith('es') ? 'Isla, voz y lecciones' : 'Island, voice and lessons';
   const sectionHeader: Record<SettingsSection, { title: string; subtitle: string }> = {
     general: { title: t('settings.general'), subtitle: t('settings.generalHint') },
     labs: { title: t('labs.title'), subtitle: t('labs.navHint') },
@@ -3931,7 +3935,8 @@ export function SettingsDialog({
     // no copy of its own. It survives only as a legacy deep-link token that
     // `normalizeSettingsSection` folds into General, so this entry can never be
     // the active header — it exists to keep the Record exhaustive.
-    appearance: { title: t('settings.general'), subtitle: t('settings.generalHint') },
+    appearance: { title: appearanceCopy.navTitle, subtitle: appearanceCopy.navHint },
+    lev: { title: 'Lev', subtitle: levNavHint },
     critiqueTheater: {
       title: t('critiqueTheater.settingsNav'),
       subtitle: t('critiqueTheater.settingsNavHint'),
@@ -4413,6 +4418,18 @@ export function SettingsDialog({
               <span>
                 <strong>{appearanceCopy.navTitle}</strong>
                 <small>{appearanceCopy.navHint}</small>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`settings-nav-item${activeSection === 'lev' ? ' active' : ''}`}
+              onClick={() => setActiveSection('lev')}
+              data-testid="settings-nav-lev"
+            >
+              <Icon name="mic" size={18} />
+              <span>
+                <strong>Lev</strong>
+                <small>{levNavHint}</small>
               </span>
             </button>
             <button
@@ -6066,6 +6083,8 @@ export function SettingsDialog({
             />
           ) : null}
 
+          {activeSection === 'lev' ? <LevSettings /> : null}
+
           {activeSection === 'labs' ? (
             <LabsSection autosave={labsAutosave} />
           ) : null}
@@ -6116,7 +6135,9 @@ export function SettingsDialog({
           ) : null}
 
           {activeSection === 'privacy' ? (
-            <PrivacySection cfg={cfg} setCfg={setCfg} />
+            <PrivacySection cfg={cfg} setCfg={setCfg}>
+              <AgentAccessSettings />
+            </PrivacySection>
           ) : null}
 
           {activeSection === 'about' ? (

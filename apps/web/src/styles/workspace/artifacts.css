@@ -4150,6 +4150,8 @@ button.agent-group-rescan-btn:hover:not(:disabled) {
   /* Buttons inherit nowrap from the shared button base; the hint copy must
      wrap or it clips under the switch on narrow panes. */
   white-space: normal;
+  /* The shared button base fixes a height; a row grows with its hint. */
+  height: auto;
   padding: 12px 14px;
   background: var(--bg-panel);
   border: 1px solid var(--border);

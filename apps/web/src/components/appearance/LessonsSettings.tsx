@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@open-design/components';
 import type { Lesson, LessonsResponse } from '@open-design/contracts';
 import { useI18n } from '../../i18n';
-import base from './AssistantSettings.module.css';
 import styles from './LessonsSettings.module.css';
 
 const COPY = {
@@ -56,12 +55,12 @@ export function LessonsSettings() {
   };
 
   return (
-    <div className={base.block} data-testid="lessons-settings">
+    <div className={styles.root} data-testid="lessons-settings">
       <div className="settings-general-block-head">
         <h3>{copy.title}</h3>
         <p className="hint">{copy.hint}</p>
       </div>
-      {lessons && lessons.length === 0 ? <p className={base.status}>{error ?? copy.empty}</p> : null}
+      {lessons && lessons.length === 0 ? <p className="hint">{error ?? copy.empty}</p> : null}
       {lessons && lessons.length > 0 ? (
         <ul className={styles.list}>
           {lessons.map((lesson) => (
