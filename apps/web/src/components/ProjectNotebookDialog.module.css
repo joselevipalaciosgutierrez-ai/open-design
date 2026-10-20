@@ -1,0 +1,15 @@
+.editor {
+  inline-size: 100%;
+  min-block-size: 280px;
+  max-block-size: 60vh;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.note {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}

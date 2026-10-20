@@ -920,7 +920,9 @@ import { registerAgentProfileRoutes } from './routes/agent-profiles.js';
 import { registerDeliveryRoutes } from './routes/delivery.js';
 import { registerSpeechRoutes } from './routes/speech.js';
 import { registerAgentAccessRoutes } from './routes/agent-access.js';
-import { registerOrchestratorRoutes } from './routes/orchestrator.js';
+import { findOrchestratorProjectId, registerOrchestratorRoutes } from './routes/orchestrator.js';
+import { appendNotebookEntry, NOTEBOOK_FRESH_RUN_MS, readNotebook, renderNotebookPrompt, runNotebookEntry } from './notebook.js';
+import { registerNotebookRoutes } from './routes/notebook.js';
 import { createAgentAccessStore } from './agent-access/access-store.js';
 import { createMacControl } from './agent-access/mac-control.js';
 import { startAgentGateway, type AgentGateway } from './agent-access/agent-gateway.js';
@@ -8123,7 +8125,31 @@ export async function startServer({
           : null;
         if (promptBudget) run.promptBudgetDiagnostics = promptBudget;
       },
-      onTerminal: createAmrTerminalReportFinalizer(amrTerminalReportOutbox),
+      onTerminal: (() => {
+        const finalizeAmrReport = createAmrTerminalReportFinalizer(amrTerminalReportOutbox);
+        const notedRunIds = new Set<string>();
+        return (run, status, terminalAt) => {
+          finalizeAmrReport(run, status, terminalAt);
+          // Each finished run leaves one line in its project's notebook
+          // (notebook.ts), which is how Lev remembers what happened there.
+          // Lev's own runs belong to no project. This also fires when an old
+          // run is read back from disk after a restart, so only a run that
+          // just ended counts, and each run once.
+          const endedAt = terminalAt ?? Date.now();
+          const justEnded = Date.now() - endedAt < NOTEBOOK_FRESH_RUN_MS;
+          if (
+            justEnded
+            && typeof run.id === 'string' && !notedRunIds.has(run.id)
+            && typeof run.projectId === 'string' && run.projectId && run.projectId !== findOrchestratorProjectId(db)
+          ) {
+            notedRunIds.add(run.id);
+            const entry = runNotebookEntry(run, status);
+            if (entry) {
+              void appendNotebookEntry(RUNTIME_DATA_DIR, run.projectId, entry, endedAt).catch(() => {});
+            }
+          }
+        };
+      })(),
       beforeFinish: (run, status, _code, _signal, terminalAt) => {
         if (run.deliverableSyntaxValidation?.metrics) {
           run.deliverableSyntaxValidation = {
@@ -9417,6 +9443,7 @@ export async function startServer({
     home: os.homedir(),
     listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
   });
+  registerNotebookRoutes(app, { http: httpDeps, db, dataDir: RUNTIME_DATA_DIR });
   registerOrchestratorRoutes(app, {
     http: httpDeps,
     db,
@@ -11709,6 +11736,7 @@ export async function startServer({
         // some and chose none (see orchestrator-context.ts).
         orchestrator: resolveOrchestratorForRun(db, {
           run: { ...run, projectId, analyticsHints: chatBody?.analyticsHints },
+          dataDir: RUNTIME_DATA_DIR,
           sessionMode: runSessionMode,
           streamFormat: def?.streamFormat ?? 'plain',
         }),
@@ -11847,6 +11875,12 @@ export async function startServer({
     const agentDir = warmEligible
       ? path.join(RUNTIME_DATA_DIR, 'runs', `agent-antigravity-${run.conversationId}`)
       : path.join(RUNTIME_DATA_DIR, 'runs', run.id);
+    // The project's notebook, latest entries (notebook.ts). Not for Lev's own
+    // space: Lev sees one line per project in its directive instead.
+    let projectNotebookPrompt = '';
+    if (typeof projectId === 'string' && projectId && projectId !== findOrchestratorProjectId(db)) {
+      projectNotebookPrompt = renderNotebookPrompt(projectId, await readNotebook(RUNTIME_DATA_DIR, projectId));
+    }
     let runSkills: RunSkills | null = null;
     if (!strategyTaskAtStart) {
       try {
@@ -12709,6 +12743,8 @@ export async function startServer({
         // Per turn on purpose: it changes with the message, so it must stay
         // out of the stable slice a resumed session skips.
         runSkills?.indexPrompt ?? '',
+        // Same for the project's notebook: it grows with every run.
+        projectNotebookPrompt,
         includeStableForPayload ? systemPrompt : '',
       ]
         .map((part) => (typeof part === 'string' ? part.trim() : ''))

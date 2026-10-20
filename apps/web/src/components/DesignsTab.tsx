@@ -1,4 +1,5 @@
 import { openProjectInMode } from "../state/open-project-in-mode";
+import { ProjectNotebookDialog } from "./ProjectNotebookDialog";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Dialog, DialogDescription, DialogFooter, DialogTitle } from "@open-design/components";
@@ -141,6 +142,7 @@ export function DesignsTab({
 	const confirmTitleId = useId();
 	const t = useT();
 	const { locale } = useI18n();
+	const [notebookFor, setNotebookFor] = useState<{ id: string; name: string } | null>(null);
 	const analytics = useAnalytics();
 	const { context: workspaceContext, loading: workspaceContextLoading } = useWorkspaceContext();
 	// P0 page_view page_name=projects — fire once when the tab mounts so
@@ -597,6 +599,13 @@ export function DesignsTab({
 		<div
 			className={`tab-panel${view === "kanban" ? " design-kanban-view" : ""}`}
 		>
+			{notebookFor ? (
+				<ProjectNotebookDialog
+					projectId={notebookFor.id}
+					projectName={notebookFor.name}
+					onClose={() => setNotebookFor(null)}
+				/>
+			) : null}
 			<div className="tab-panel-toolbar designs-toolbar">
 				<div className="toolbar-left">
 					<div
@@ -1126,6 +1135,17 @@ export function DesignsTab({
 											}}
 										>
 											{locale.toLowerCase().startsWith("es") ? "Diseño" : "Design"}
+										</button>
+										<button
+											type="button"
+											className="design-card-open-mode"
+											data-testid="design-card-open-notebook"
+											onClick={(e) => {
+												e.stopPropagation();
+												setNotebookFor({ id: p.id, name: p.name });
+											}}
+										>
+											{locale.toLowerCase().startsWith("es") ? "Libreta" : "Notebook"}
 										</button>
 									</div>
 								</div>

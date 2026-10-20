@@ -8,7 +8,8 @@
  */
 import { isSystemProject, type AgentProfile, type ChatSessionMode, type OrchestratorContext } from '@open-design/contracts';
 
-import { getConversation, listAgentProfiles, listProjects } from './db.js';
+import { countMessages, getConversation, listAgentProfiles, listConversations, listMessages, listProjects } from './db.js';
+import { lastNotebookEntrySync } from './notebook.js';
 import { findOrchestratorProjectId } from './routes/orchestrator.js';
 import { DEFAULT_DELEGATION_LIMITS, type DelegationLimits } from './delegation.js';
 
@@ -37,7 +38,9 @@ export interface ResolveOrchestratorInput {
   /** The run is in Lev's space (the general chat on Home). */
   inOrchestratorSpace?: boolean;
   /** The person's projects, most recent first; listed for Lev. */
-  projects?: ReadonlyArray<{ id: string; name: string }>;
+  projects?: ReadonlyArray<{ id: string; name: string; lastNote?: string | null }>;
+  /** Lev's earlier sessions, most recent first. */
+  recentSessions?: ReadonlyArray<{ id: string; label: string; date: string }>;
 }
 
 function isDesignSystemEnrichment(hints: unknown): boolean {
@@ -80,7 +83,7 @@ export function resolveOrchestratorContext(input: ResolveOrchestratorInput): Orc
     },
     sessionMode: input.sessionMode,
     ...(input.inOrchestratorSpace
-      ? { scope: 'everywhere' as const, projects: input.projects ?? [] }
+      ? { scope: 'everywhere' as const, projects: input.projects ?? [], recentSessions: input.recentSessions ?? [] }
       : {}),
   };
 }
@@ -100,6 +103,8 @@ export function resolveOrchestratorForRun(
     sessionMode?: ChatSessionMode | undefined;
     streamFormat?: string | null | undefined;
     limits?: DelegationLimits;
+    /** The daemon's data root: Lev reads each project's latest notebook line. */
+    dataDir?: string;
   },
 ): OrchestratorContext | null {
   const conversationId = input.run.conversationId;
@@ -113,7 +118,24 @@ export function resolveOrchestratorForRun(
           projects: (listProjects(db) as Array<{ id: string; name: string; updatedAt?: number; metadata?: unknown }>)
             .filter((project) => !isSystemProject(project))
             .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-            .map((project) => ({ id: project.id, name: project.name })),
+            .map((project) => ({
+              id: project.id,
+              name: project.name,
+              lastNote: input.dataDir ? lastNotebookEntrySync(input.dataDir, project.id) : null,
+            })),
+          recentSessions: (listConversations(db, levProjectId as string) as Array<{ id: string; title?: string | null; updatedAt?: number; createdAt?: number }>)
+            .filter((conversation) => conversation.id !== conversationId && countMessages(db, conversation.id) > 0)
+            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+            .slice(0, 5)
+            .map((conversation) => {
+              const firstUser = (listMessages(db, conversation.id) as Array<{ role?: string; content?: string }>).find((m) => m.role === 'user');
+              const at = new Date(conversation.updatedAt ?? conversation.createdAt ?? 0);
+              return {
+                id: conversation.id,
+                label: (conversation.title || firstUser?.content || '').replace(/\s+/g, ' ').trim().slice(0, 90) || '(untitled)',
+                date: `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`,
+              };
+            }),
         }
       : {}),
     conversationAgentProfileId: conversationId

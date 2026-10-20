@@ -40,6 +40,17 @@ export interface OrchestratorLimits {
 export interface OrchestratorProject {
   id: string;
   name: string;
+  /** The project's latest notebook line: what last happened there. */
+  lastNote?: string | null;
+}
+
+/** One of Lev's earlier sessions, for the session index. */
+export interface OrchestratorSession {
+  id: string;
+  /** The session's title, or its first message. */
+  label: string;
+  /** When it was last used, `YYYY-MM-DD`. */
+  date: string;
 }
 
 export interface OrchestratorContext {
@@ -54,7 +65,12 @@ export interface OrchestratorContext {
   scope?: 'project' | 'everywhere' | undefined;
   /** The person's projects, most recent first (`everywhere` only). */
   projects?: ReadonlyArray<OrchestratorProject> | undefined;
+  /** Lev's earlier sessions, most recent first (`everywhere` only). */
+  recentSessions?: ReadonlyArray<OrchestratorSession> | undefined;
 }
+
+/** Earlier sessions listed in Lev's prompt; the rest are read with `od lev sessions`. */
+export const ORCHESTRATOR_MAX_LISTED_SESSIONS = 5;
 
 /** Projects listed in Lev's prompt; the rest are read with `od project list`. */
 export const ORCHESTRATOR_MAX_LISTED_PROJECTS = 15;
@@ -182,6 +198,7 @@ function renderGeneralOrchestratorDirective(context: OrchestratorContext): strin
   const { agents, limits } = context;
   const projects = (context.projects ?? []).slice(0, ORCHESTRATOR_MAX_LISTED_PROJECTS);
   const unlistedProjects = (context.projects?.length ?? 0) - projects.length;
+  const sessions = (context.recentSessions ?? []).slice(0, ORCHESTRATOR_MAX_LISTED_SESSIONS);
   const listedAgents = agents.slice(0, ORCHESTRATOR_MAX_LISTED_AGENTS);
   return [
     "# Lev — the person's general orchestrator (read first; overrides the Ask-mode rules above)",
@@ -190,12 +207,24 @@ function renderGeneralOrchestratorDirective(context: OrchestratorContext): strin
     '',
     'Projects (most recent first):',
     ...(projects.length > 0
-      ? projects.map((project) => `- ${oneLine(project.name, 80)} (id: ${oneLine(project.id, 80)})`)
+      ? projects.map((project) =>
+          `- ${oneLine(project.name, 80)} (id: ${oneLine(project.id, 80)})${project.lastNote ? ` — last: ${oneLine(project.lastNote, 120)}` : ''}`,
+        )
       : ['- none yet']),
     ...(unlistedProjects > 0 ? [`- …and ${unlistedProjects} more: \`"$OD_NODE_BIN" "$OD_BIN" project list --json\`.`] : []),
     '',
     'Agents:',
     ...(listedAgents.length > 0 ? listedAgents.map(renderAgent) : ['- none set up: delegate without `--agent` (the project\'s default agent).']),
+    '',
+    ...(sessions.length > 0
+      ? ['', 'Your earlier sessions with the person (most recent first):', ...sessions.map((session) => `- ${session.date} · ${oneLine(session.label, 90)} (id: ${oneLine(session.id, 80)})`)]
+      : []),
+    '',
+    '## Memory: remember without rereading',
+    '',
+    '- What the person tells you that is worth keeping (who they are, their brands, how they like things done): save it once with `"$OD_NODE_BIN" "$OD_BIN" memory remember --name "<short title>" --description "<one line>"`. It reaches every later session.',
+    '- A decision about a project (made here, not in its chat): write it in that project\'s notebook with `"$OD_NODE_BIN" "$OD_BIN" project note <projectId> "<the decision>"`. The project\'s own chat reads it there.',
+    '- To recall what happened in a project, read its notebook: `"$OD_NODE_BIN" "$OD_BIN" project notebook <projectId>`. To reread an earlier session with the person: `"$OD_NODE_BIN" "$OD_BIN" lev show <session id>`. Read only when the answer needs it.',
     '',
     '## Decide first, for every message',
     '',

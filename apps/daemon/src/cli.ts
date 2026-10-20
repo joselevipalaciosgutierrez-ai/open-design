@@ -257,6 +257,7 @@ const PROJECT_RESOURCE_STRING_FLAGS = new Set([
   ...PROJECT_STRING_FLAGS,
   'workspace',
   'workspace-member',
+  'by',
 ]);
 const PROJECT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json', 'follow', 'thumbnail', 'skip-discovery']);
 const WORKSPACE_STRING_FLAGS = new Set([
@@ -7167,6 +7168,10 @@ async function runProject(args) {
                                           Restore the daemon-selected default
                                           scenario with a snapshot CAS guard.
   od project delete <id>                  Delete a project.
+  od project notebook <id> [--json]       The project's notebook: what was done
+                                          there and what was decided.
+  od project note <id> "<text>" [--by <who>] [--json]
+                                          Write a decision in the notebook.
   od project revoke-public-link <id> --path <file> --url <public-url>
                     Revoke a public file link whose local publication record
                     was lost during an older daemon restart or upgrade.
@@ -7277,6 +7282,37 @@ Common options:
       if (!resp.ok) return structuredHttpFailure(resp, 'project-not-found');
       const data = await resp.json();
       process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+      return;
+    }
+    case 'notebook': {
+      const id = positionalArgs(rest, PROJECT_RESOURCE_STRING_FLAGS)[0];
+      if (!id) {
+        console.error('Usage: od project notebook <id> [--json]');
+        process.exit(2);
+      }
+      const resp = await fetch(`${base}/api/projects/${encodeURIComponent(id)}/notebook`, { headers: workspaceHeaders });
+      if (!resp.ok) return structuredHttpFailure(resp, 'project-not-found');
+      const data = await resp.json();
+      if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+      process.stdout.write(data.text ? `${data.text.trimEnd()}\n` : '(the notebook is empty)\n');
+      return;
+    }
+    case 'note': {
+      const [id, ...words] = positionalArgs(rest, PROJECT_RESOURCE_STRING_FLAGS);
+      const note = words.join(' ').trim();
+      if (!id || !note) {
+        console.error('Usage: od project note <id> "<text>" [--by <who>] [--json]');
+        process.exit(2);
+      }
+      const resp = await fetch(`${base}/api/projects/${encodeURIComponent(id)}/notebook/notes`, {
+        method: 'POST',
+        headers: { ...workspaceHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ note, ...(typeof flags.by === 'string' && flags.by ? { by: flags.by } : {}) }),
+      });
+      if (!resp.ok) return structuredHttpFailure(resp, 'project-not-found');
+      const data = await resp.json();
+      if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+      console.log(`[project] noted in ${id}`);
       return;
     }
     case 'restore-automatic-scenario': {
@@ -10812,6 +10848,10 @@ Common options:
 
 function printMemoryHelp() {
   console.log(`Usage:
+  od memory remember --name "<title>" --description "<one line>" [--body "<detail>"]
+                     [--type user|feedback|project|reference] [--json]
+      Keep a fact across sessions (what the person told Lev, a preference).
+
   od memory tree list [--json]
       List derived memory-tree folders and entry nodes.
 
@@ -11066,6 +11106,7 @@ async function runMemory(args) {
     process.exit(args.length === 0 ? 2 : 0);
   }
   const topic = args[0];
+  if (topic === 'remember') return runMemoryRemember(args.slice(1));
   if (
     topic !== 'tree'
     && topic !== 'profile'
@@ -11197,6 +11238,38 @@ async function runMemory(args) {
 // `od memory profile <show|set>` — the singleton structured user profile the
 // PRE loop (intent gateway) reads to expand a short query into a full brief.
 // Same store as every other memory entry; the well-known id is `user_profile`.
+// `od memory remember`: keep a fact across sessions (Lev saves what the person
+// tells it this way). Same store as the Memory settings page.
+async function runMemoryRemember(rest) {
+  let flags;
+  try {
+    flags = parseFlags(rest, { string: MEMORY_STRING_FLAGS, boolean: MEMORY_BOOLEAN_FLAGS });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  const type = typeof flags.type === 'string' ? flags.type : 'user';
+  if (!flags.name || !['user', 'feedback', 'project', 'reference'].includes(type)) {
+    console.error('Usage: od memory remember --name "<short title>" --description "<one line>" [--body "<detail>"] [--type user|feedback|project|reference] [--json]');
+    process.exit(2);
+  }
+  const base = await cliDaemonBaseUrl(flags);
+  const resp = await fetch(`${base}/api/memory`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      type,
+      name: flags.name,
+      description: typeof flags.description === 'string' ? flags.description : '',
+      body: typeof flags.body === 'string' ? flags.body : (typeof flags.description === 'string' ? flags.description : ''),
+    }),
+  });
+  if (!resp.ok) return structuredHttpFailure(resp);
+  const data = await resp.json();
+  if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+  console.log(`[memory] remembered ${data.entry?.id ?? flags.name}`);
+}
+
 async function runMemoryProfile(base, rest, flags, writeJson) {
   const parts = memoryPositionals(rest);
   const action = parts[0] ?? 'show';
@@ -12582,9 +12655,10 @@ async function runLev(args) {
   od lev sessions [--json]                Lev's sessions, newest first
   od lev new [--title "<title>"] [--json]  Start a new session
   od lev delete <sessionId> [--json]      Delete a session for good
+  od lev show <sessionId> [--json]        Reread an earlier session, compactly
 Lev's sessions live in a hidden system project; the app's general chat on
 Home shows the same sessions.`;
-  if (flags.help || flags.h || !['sessions', 'new', 'delete'].includes(sub)) {
+  if (flags.help || flags.h || !['sessions', 'new', 'delete', 'show'].includes(sub)) {
     console.log(usage);
     if (!(flags.help || flags.h)) process.exit(2);
     return;
@@ -12596,6 +12670,20 @@ Home shows the same sessions.`;
     if (space.sessions.length === 0) console.log('  no sessions yet');
     for (const session of space.sessions) {
       console.log(`  ${session.id}\t${new Date(session.updatedAt).toISOString()}\t${session.messageCount} msgs\t${session.title ?? session.preview ?? '(untitled)'}`);
+    }
+    return;
+  }
+  if (sub === 'show') {
+    const sessionId = positionalArgs(args, LEV_STRING_FLAGS)[1];
+    if (!sessionId) {
+      console.error('Usage: od lev show <sessionId>');
+      process.exit(2);
+    }
+    const data = await accessCall(flags, `/api/projects/${encodeURIComponent(space.projectId)}/conversations/${encodeURIComponent(sessionId)}/messages`);
+    if (flags.json) return process.stdout.write(JSON.stringify(data) + '\n');
+    for (const m of data.messages ?? []) {
+      const text = String(m.content ?? '').replace(/<od-[a-z-]+[^>]*\/>/g, '').replace(/\s+/g, ' ').trim();
+      if (text) console.log(`${m.role === 'user' ? 'Person' : 'Lev'}: ${text.length > 600 ? `${text.slice(0, 599)}…` : text}`);
     }
     return;
   }

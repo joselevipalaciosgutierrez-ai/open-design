@@ -248,6 +248,21 @@ four short lines on reading narrowly, filtering command output and answering
 briefly (~150 tokens). They replace the person's `zipai-optimizer` skill as a
 global: listed in the skill index, it was read in 2 of 90 runs.
 
+## Memory in the prompt, with a ceiling
+
+Three blocks carry memory, each capped so it never grows with history:
+
+- **Personal memory** (`composeMemoryBody`, `apps/daemon/src/memory.ts`): in
+  full while it fits `MEMORY_PROMPT_BUDGET_CHARS` (~450 tokens), then an index
+  of one line per fact with its id, read on demand with `od memory tree view`.
+- **A project's notebook** (`apps/daemon/src/notebook.ts`): its latest 6
+  entries ride the per-turn `clientSystemPrompt` of that project's chat
+  (legacy side only; OD Next sends its own persisted text), capped at ~1.4K
+  characters. Older entries are read with `od project notebook`.
+- **Lev's directive** (`renderOrchestratorDirective`, scope `everywhere`, shared
+  by both sides): one latest-notebook line per listed project and its 5 most
+  recent sessions; the rest is read with `od project notebook` / `od lev show`.
+
 ## Ask mode never takes OD Next
 
 OD Next has no Ask variant: it composes its whole design strategy for every

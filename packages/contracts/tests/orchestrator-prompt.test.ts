@@ -155,3 +155,20 @@ describe('Lev, the general orchestrator', () => {
     expect(text.length / 4).toBeLessThan(1200);
   });
 });
+
+describe('Lev remembers without rereading', () => {
+  it('shows each project\'s latest notebook line, the earlier sessions, and how to save and recall', () => {
+    const text = renderOrchestratorDirective({
+      agents: [],
+      limits: { maxDepth: 2, maxRunsPerTree: 8, maxConcurrentPerTree: 3, maxInstancesPerAgent: 2 },
+      scope: 'everywhere',
+      projects: [{ id: 'p1', name: 'Cafetería', lastNote: 'Lev · nota: solo móvil' }],
+      recentSessions: [{ id: 's1', label: 'Plan de la semana', date: '2026-10-19' }],
+    });
+    expect(text).toContain('Cafetería (id: p1) — last: Lev · nota: solo móvil');
+    expect(text).toContain('2026-10-19 · Plan de la semana (id: s1)');
+    expect(text).toContain('memory remember');
+    expect(text).toContain('project note <projectId>');
+    expect(text).toContain('lev show <session id>');
+  });
+});

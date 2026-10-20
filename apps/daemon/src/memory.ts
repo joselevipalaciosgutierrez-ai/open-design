@@ -695,7 +695,41 @@ export async function composeMemoryBody(dataDir) {
     }
     parts.push('');
   }
-  return parts.join('\n').trim();
+  const full = parts.join('\n').trim();
+  if (full.length <= MEMORY_PROMPT_BUDGET_CHARS) return full;
+  return compactMemoryBody(ordered, grouped);
+}
+
+/**
+ * The memory block's ceiling in every prompt (about 450 tokens). Past it the
+ * block becomes an index, one line per fact, and the agent reads a fact's
+ * detail on demand, the way skills work.
+ */
+export const MEMORY_PROMPT_BUDGET_CHARS = 1_800;
+
+function compactMemoryBody(ordered, grouped) {
+  const lines = ['(Index only: read a fact in full with `"$OD_NODE_BIN" "$OD_BIN" memory tree view <id>`.)'];
+  const all = [];
+  for (const type of ordered) {
+    if (type === 'profile') continue;
+    for (const e of grouped.get(type) ?? []) all.push({ type, e });
+  }
+  let used = lines[0].length;
+  let shown = 0;
+  let lastType = null;
+  for (const { type, e } of all) {
+    const header = type !== lastType ? `### ${capitalize(type)}` : null;
+    const line = `- **${e.name}** — ${e.description || '(no description)'} (id: ${e.id})`;
+    const cost = line.length + (header ? header.length + 1 : 0) + 1;
+    if (used + cost > MEMORY_PROMPT_BUDGET_CHARS) break;
+    if (header) lines.push(header);
+    lines.push(line);
+    used += cost;
+    shown += 1;
+    lastType = type;
+  }
+  if (shown < all.length) lines.push(`(${all.length - shown} more: \`"$OD_NODE_BIN" "$OD_BIN" memory tree list\`.)`);
+  return lines.join('\n');
 }
 
 async function readEntryBodyById(dataDir, id) {
