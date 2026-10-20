@@ -5,6 +5,7 @@
 // This panel is the user-facing form; persistence flows through
 // `state/mcp.ts` -> daemon `/api/mcp/servers`.
 
+import { McpScopeSelect } from './McpScopeSelect';
 import {
   forwardRef,
   useEffect,
@@ -815,6 +816,7 @@ function McpRow({ row, idx, total, template, onChange, onRemove, onMoveUp, onMov
             </span>
           </button>
         )}
+        <McpScopeSelect serverId={row.id} />
         <span className="mcp-row-counter hint">
           {idx + 1} / {total}
         </span>

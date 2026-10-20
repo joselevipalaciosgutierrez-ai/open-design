@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { DEFAULT_MODEL_OPTION, clampCodexReasoning } from './shared.js';
+import { agentSandboxEnforced } from '../../agent-access/sandbox-profile.js';
 import { resolveAgentLaunch } from '../launch.js';
 import type { RuntimeModelOption } from '../types.js';
 import type { RuntimeAgentDef } from '../types.js';
@@ -258,6 +259,11 @@ export function codexNeedsDangerFullAccessSandbox(
   // Only danger-full-access is accepted; unknown values keep the default path.
   if (env.OD_CODEX_SANDBOX?.trim() === 'danger-full-access') return true;
   if (platform === 'win32') return true;
+  // On macOS the daemon already runs every agent inside its own sandbox
+  // (agent-access/sandbox-profile.ts), and a sandboxed process cannot apply a
+  // second one: Codex's workspace-write would fail on every command. The
+  // daemon's sandbox is the boundary there, with the same rules as every agent.
+  if (agentSandboxEnforced({ platform, env })) return true;
   // WSL reports `linux` but Codex still hits the Windows read-only
   // workspace-write sandbox path when launched from there (#2834).
   return Boolean(env.WSL_DISTRO_NAME?.trim());
@@ -408,6 +414,11 @@ export const codexAgentDef = {
       // `codex exec resume`; it must come after the flags. The prompt is
       // delivered via stdin (promptViaStdin), so the thread id is the final
       // argv entry.
+      // The person's external MCP servers (Settings → MCP), as config
+      // overrides: flags, so they come before the resume id.
+      if (Array.isArray(runtimeContext.mcpConfigArgs)) {
+        args.push(...runtimeContext.mcpConfigArgs);
+      }
       if (resumeSessionId) {
         args.push(resumeSessionId);
       }
@@ -421,6 +432,7 @@ export const codexAgentDef = {
     // captured from the stream, not a daemon-minted id.
     resumesSessionViaCli: true,
     capturesSessionIdFromStream: true,
+    externalMcpInjection: 'codex-config-overrides',
     streamFormat: 'json-event-stream',
     eventParser: 'codex',
 } satisfies RuntimeAgentDef;

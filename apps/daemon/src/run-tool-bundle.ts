@@ -136,6 +136,41 @@ export function validateRunToolBundleForAgent(
     return { ok: true };
   }
 
+  // Claude Code reads a file in the run's own folder (`--mcp-config`): no
+  // project needed.
+  if (agent.externalMcpInjection === 'claude-mcp-config-file') {
+    return { ok: true };
+  }
+
+  // Codex (config flags) and Antigravity (workspace plugin) speak stdio and
+  // streamable HTTP, not the legacy SSE transport. Antigravity's plugin lives
+  // in the project folder, so it needs a daemon-managed project.
+  if (
+    agent.externalMcpInjection === 'codex-config-overrides'
+    || agent.externalMcpInjection === 'antigravity-workspace-plugin'
+  ) {
+    const unsupported = servers.findIndex((server) => server.enabled && server.transport === 'sse');
+    if (unsupported !== -1) {
+      return {
+        ok: false,
+        message:
+          `toolBundle.mcpServers[${unsupported}] uses sse transport, ` +
+          `but ${agentLabel(agent)} only supports stdio and streamable HTTP MCP servers`,
+      };
+    }
+    if (
+      agent.externalMcpInjection === 'antigravity-workspace-plugin'
+      && options.deliveryTarget
+      && options.deliveryTarget !== 'managed-project'
+    ) {
+      return {
+        ok: false,
+        message: `${agentLabel(agent)} receives MCP servers through a plugin in the project folder, so toolBundle requires a daemon-managed project`,
+      };
+    }
+    return { ok: true };
+  }
+
   if (agent.externalMcpInjection === 'acp-merge') {
     const unsupported = servers.findIndex(
       (server) => server.enabled && server.transport !== 'stdio',

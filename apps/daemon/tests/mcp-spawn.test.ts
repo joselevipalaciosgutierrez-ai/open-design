@@ -20,14 +20,27 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { insertConversation } from '../src/db.js';
 import { startServer } from '../src/server.js';
 
-async function withFakeClaude<T>(run: () => Promise<T>): Promise<T> {
+/** The `--mcp-config` file the newest fake `claude` was started with, parsed; null when it got none. */
+async function lastClaudeMcpConfig(binDir: string): Promise<{ mcpServers: Record<string, unknown> } | null> {
+  const runs = (await fsp.readdir(binDir)).filter((f) => f.startsWith('argv-')).sort();
+  const argv = JSON.parse(await fsp.readFile(join(binDir, runs[runs.length - 1]!), 'utf8')) as string[];
+  const at = argv.indexOf('--mcp-config');
+  return at === -1 ? null : JSON.parse(await fsp.readFile(argv[at + 1]!, 'utf8'));
+}
+
+async function withFakeClaude<T>(run: (binDir: string) => Promise<T>): Promise<T> {
   const dir = await fsp.mkdtemp(join(tmpdir(), 'od-mcp-spawn-bin-'));
   const oldPath = process.env.PATH;
   const oldClaudeBin = process.env.CLAUDE_BIN;
   const oldAgentHome = process.env.OD_AGENT_HOME;
   // Fake `claude` that prints stream-json the daemon understands and exits 0.
   // The single result frame is enough to drive the run to `succeeded`.
+  // The fake records its argv, so tests can see the `--mcp-config` file.
   const script = `
+require('fs').writeFileSync(
+  require('path').join(${JSON.stringify(dir)}, 'argv-' + Date.now() + '-' + process.pid + '.json'),
+  JSON.stringify(process.argv.slice(2)),
+);
 const out = {
   type: 'result',
   subtype: 'success',
@@ -56,7 +69,7 @@ process.exit(0);
     process.env.PATH = `${dir}${delimiter}${oldPath ?? ''}`;
     delete process.env.CLAUDE_BIN;
     process.env.OD_AGENT_HOME = dir;
-    return await run();
+    return await run(dir);
   } finally {
     process.env.PATH = oldPath;
     if (oldClaudeBin === undefined) delete process.env.CLAUDE_BIN;
@@ -176,8 +189,8 @@ describe('spawn writes external MCP config for Claude Code', () => {
     }
   }
 
-  it('writes .mcp.json into the per-project dir, then removes it when servers are cleared', async () => {
-    await withFakeClaude(async () => {
+  it('hands Claude its MCP servers in a file of its own run, never a shared .mcp.json', async () => {
+    await withFakeClaude(async (binDir) => {
       // Configure one enabled SSE server. URL gets normalized (trailing slash).
       const putRes = await fetch(`${baseUrl}/api/mcp/servers`, {
         method: 'PUT',
@@ -196,10 +209,12 @@ describe('spawn writes external MCP config for Claude Code', () => {
       expect(putRes.ok).toBe(true);
 
       const { id, dir } = await createProject();
+      // A `.mcp.json` an earlier version left in the shared project folder.
+      await fsp.mkdir(dir, { recursive: true });
+      await fsp.writeFile(join(dir, '.mcp.json'), '{"mcpServers":{"stale":{}}}');
 
       // Drive a chat run. The fake `claude` exits 0 immediately; what we care
-      // about is the SIDE EFFECT — `.mcp.json` written to the project cwd
-      // before the spawn.
+      // about is what it was started with.
       const chatRes = await fetch(`${baseUrl}/api/runs`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -214,16 +229,15 @@ describe('spawn writes external MCP config for Claude Code', () => {
       await waitForRunStatus(baseUrl, runId);
 
       const target = join(dir, '.mcp.json');
-      expect(existsSync(target)).toBe(true);
-      const written = JSON.parse(await fsp.readFile(target, 'utf8'));
+      expect(existsSync(target)).toBe(false);
+      const written = (await lastClaudeMcpConfig(binDir))!;
       expect(written.mcpServers).toBeDefined();
       expect(written.mcpServers.higgsfield).toMatchObject({
         type: 'sse',
         url: 'https://mcp.higgsfield.ai/',
       });
 
-      // Clear the MCP config and run again. The stale .mcp.json must be
-      // removed so a freshly-spawned agent doesn't see the old config.
+      // Clear the MCP config and run again: no servers, no --mcp-config.
       await fetch(`${baseUrl}/api/mcp/servers`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -244,6 +258,7 @@ describe('spawn writes external MCP config for Claude Code', () => {
       await waitForRunStatus(baseUrl, runId2);
 
       expect(existsSync(target)).toBe(false);
+      expect(await lastClaudeMcpConfig(binDir)).toBeNull();
     });
   }, 30_000);
 
@@ -429,7 +444,7 @@ describe('spawn writes external MCP config for Claude Code', () => {
   }, 30_000);
 
   it('injects run-scoped MCP servers without saving them to the persistent registry', async () => {
-    await withFakeClaude(async () => {
+    await withFakeClaude(async (binDir) => {
       const { id, dir } = await createProject();
 
       const chatRes = await fetch(`${baseUrl}/api/runs`, {
@@ -472,9 +487,8 @@ describe('spawn writes external MCP config for Claude Code', () => {
         'run-remote',
       ]);
 
-      const target = join(dir, '.mcp.json');
-      expect(existsSync(target)).toBe(true);
-      const written = JSON.parse(await fsp.readFile(target, 'utf8'));
+      expect(existsSync(join(dir, '.mcp.json'))).toBe(false);
+      const written = (await lastClaudeMcpConfig(binDir))!;
       expect(written.mcpServers.run_local).toBeUndefined();
       expect(written.mcpServers['run-local']).toMatchObject({
         command: 'node',
@@ -494,14 +508,17 @@ describe('spawn writes external MCP config for Claude Code', () => {
     });
   }, 30_000);
 
-  it('rejects Claude run-scoped MCP bundles for imported-folder projects', async () => {
+  it('rejects Antigravity run-scoped MCP bundles for imported-folder projects', async () => {
+    // Antigravity takes MCP servers as a plugin in the project folder, which
+    // is never written into the person's own (imported) folder. Claude reads a
+    // file of its own run and has no such limit.
     const { id, dir, externalDir, conversationId } = await importFolderProject();
 
     const runsRes = await fetch(`${baseUrl}/api/runs`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        agentId: 'claude',
+        agentId: 'antigravity',
         projectId: id,
         message: 'imported run-scoped tools',
         toolBundle: {
@@ -523,7 +540,7 @@ describe('spawn writes external MCP config for Claude Code', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        agentId: 'claude',
+        agentId: 'antigravity',
         projectId: id,
         message: 'imported chat-scoped tools',
         toolBundle: {
@@ -600,7 +617,7 @@ describe('spawn writes external MCP config for Claude Code', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        agentId: 'codex',
+        agentId: 'cursor-agent',
         projectId: id,
         message: 'bad tools',
         toolBundle: {
@@ -619,7 +636,7 @@ describe('spawn writes external MCP config for Claude Code', () => {
       error?: { message?: string };
     };
     expect(unsupportedRuntimeBody.error?.message).toContain(
-      'Codex CLI (codex) does not support run-scoped MCP tool bundles',
+      '(cursor-agent) does not support run-scoped MCP tool bundles',
     );
     const messagesRes = await fetch(
       `${baseUrl}/api/projects/${id}/conversations/${conversationId}/messages`,

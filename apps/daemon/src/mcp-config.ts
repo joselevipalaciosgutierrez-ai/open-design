@@ -338,6 +338,82 @@ export function buildClaudeMcpJson(
   return { mcpServers: out };
 }
 
+/** A TOML basic string (Codex `-c key=value` values are TOML). */
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+/** A TOML inline table of string values: `{ "KEY" = "value" }`. */
+function tomlStringTable(values: Record<string, string>): string {
+  const entries = Object.entries(values).map(([k, v]) => `${tomlString(k)} = ${tomlString(v)}`);
+  return `{ ${entries.join(', ')} }`;
+}
+
+/**
+ * Codex: the enabled servers as `-c mcp_servers.<id>.…` config overrides, so
+ * a run gets them with no file written and nothing left behind. Codex merges
+ * them over the person's own `~/.codex/config.toml`. Stdio servers carry
+ * command/args/env; HTTP ones `url` and `http_headers`. Legacy SSE servers are
+ * skipped: Codex speaks streamable HTTP only.
+ */
+export function buildCodexMcpConfigArgs(
+  servers: McpServerConfig[],
+  tokens: Record<string, string> = {},
+): string[] {
+  const args: string[] = [];
+  for (const s of servers.filter((server) => server.enabled)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(s.id)) continue;
+    const key = `mcp_servers.${s.id}`;
+    if (s.transport === 'stdio') {
+      if (!s.command) continue;
+      args.push('-c', `${key}.command=${tomlString(s.command)}`);
+      if (s.args && s.args.length > 0) args.push('-c', `${key}.args=${JSON.stringify(s.args)}`);
+      if (s.env && Object.keys(s.env).length > 0) args.push('-c', `${key}.env=${tomlStringTable(s.env)}`);
+    } else if (s.transport === 'http' && s.url) {
+      args.push('-c', `${key}.url=${tomlString(s.url)}`);
+      const headers = mergeAuthHeader(s.headers, effectiveMcpAuthMode(s) === 'oauth' ? tokens[s.id] : undefined);
+      if (headers && Object.keys(headers).length > 0) args.push('-c', `${key}.http_headers=${tomlStringTable(headers)}`);
+    }
+  }
+  return args;
+}
+
+/** Where Antigravity looks for plugins inside a workspace, and the one Open Design owns. */
+export const ANTIGRAVITY_OD_MCP_PLUGIN_DIR = path.join('.agents', 'plugins', 'od-mcp');
+
+/**
+ * Antigravity: the enabled servers as a workspace plugin
+ * (`.agents/plugins/od-mcp/{plugin.json,mcp_config.json}`), which agy loads
+ * for a run in that folder — verified with agy 1.4.2. Its streamable-HTTP
+ * entries take `url`; legacy SSE is not supported by agy and is skipped.
+ * Returns null when there is nothing to expose.
+ */
+export function buildAntigravityMcpPlugin(
+  servers: McpServerConfig[],
+  tokens: Record<string, string> = {},
+): { pluginJson: unknown; mcpConfig: unknown } | null {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const s of servers.filter((server) => server.enabled)) {
+    if (s.transport === 'stdio') {
+      if (!s.command) continue;
+      const entry: Record<string, unknown> = { command: s.command };
+      if (s.args && s.args.length > 0) entry.args = s.args;
+      if (s.env && Object.keys(s.env).length > 0) entry.env = s.env;
+      out[s.id] = entry;
+    } else if (s.transport === 'http' && s.url) {
+      const entry: Record<string, unknown> = { url: s.url };
+      const headers = mergeAuthHeader(s.headers, effectiveMcpAuthMode(s) === 'oauth' ? tokens[s.id] : undefined);
+      if (headers && Object.keys(headers).length > 0) entry.headers = headers;
+      out[s.id] = entry;
+    }
+  }
+  if (Object.keys(out).length === 0) return null;
+  return {
+    pluginJson: { name: 'od-mcp', version: '1.0.0', description: 'MCP servers Open Design hands to this run.' },
+    mcpConfig: { mcpServers: out },
+  };
+}
+
 /** Build a headers object that includes the daemon-issued bearer token when
  * the user hasn't already supplied a NON-EMPTY Authorization header. A
  * blank Authorization (empty string / whitespace only) is treated as
