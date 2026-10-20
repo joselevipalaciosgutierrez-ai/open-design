@@ -318,3 +318,142 @@
   padding: 0;
   margin-bottom: 6px;
 }
+
+/* ---- Simplified editor: one sentence, the rest drafted (see AgentEditor) ---- */
+.textareaShort {
+  min-height: 0;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.draftLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  color: var(--text-strong);
+}
+
+.skillSuggested {
+  border-style: solid;
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.skillSuggested em {
+  margin-left: 4px;
+  font-style: normal;
+  color: var(--text-soft);
+}
+
+.emojiInput {
+  width: 64px;
+  text-align: center;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.more {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+
+.moreToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreToggle:hover {
+  color: var(--text-strong);
+}
+
+.moreToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.moreChevron {
+  display: inline-block;
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.more[data-open='true'] .moreChevron {
+  transform: rotate(90deg);
+}
+
+/* Height animates with the 0fr → 1fr grid pattern; the body stays mounted. */
+.moreBody {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.more[data-open='true'] .moreBody {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.moreInner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 4px;
+}
+
+.more[data-open='false'] .moreInner {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moreBody,
+  .more[data-open='true'] .moreBody,
+  .moreChevron {
+    transition: none;
+  }
+}

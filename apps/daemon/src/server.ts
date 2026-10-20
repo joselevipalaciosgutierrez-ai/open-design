@@ -924,6 +924,8 @@ import { findOrchestratorProjectId, registerOrchestratorRoutes } from './routes/
 import { recordAgentOutcome } from './agent-stats.js';
 import { appendNotebookEntry, NOTEBOOK_FRESH_RUN_MS, readNotebook, renderNotebookPrompt, runNotebookEntry } from './notebook.js';
 import { registerNotebookRoutes } from './routes/notebook.js';
+import { registerAgentDraftRoutes } from './routes/agent-draft.js';
+import { oneShotText } from './memory-llm.js';
 import { lessonAgentKey, registerLessonRoutes } from './routes/lessons.js';
 import { lessonsForTurn, readLessons, renderLessonsPrompt, renderPreviousFailureNudge } from './lessons.js';
 import { createAgentAccessStore } from './agent-access/access-store.js';
@@ -9465,6 +9467,19 @@ export async function startServer({
     listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
   });
   registerNotebookRoutes(app, { http: httpDeps, db, dataDir: RUNTIME_DATA_DIR });
+  registerAgentDraftRoutes(app, {
+    http: httpDeps,
+    listSkills: async () =>
+      (await listAllSkills()).map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        triggers: skill.triggers,
+      })),
+    globalSkillIds: async () => (await skillScopes.read()).global,
+    ask: ({ system, user, runtimeId }) =>
+      oneShotText(RUNTIME_DATA_DIR, { system, user, chatAgentId: runtimeId ?? 'claude', projectRoot: PROJECT_ROOT }),
+  });
   registerLessonRoutes(app, {
     http: httpDeps,
     db,

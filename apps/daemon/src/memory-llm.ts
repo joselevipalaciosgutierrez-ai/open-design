@@ -1500,3 +1500,30 @@ export async function extractWithLLM(dataDir, input, options) {
 
   return written;
 }
+
+/**
+ * One short model call outside memory extraction (drafting an agent's card,
+ * for instance). Same provider choice as memory: the Memory model override,
+ * else the person's signed-in local CLI (Claude Code, Codex, OpenCode), else
+ * an API key the daemon already has. Returns the model's text, or null when
+ * no provider is available or the call fails.
+ */
+export async function oneShotText(dataDir, { system, user, chatAgentId = 'claude', chatModel = null, projectRoot = null, localCliRunner = undefined }) {
+  let provider = await pickProvider(projectRoot, dataDir, chatAgentId, null, chatModel);
+  // Prefer the person's signed-in Claude Code when the chosen agent has no
+  // one-shot mode of its own (Antigravity, Cursor…).
+  if (!provider && chatAgentId !== 'claude') provider = await pickProvider(projectRoot, dataDir, 'claude', null, null);
+  if (!provider) return null;
+  try {
+    if (provider.transport === 'chat-cli') {
+      return await callLocalCli(provider, system, user, { dataDir, projectRoot, localCliRunner });
+    }
+    if (provider.kind === 'anthropic') return await callAnthropic(provider, system, user);
+    if (provider.kind === 'azure') return await callAzure(provider, system, user);
+    if (provider.kind === 'google') return await callGoogle(provider, system, user);
+    return await callOpenAI(provider, system, user);
+  } catch (err) {
+    console.warn(`[one-shot] ${provider.kind} call failed`, err?.message ?? err);
+    return null;
+  }
+}

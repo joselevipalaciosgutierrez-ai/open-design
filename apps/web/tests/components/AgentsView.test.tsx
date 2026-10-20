@@ -183,6 +183,35 @@ describe('AgentsView', () => {
     });
   });
 
+  it('drafts the agent from one sentence without overwriting what the person edited', async () => {
+    const fetchMock = stubProfiles([]);
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/api/agent-profiles/draft')) {
+        return new Response(JSON.stringify({
+          emoji: '📊', role: 'Market researcher', instructions: 'Cite sources.',
+          card: { goodFor: 'competitor analysis', notFor: 'visual design', delivers: 'a report' },
+          suggestedSkillIds: ['web-proto'], source: 'model',
+        }), { status: 200 });
+      }
+      return base(input, init);
+    });
+    renderView();
+    await screen.findByTestId('agents-empty');
+
+    fireEvent.click(screen.getByTestId('agents-new'));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Market' } });
+    fireEvent.click(screen.getByTestId('agent-more-options'));
+    fireEvent.change(screen.getByTestId('agent-routing-not-for'), { target: { value: 'anything visual' } });
+    const describe = screen.getByTestId('agent-describe');
+    fireEvent.change(describe, { target: { value: 'Researches competitors before anything is designed' } });
+    fireEvent.blur(describe);
+
+    await waitFor(() => expect((screen.getByTestId('agent-routing-good-for') as HTMLInputElement).value).toBe('competitor analysis'));
+    expect((screen.getByTestId('agent-routing-not-for') as HTMLInputElement).value).toBe('anything visual');
+    expect(screen.getByTestId('agent-suggested-skills').textContent).toContain('Web prototype');
+  });
+
   it('uploads a SKILL.md, imports it and selects it for the agent', async () => {
     const fetchMock = stubProfiles([]);
     renderView();

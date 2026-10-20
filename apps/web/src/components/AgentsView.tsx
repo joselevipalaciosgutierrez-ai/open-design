@@ -3,9 +3,11 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from 'react';
+import type { AgentDraftResponse } from '@open-design/contracts';
 import type {
   AgentProfile,
   AgentProfileInput,
@@ -239,6 +241,44 @@ function AgentEditor({
   const [designSystemId, setDesignSystemId] = useState(profile?.designSystemId ?? '');
   const [skillIds, setSkillIds] = useState<string[]>(profile?.skillIds ?? []);
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
+  // One sentence drives the rest: the app drafts icon, role, instructions and
+  // Lev's card from it (POST /api/agent-profiles/draft). A field the person
+  // edited is never overwritten by a draft.
+  const [description, setDescription] = useState('');
+  const [draftState, setDraftState] = useState<'idle' | 'drafting' | 'model' | 'basic'>('idle');
+  const [suggestedSkillIds, setSuggestedSkillIds] = useState<string[]>([]);
+  const [moreOpen, setMoreOpen] = useState(!!profile);
+  const touched = useRef(new Set<string>());
+  const lastDrafted = useRef('');
+  const touch = (field: string) => touched.current.add(field);
+  const draft = async (force = false) => {
+    const sentence = description.trim();
+    if (sentence.length < 8 || (!force && sentence === lastDrafted.current)) return;
+    lastDrafted.current = sentence;
+    setDraftState('drafting');
+    try {
+      const resp = await fetch('/api/agent-profiles/draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), description: sentence, runtimeId }),
+      });
+      if (!resp.ok) throw new Error(String(resp.status));
+      const result = (await resp.json()) as AgentDraftResponse;
+      const fill = (field: string, apply: () => void) => {
+        if (force || !touched.current.has(field)) apply();
+      };
+      fill('emoji', () => setEmoji(result.emoji));
+      fill('role', () => setRole(result.role));
+      fill('instructions', () => setInstructions(result.instructions));
+      fill('goodFor', () => setGoodFor(result.card.goodFor ?? ''));
+      fill('notFor', () => setNotFor(result.card.notFor ?? ''));
+      fill('delivers', () => setDelivers(result.card.delivers ?? ''));
+      setSuggestedSkillIds(result.suggestedSkillIds);
+      setDraftState(result.source);
+    } catch {
+      setDraftState('idle');
+    }
+  };
   const [designSystems, setDesignSystems] = useState<DesignSystemSummary[]>([]);
 
   useEffect(() => {
@@ -259,6 +299,20 @@ function AgentEditor({
   }, []);
 
   const [skillFilter, setSkillFilter] = useState('');
+  // Global skills reach every agent already, so they are not offered here.
+  const [globalSkillIds, setGlobalSkillIds] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/skill-scopes')
+      .then((resp) => (resp.ok ? (resp.json() as Promise<{ global?: string[] }>) : { global: [] }))
+      .then((scopes) => {
+        if (!cancelled) setGlobalSkillIds(scopes.global ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [skillNotice, setSkillNotice] = useState<string | null>(null);
 
   const uploadSkill = async (file: File | undefined) => {
@@ -284,9 +338,10 @@ function AgentEditor({
     return userSkills.filter(
       (skill) =>
         !skillIds.includes(skill.id) &&
+        !globalSkillIds.includes(skill.id) &&
         `${skill.name} ${skill.description ?? ''}`.toLowerCase().includes(query),
     );
-  }, [userSkills, skillIds, skillFilter]);
+  }, [userSkills, skillIds, skillFilter, globalSkillIds]);
 
   const toggleSkill = (id: string) =>
     setSkillIds((current) =>
@@ -373,39 +428,44 @@ function AgentEditor({
           {profile ? copy.editorTitleEdit : copy.editorTitleNew}
         </h2>
 
-        <div className={styles.row}>
-          <label className={styles.field} htmlFor={`${ids}-emoji`}>
-            <span>{copy.emojiLabel}</span>
-            <input
-              id={`${ids}-emoji`}
-              className={styles.input}
-              value={emoji}
-              maxLength={16}
-              onChange={(event) => setEmoji(event.target.value)}
-            />
-          </label>
-          <label className={`${styles.field} ${styles.grow}`} htmlFor={`${ids}-name`}>
-            <span>{copy.nameLabel}</span>
-            <input
-              id={`${ids}-name`}
-              className={styles.input}
-              value={name}
-              maxLength={60}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-        </div>
-
-        <label className={styles.field} htmlFor={`${ids}-role`}>
-          <span>{copy.roleLabel}</span>
+        <label className={styles.field} htmlFor={`${ids}-name`}>
+          <span>{copy.nameLabel}</span>
           <input
-            id={`${ids}-role`}
+            id={`${ids}-name`}
             className={styles.input}
-            value={role}
-            maxLength={160}
-            placeholder={copy.rolePlaceholder}
-            onChange={(event) => setRole(event.target.value)}
+            value={name}
+            maxLength={60}
+            onChange={(event) => setName(event.target.value)}
           />
+        </label>
+
+        <label className={styles.field} htmlFor={`${ids}-describe`}>
+          <span>{copy.describeLabel}</span>
+          <textarea
+            id={`${ids}-describe`}
+            className={`${styles.input} ${styles.textareaShort}`}
+            value={description}
+            maxLength={600}
+            rows={2}
+            placeholder={copy.describePlaceholder}
+            data-testid="agent-describe"
+            onChange={(event) => setDescription(event.target.value)}
+            onBlur={() => void draft()}
+          />
+          <span className={styles.draftLine} role="status">
+            {draftState === 'drafting'
+              ? copy.drafting
+              : draftState === 'model'
+                ? copy.draftReady
+                : draftState === 'basic'
+                  ? copy.draftBasic
+                  : copy.describeHint}
+            {draftState === 'model' || draftState === 'basic' ? (
+              <button type="button" className={styles.linkButton} onClick={() => void draft(true)}>
+                {copy.redraft}
+              </button>
+            ) : null}
+          </span>
         </label>
 
         <div className={styles.row}>
@@ -456,26 +516,6 @@ function AgentEditor({
           />
         ) : null}
 
-        <label className={styles.field} htmlFor={`${ids}-ds`}>
-          <span>{copy.designSystemLabel}</span>
-          <select
-            id={`${ids}-ds`}
-            className={styles.input}
-            value={designSystemId}
-            onChange={(event) => setDesignSystemId(event.target.value)}
-          >
-            <option value="">{copy.designSystemNone}</option>
-            {designSystemId && !designSystems.some((ds) => ds.id === designSystemId) ? (
-              <option value={designSystemId}>{designSystemId}</option>
-            ) : null}
-            {designSystems.map((ds) => (
-              <option key={ds.id} value={ds.id}>
-                {ds.title}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <fieldset className={`${styles.field} ${styles.skillsSet}`}>
           <legend>{copy.skillsLabel}</legend>
           {skillIds.length > 0 ? (
@@ -496,6 +536,26 @@ function AgentEditor({
                 </span>
                 );
               })}
+            </div>
+          ) : null}
+          {suggestedSkillIds.some((id) => !skillIds.includes(id)) ? (
+            <div className={styles.skillSuggestions} aria-label={copy.skillsSuggested} data-testid="agent-suggested-skills">
+              {suggestedSkillIds
+                .filter((id) => !skillIds.includes(id))
+                .map((id) => {
+                  const skill = skills?.find((candidate) => candidate.id === id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`${styles.skillSuggestion} ${styles.skillSuggested}`}
+                      title={skill?.description || undefined}
+                      onClick={() => toggleSkill(id)}
+                    >
+                      + {skill?.name ?? id} <em>{copy.suggestedBadge}</em>
+                    </button>
+                  );
+                })}
             </div>
           ) : null}
           <div className={styles.skillTools}>
@@ -524,8 +584,22 @@ function AgentEditor({
           {skillNotice ? <small className={styles.hint} role="status">{skillNotice}</small> : null}
           {skills === null ? (
             <small className={styles.hint}>{copy.skillsLoading}</small>
-          ) : suggestions.length > 0 ? (
-            <div className={styles.skillSuggestions} aria-label={copy.skillsSuggested}>
+          ) : skillFilter.trim() && suggestions.length > 0 ? (
+            <div className={styles.skillSuggestions}>
+              {suggestions.map((skill) => (
+                <button
+                  key={skill.id}
+                  type="button"
+                  className={styles.skillSuggestion}
+                  title={skill.description || undefined}
+                  onClick={() => toggleSkill(skill.id)}
+                >
+                  + {skill.name}
+                </button>
+              ))}
+            </div>
+          ) : !skillFilter.trim() && suggestedSkillIds.length === 0 && suggestions.length > 0 ? (
+            <div className={styles.skillSuggestions}>
               {suggestions.map((skill) => (
                 <button
                   key={skill.id}
@@ -541,46 +615,104 @@ function AgentEditor({
           ) : userSkills.length === 0 ? (
             <small className={styles.hint}>{copy.skillsNone}</small>
           ) : null}
-          <small className={styles.hint}>{copy.skillsHint}</small>
         </fieldset>
 
-        <label className={styles.field} htmlFor={`${ids}-instructions`}>
-          <span>{copy.instructionsLabel}</span>
-          <textarea
-            id={`${ids}-instructions`}
-            className={`${styles.input} ${styles.textarea}`}
-            value={instructions}
-            maxLength={8000}
-            rows={6}
-            placeholder={copy.instructionsPlaceholder}
-            onChange={(event) => setInstructions(event.target.value)}
-          />
-          <small className={styles.hint}>{copy.instructionsHint}</small>
-        </label>
+        <div className={styles.more} data-open={moreOpen ? 'true' : 'false'}>
+          <button
+            type="button"
+            className={styles.moreToggle}
+            aria-expanded={moreOpen}
+            data-testid="agent-more-options"
+            onClick={() => setMoreOpen((open) => !open)}
+          >
+            <span aria-hidden className={styles.moreChevron}>›</span>
+            {copy.moreOptions}
+          </button>
+          <div className={styles.moreBody}>
+            <div className={styles.moreInner}>
+              <div className={styles.row}>
+                <label className={styles.field} htmlFor={`${ids}-emoji`}>
+                  <span>{copy.emojiLabel}</span>
+                  <input
+                    id={`${ids}-emoji`}
+                    className={`${styles.input} ${styles.emojiInput}`}
+                    value={emoji}
+                    maxLength={16}
+                    onChange={(event) => { touch('emoji'); setEmoji(event.target.value); }}
+                  />
+                </label>
+                <label className={`${styles.field} ${styles.grow}`} htmlFor={`${ids}-role`}>
+                  <span>{copy.roleLabel}</span>
+                  <input
+                    id={`${ids}-role`}
+                    className={styles.input}
+                    value={role}
+                    maxLength={160}
+                    placeholder={copy.rolePlaceholder}
+                    onChange={(event) => { touch('role'); setRole(event.target.value); }}
+                  />
+                </label>
+              </div>
 
-        <fieldset className={styles.field} data-testid="agent-routing-fields">
-          <legend>{copy.cardTitle}</legend>
-          <small className={styles.hint}>{copy.cardHint}</small>
-          {([
-            ['good-for', copy.goodForLabel, copy.goodForPlaceholder, goodFor, setGoodFor],
-            ['not-for', copy.notForLabel, copy.notForPlaceholder, notFor, setNotFor],
-            ['delivers', copy.deliversLabel, copy.deliversPlaceholder, delivers, setDelivers],
-          ] as const).map(([key, label, placeholder, value, setValue]) => (
-            <label key={key} className={styles.field} htmlFor={`${ids}-${key}`}>
-              <span>{label}</span>
-              <textarea
-                id={`${ids}-${key}`}
-                className={`${styles.input} ${styles.textarea}`}
-                value={value}
-                maxLength={600}
-                rows={2}
-                placeholder={placeholder}
-                data-testid={`agent-routing-${key}`}
-                onChange={(event) => setValue(event.target.value)}
-              />
-            </label>
-          ))}
-        </fieldset>
+              <div className={styles.section} data-testid="agent-routing-fields">
+                <span className={styles.sectionTitle}>{copy.cardTitle}</span>
+                <small className={styles.hint}>{copy.cardHint}</small>
+                {([
+                  ['good-for', 'goodFor', copy.goodForLabel, copy.goodForPlaceholder, goodFor, setGoodFor],
+                  ['not-for', 'notFor', copy.notForLabel, copy.notForPlaceholder, notFor, setNotFor],
+                  ['delivers', 'delivers', copy.deliversLabel, copy.deliversPlaceholder, delivers, setDelivers],
+                ] as const).map(([key, field, label, placeholder, value, setValue]) => (
+                  <label key={key} className={styles.field} htmlFor={`${ids}-${key}`}>
+                    <span>{label}</span>
+                    <input
+                      id={`${ids}-${key}`}
+                      className={styles.input}
+                      value={value}
+                      maxLength={600}
+                      placeholder={placeholder}
+                      data-testid={`agent-routing-${key}`}
+                      onChange={(event) => { touch(field); setValue(event.target.value); }}
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <label className={styles.field} htmlFor={`${ids}-instructions`}>
+                <span>{copy.instructionsLabel}</span>
+                <textarea
+                  id={`${ids}-instructions`}
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={instructions}
+                  maxLength={8000}
+                  rows={4}
+                  placeholder={copy.instructionsPlaceholder}
+                  onChange={(event) => { touch('instructions'); setInstructions(event.target.value); }}
+                />
+                <small className={styles.hint}>{copy.instructionsHint}</small>
+              </label>
+
+              <label className={styles.field} htmlFor={`${ids}-ds`}>
+                <span>{copy.designSystemLabel}</span>
+                <select
+                  id={`${ids}-ds`}
+                  className={styles.input}
+                  value={designSystemId}
+                  onChange={(event) => setDesignSystemId(event.target.value)}
+                >
+                  <option value="">{copy.designSystemNone}</option>
+                  {designSystemId && !designSystems.some((ds) => ds.id === designSystemId) ? (
+                    <option value={designSystemId}>{designSystemId}</option>
+                  ) : null}
+                  {designSystems.map((ds) => (
+                    <option key={ds.id} value={ds.id}>
+                      {ds.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
 
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
 

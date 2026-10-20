@@ -35,6 +35,15 @@ export interface AgentsCopy {
   instructionsHint: string;
   cardTitle: string;
   cardHint: string;
+  describeLabel: string;
+  describePlaceholder: string;
+  describeHint: string;
+  drafting: string;
+  draftReady: string;
+  draftBasic: string;
+  redraft: string;
+  moreOptions: string;
+  suggestedBadge: string;
   goodForLabel: string;
   goodForPlaceholder: string;
   notForLabel: string;
@@ -147,6 +156,15 @@ const es: AgentsCopy = {
   modelOtherPlaceholder: 'Id del modelo',
   instructionsLabel: 'Instrucciones del rol',
   instructionsHint: 'Se agregan al prompt del sistema en cada mensaje de este agente.',
+  describeLabel: '¿Qué hace?',
+  describePlaceholder: 'Ej.: Investiga la competencia y el mercado antes de diseñar algo',
+  describeHint: 'Con esta frase la app prepara el icono, el rol, las instrucciones y la ficha para Lev. Puedes cambiarlos en Más opciones.',
+  drafting: 'Preparando el agente…',
+  draftReady: 'Listo: revisa Más opciones si quieres ajustar algo.',
+  draftBasic: 'No hay un modelo disponible: rellené lo básico con tu frase.',
+  redraft: 'Volver a generar',
+  moreOptions: 'Más opciones',
+  suggestedBadge: 'sugerida',
   cardTitle: 'Ficha para Lev',
   cardHint: 'Lev la lee para decidir a quién mandar cada encargo. Corta y concreta: con ejemplos.',
   goodForLabel: 'Para qué sirve',
@@ -252,6 +270,15 @@ const en: AgentsCopy = {
   modelOtherPlaceholder: 'Model id',
   instructionsLabel: 'Role instructions',
   instructionsHint: "Added to the system prompt on every message to this agent.",
+  describeLabel: "What does it do?",
+  describePlaceholder: "e.g. Researches competitors and the market before anything is designed",
+  describeHint: "From this sentence the app prepares the icon, role, instructions and Lev's card. You can change them under More options.",
+  drafting: "Preparing the agent…",
+  draftReady: "Done: check More options if you want to adjust anything.",
+  draftBasic: "No model is available: the basics were filled from your sentence.",
+  redraft: "Generate again",
+  moreOptions: "More options",
+  suggestedBadge: "suggested",
   cardTitle: "Card for Lev",
   cardHint: "Lev reads it to decide which agent gets each order. Short and concrete, with examples.",
   goodForLabel: "Good for",
