@@ -28,6 +28,14 @@ export function parseCursorAgentModels(stdout: string): RuntimeModelOption[] | n
   return out.length > 1 ? out : null;
 }
 
+/**
+ * Follow-up turns continue Cursor's own chat (`--resume <chatId>`), so the
+ * daemon sends only the latest turn instead of the whole transcript. The id
+ * is the `session_id` of the stream's init event. `OD_CURSOR_RESUME=off`
+ * brings the stateless path back.
+ */
+export const CURSOR_RESUME = process.env.OD_CURSOR_RESUME !== 'off';
+
 export const cursorAgentDef = {
     id: 'cursor-agent',
     name: 'Cursor Agent',
@@ -94,8 +102,20 @@ export const cursorAgentDef = {
       if (options.model && options.model !== 'default') {
         args.push('--model', options.model);
       }
+      if (
+        CURSOR_RESUME
+        && typeof runtimeContext.resumeSessionId === 'string'
+        && /^[A-Za-z0-9-]{8,80}$/.test(runtimeContext.resumeSessionId)
+      ) {
+        args.push('--resume', runtimeContext.resumeSessionId);
+      }
       return args;
     },
+    resumesSessionViaCli: CURSOR_RESUME,
+    capturesSessionIdFromStream: CURSOR_RESUME,
+    // Like agy: a turn right after a `<question-form>` goes fresh, so the
+    // model does not re-emit the form it remembers.
+    resumeSkipsAfterQuestionForm: true,
     promptViaStdin: true,
     streamFormat: 'json-event-stream',
     eventParser: 'cursor-agent',

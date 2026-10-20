@@ -1194,6 +1194,29 @@ process.exit(127);
     expect(task.continuedFromTaskExecutionId).toBe(first.strategyTask!.taskExecutionId);
   }, 45_000);
 
+  it('keeps an Ask-mode turn on the ordinary route, where Ask is light', async () => {
+    const fixture = await createPublicRolloutFixture('ask-mode-ordinary', 'design');
+    started = fixture.started;
+    binDir = fixture.binDir;
+    delete process.env.OD_NEXT_STRATEGY_ROLLOUT;
+    process.env.OD_NEXT_STRATEGY_LOCAL_SYNTHETIC_CANARY = '1';
+
+    const invocationsBefore = (await readProjectInvocations(fixture.logPath, fixture.projectId)).length;
+    const ask = await postRun(started.url, {
+      ...publicRunRequest(fixture, 'hola', 'ask-mode-ordinary'),
+      sessionMode: 'chat',
+    });
+    expect(ask.strategyTask).toBeUndefined();
+    expect(await readDurableRunState(ask.runId as string)).toMatchObject({
+      strategyRolloutDecision: { decisionClass: 'not_applicable' },
+    });
+    await waitForRunTerminal(started.url, ask.runId as string);
+    const invocations = (await readProjectInvocations(fixture.logPath, fixture.projectId)).slice(invocationsBefore);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.stdin).not.toContain('OD Next Strategy V2');
+    expect(invocations[0]?.stdin).toContain('# Ask mode');
+  }, 60_000);
+
   it('runs OD Next by default and leaves it on the next run once the installation opts out', async () => {
     const fixture = await createPublicRolloutFixture('app-config-opt-out', 'design');
     started = fixture.started;

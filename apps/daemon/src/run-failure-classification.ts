@@ -378,7 +378,12 @@ function isSessionResumeExpiredText(text: string): boolean {
 // so a first occurrence cannot be laundered into a sign-in prompt.
 function isTransientCredentialRefreshText(text: string): boolean {
   return /\banother [\w ]*process is refreshing it\b/i.test(text) ||
-    /\bexited mid-refresh\b/i.test(text);
+    /\bexited mid-refresh\b/i.test(text) ||
+    // Antigravity's start-up refresh of its hourly token giving up. The next
+    // run signs in with no action from the person, so it is a refresh that
+    // ran out of time, not a sign-out; a real sign-out fails the retry too
+    // and then shows the sign-in card.
+    /\bauthentication failed or timed out\b/i.test(text);
 }
 
 function promptTooLargeDetail(text: string): TrackingRunFailureDetail | null {
@@ -1142,6 +1147,19 @@ function classifyRunFailureBase(
       errorCode === 'AMR_TIER_UPGRADE_REQUIRED'
         ? { evidenceLevel: 'structured_code' }
         : {},
+    );
+  }
+
+  // A CLI can raise its sign-in code when only the token refresh ran out of
+  // time (Antigravity does). Its own words say which it was, and a refresh
+  // that timed out takes the one silent retry below rather than a sign-in card.
+  if (errorCode === 'AGENT_AUTH_REQUIRED' && isTransientCredentialRefreshText(text)) {
+    return classification(
+      'process_exit',
+      'credential_refresh_contention',
+      'session_init',
+      true,
+      'retry',
     );
   }
 

@@ -2467,3 +2467,16 @@ test('antigravity stream still parses Gemini-CLI-shaped JSONL from agy-compatibl
     { type: 'text_delta', delta: 'Hello from Antigravity.' },
   ]);
 });
+
+test('cursor init reports the chat id that --resume continues', () => {
+  const { events, handler } = collectEvents('cursor-agent');
+  handler.feed(
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'auto', session_id: 'c6b62c6f-7ead-4fd6-9922-e952131177ff' }) + '\n',
+  );
+  assert.deepEqual(events[0], {
+    type: 'status',
+    label: 'initializing',
+    model: 'auto',
+    sessionId: 'c6b62c6f-7ead-4fd6-9922-e952131177ff',
+  });
+});

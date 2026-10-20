@@ -14,6 +14,9 @@ import type { RuntimeAgentDef } from '../types.js';
 
 const ANTIGRAVITY_SKIP_PERMISSIONS_FLAG = '--dangerously-skip-permissions';
 
+/** Continue agy's own conversation on follow-up turns; `OD_ANTIGRAVITY_RESUME=off` turns it off. */
+const ANTIGRAVITY_RESUME = process.env.OD_ANTIGRAVITY_RESUME !== 'off';
+
 // Headless runs use agy's documented stdin channel (agy >= 1.1.15):
 //   agy --input-format stream-json --output-format stream-json
 // with the prompt written to stdin as one NDJSON `user` message. The prompt
@@ -215,20 +218,28 @@ export const antigravityAgentDef = {
     { id: 'GPT-OSS 120B (Medium)', label: 'GPT-OSS 120B (Medium)' },
   ],
   supportsCustomModel: false,
-  // We deliberately do NOT opt into `resumesSessionViaCli` / agy's `-c`
-  // resume flag on follow-up turns. Tested both shapes; `-c` activates
-  // agy's internal agentic loop (multi-step model retries, tool calls,
-  // fallback-to-cached-response on tool errors) which can't be steered
-  // from OD's system-prompt OVERRIDE — even with the strongest wording
-  // we got an identical byte-for-byte form re-emission on turn 2 when
-  // turn 1's tool-call retry path returned the cached form response.
+  // Follow-up turns continue agy's own conversation with `--conversation
+  // <id>` (agy >= 1.4), so the daemon sends only the latest turn instead of
+  // the whole transcript every time. The id is agy's `conversation_id`,
+  // captured from the stream (capture-style, like Codex).
   //
-  // Instead we treat agy as a stateless adapter like qwen /
-  // deepseek: every spawn gets the full OD-rendered transcript via
-  // `buildDaemonTranscript`, and that transcript's prior assistant
-  // turns are sanitized to strip `<question-form>` markup + form-schema
-  // JSON fences (see `sanitizePriorAssistantTurnForTranscript` in
-  // apps/web/src/providers/daemon.ts).
+  // History: this adapter used to be stateless. The earlier attempt used
+  // `-c` ("continue the most recent conversation", not a specific one), and
+  // on a turn after a `<question-form>` agy re-emitted the same form. The
+  // resume-identity guard (model, cwd, cursor) and `sessionStillExists`
+  // below now decide when a session may be continued, and
+  // `OD_ANTIGRAVITY_RESUME=off` brings the stateless path back.
+  //
+  // agy given an unknown id does NOT fail: it warns and opens a new
+  // conversation with no context. `sessionStillExists` checks agy's own
+  // conversation store first, so a missing one gets the full transcript.
+  resumesSessionViaCli: ANTIGRAVITY_RESUME,
+  capturesSessionIdFromStream: ANTIGRAVITY_RESUME,
+  resumeSkipsAfterQuestionForm: true,
+  externalMcpInjection: 'antigravity-workspace-plugin',
+  sessionStillExists: (sessionId: string) =>
+    /^[A-Za-z0-9-]{8,80}$/.test(sessionId)
+    && existsSync(join(homedir(), '.gemini', 'antigravity-cli', 'conversations', `${sessionId}.db`)),
   buildArgs: (
     _prompt,
     _imagePaths,
@@ -257,9 +268,28 @@ export const antigravityAgentDef = {
     if (agentCapabilities.get('antigravity')?.skipPermissions) {
       args.push(ANTIGRAVITY_SKIP_PERMISSIONS_FLAG);
     }
+    // agy >= 1.4 takes a per-session effort.
+    if (options.reasoning && options.reasoning !== 'default') {
+      args.push('--effort', options.reasoning);
+    }
+    if (
+      ANTIGRAVITY_RESUME
+      && typeof runtimeContext.resumeSessionId === 'string'
+      && runtimeContext.resumeSessionId.length > 0
+    ) {
+      args.push('--conversation', runtimeContext.resumeSessionId);
+    }
     args.push(...ANTIGRAVITY_STREAM_JSON_ARGS);
     return args;
   },
+  reasoningOptions: [
+    { id: 'default', label: 'Default' },
+    { id: 'low', label: 'Low' },
+    { id: 'medium', label: 'Medium' },
+    { id: 'high', label: 'High' },
+    { id: 'xhigh', label: 'XHigh' },
+    { id: 'max', label: 'Max' },
+  ],
   promptViaStdin: true,
   encodeStdinPrompt: encodeAntigravityStdinPrompt,
   streamFormat: 'json-event-stream',

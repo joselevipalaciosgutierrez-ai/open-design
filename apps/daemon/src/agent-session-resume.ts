@@ -221,6 +221,8 @@ export function resolveAgentResumeContext(
     /** The current run's in-flight assistant placeholder id, excluded from the
      *  "latest completed assistant" cursor lookup. */
     currentAssistantMessageId?: string | null;
+    /** The runtime's own answer to "is that session still there?" (see RuntimeAgentDef). */
+    sessionStillExists?: (sessionId: string) => boolean;
   },
 ): AgentResumeContext {
   const record = getAgentSessionRecord(db, input.conversationId, input.agentId);
@@ -245,7 +247,15 @@ export function resolveAgentResumeContext(
           ),
         })
       : null;
-  const resumable = storedSessionId != null && invalidationReason == null;
+  // A session the CLI no longer has cannot be continued: there is nothing
+  // to anchor the turn to, the same as a missing cursor.
+  const sessionGone =
+    storedSessionId != null
+    && invalidationReason == null
+    && input.sessionStillExists !== undefined
+    && !input.sessionStillExists(storedSessionId);
+  const effectiveReason = sessionGone ? 'missing_cursor' : invalidationReason;
+  const resumable = storedSessionId != null && effectiveReason == null;
   return {
     storedSessionId,
     resumeSessionId: resumable ? storedSessionId : null,
@@ -255,7 +265,7 @@ export function resolveAgentResumeContext(
     storedStablePromptHash: resumable ? (record?.stablePromptHash ?? null) : null,
     storedInputTokens: resumable ? (record?.lastInputTokens ?? null) : null,
     storedStableSections: resumable ? parseStableSections(record?.stablePromptSections) : null,
-    invalidationReason,
+    invalidationReason: effectiveReason,
   };
 }
 
@@ -525,4 +535,26 @@ export function isAmrResumeFailure(stdout: string): boolean {
 export function isAmrOpencodeEventStreamResumeFailure(text: string): boolean {
   if (!text) return false;
   return AMR_OPENCODE_EVENT_STREAM_RESUME_FAILURE_PATTERNS.some((re) => re.test(text));
+}
+
+/**
+ * The same context, no longer resuming, when the turn the stored session last
+ * produced asked the person a `<question-form>` and the runtime is one that
+ * re-emits its own form when continued (see RuntimeAgentDef
+ * `resumeSkipsAfterQuestionForm`). The answer then rides a full transcript.
+ */
+export function withoutResumeAfterQuestionForm<T extends AgentResumeContext>(
+  ctx: T,
+  lastAssistantContent: string | null | undefined,
+): T {
+  if (!ctx.isResuming || !lastAssistantContent || !lastAssistantContent.includes('<question-form')) return ctx;
+  return {
+    ...ctx,
+    resumeSessionId: null,
+    isResuming: false,
+    storedStablePromptHash: null,
+    storedInputTokens: null,
+    storedStableSections: null,
+    invalidationReason: 'conversation_advanced',
+  };
 }

@@ -17,6 +17,8 @@ const CLAUDE_FALLBACK_MODELS = [
   { id: 'claude-haiku-4-5', label: 'claude-haiku-4-5' },
 ];
 
+const CLAUDE_LEAN = process.env.OD_CLAUDE_LEAN !== 'off';
+
 export const claudeAgentDef = {
     id: 'claude',
     name: 'Claude Code',
@@ -42,6 +44,8 @@ export const claudeAgentDef = {
       '--forward-subagent-text': 'forwardSubagentText',
       '--agents': 'customAgents',
       '--add-dir': 'addDir',
+      '--disable-slash-commands': 'disableSlashCommands',
+      '--exclude-dynamic-system-prompt-sections': 'excludeDynamicPromptSections',
     },
     // `--thinking-display` is a real option but it is hidden from both
     // `claude --help` and `claude -p --help`, so the capabilityFlags scan
@@ -118,6 +122,27 @@ export const claudeAgentDef = {
       } else if (typeof runtimeContext.newSessionId === 'string' && runtimeContext.newSessionId) {
         args.push('--session-id', runtimeContext.newSessionId);
       }
+      // This run's MCP servers, from a file only this run can read.
+      // `--mcp-config` takes several values, so it goes before another flag.
+      if (typeof runtimeContext.mcpConfigPath === 'string' && runtimeContext.mcpConfigPath) {
+        args.push('--mcp-config', runtimeContext.mcpConfigPath);
+      }
+      // Leaner prompt, same abilities (`OD_CLAUDE_LEAN=off` turns both off):
+      // - Claude's own skills stay out. The app hands every agent its skills
+      //   through its own index; Claude's list was ~6.8K tokens per new
+      //   session on top of that (measured). Skills worth keeping are
+      //   imported into the app's library instead.
+      // - The per-machine sections (cwd, env, git status) move into the first
+      //   user message, so the system prompt stays byte-identical and cached:
+      //   new tokens on a follow-up turn went from ~7.5K to ~3.7K (measured).
+      // Both only apply to the runs this app starts; Claude elsewhere is
+      // untouched. Gated on the `--help` probe for older builds.
+      if (CLAUDE_LEAN && caps.disableSlashCommands) {
+        args.push('--disable-slash-commands');
+      }
+      if (CLAUDE_LEAN && caps.excludeDynamicPromptSections) {
+        args.push('--exclude-dynamic-system-prompt-sections');
+      }
       args.push('--permission-mode', 'bypassPermissions');
       return args;
     },
@@ -127,6 +152,6 @@ export const claudeAgentDef = {
     // Claude Code auto-loads `.mcp.json` from the project cwd at spawn,
     // so the daemon writes the user's external MCP servers there before
     // launching (server.ts handles the cwd guard).
-    externalMcpInjection: 'claude-mcp-json',
+    externalMcpInjection: 'claude-mcp-config-file',
     resumesSessionViaCli: true,
 } satisfies RuntimeAgentDef;

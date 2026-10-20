@@ -782,6 +782,8 @@ function handleCursorEvent(obj: unknown, onEvent: StreamEventHandler, state: Par
       type: 'status',
       label: 'initializing',
       model: typeof obj.model === 'string' ? obj.model : undefined,
+      // The chat id `cursor-agent --resume <id>` continues.
+      ...(typeof obj.session_id === 'string' && obj.session_id ? { sessionId: obj.session_id } : {}),
     });
     return true;
   }

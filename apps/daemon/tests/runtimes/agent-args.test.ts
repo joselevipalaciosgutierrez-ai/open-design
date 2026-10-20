@@ -715,20 +715,19 @@ test('antigravity runs headless stream-json with the prompt as one agy user mess
     rmSync(settingsDir, { recursive: true, force: true });
   }
 
-  // Argv must NOT carry `-c` even on follow-up turns. We tested resume
-  // mode and found agy's `-c` activates an internal agentic loop (tool
-  // calls, retries, fallback-to-cached-response) that overrides OD's
-  // system-prompt OVERRIDE — producing byte-identical form re-emissions
-  // on turn 2. The stateless path + sanitized transcript injection is
-  // what actually breaks the discovery loop. Pin both shapes so a
-  // future contributor doesn't silently reintroduce `-c` and hit the
-  // same regression.
+  // Argv never carries `-c` ("continue the most recent conversation"): on a
+  // turn after a `<question-form>` it re-emitted the same form. Follow-up
+  // turns continue a SPECIFIC conversation with `--conversation <id>` only
+  // when the daemon resumes (captured id, identity guard, the session still
+  // on disk), and never right after a question form
+  // (`resumeSkipsAfterQuestionForm`, see antigravity-resume.test.ts).
   const followUp = antigravity.buildArgs('next message', [], [], {}, {
     hasPriorAssistantTurn: true,
   });
   assert.deepEqual(followUp, AGY_STREAM_JSON_ARGS);
   assert.equal(followUp.includes('-c'), false);
-  assert.equal(antigravity.resumesSessionViaCli, undefined);
+  assert.equal(antigravity.resumesSessionViaCli, true);
+  assert.equal(antigravity.resumeSkipsAfterQuestionForm, true);
 
   // The prompt never rides argv, so no argv budget applies.
   assert.equal(antigravity.maxPromptArgBytes, undefined);
@@ -1294,4 +1293,29 @@ test('promptInputFormat is a string property (or undefined) on every promptViaSt
       `${name}.promptInputFormat must equal ${JSON.stringify(expected)}`,
     );
   }
+});
+
+test('cursor-agent continues its own chat with --resume <id>', () => {
+  agentCapabilities.delete('cursor-agent');
+  assert.equal(cursorAgent.resumesSessionViaCli, true);
+  assert.equal(cursorAgent.capturesSessionIdFromStream, true);
+  const resumed = cursorAgent.buildArgs('', [], [], {}, { resumeSessionId: 'c6b62c6f-7ead-4fd6-9922-e952131177ff' });
+  assert.deepEqual(resumed.slice(-2), ['--resume', 'c6b62c6f-7ead-4fd6-9922-e952131177ff']);
+  const odd = cursorAgent.buildArgs('', [], [], {}, { resumeSessionId: '--force; rm' });
+  assert.equal(odd.includes('--resume'), false);
+});
+
+test('claude leaves its own skills and per-machine prompt sections out when the build supports it', () => {
+  agentCapabilities.set('claude', { disableSlashCommands: true, excludeDynamicPromptSections: true });
+  try {
+    const args = claude.buildArgs('', [], [], {}, {});
+    assert.ok(args.includes('--disable-slash-commands'));
+    assert.ok(args.includes('--exclude-dynamic-system-prompt-sections'));
+    assert.equal(args.at(-2), '--permission-mode');
+  } finally {
+    agentCapabilities.delete('claude');
+  }
+  const older = claude.buildArgs('', [], [], {}, {});
+  assert.equal(older.includes('--disable-slash-commands'), false);
+  assert.equal(older.includes('--exclude-dynamic-system-prompt-sections'), false);
 });
