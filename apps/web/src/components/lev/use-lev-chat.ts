@@ -88,11 +88,12 @@ export function useLevChat(agent: LevAgentChoice) {
       abortRef.current = controller;
       const events: PersistedAgentEvent[] = [];
       let reply = '';
+      let runId: string | undefined;
       const update = (patch: Partial<ChatMessage>) =>
         setMessages((current) => current.map((m) => (m.id === assistant.id ? { ...m, ...patch } : m)));
       const finish = (status: 'succeeded' | 'failed', finalText: string) => {
         setStreaming(false);
-        const done: ChatMessage = { ...assistant, content: finalText, runStatus: status, events, endedAt: Date.now() };
+        const done: ChatMessage = { ...assistant, ...(runId ? { runId } : {}), content: finalText, runStatus: status, events, endedAt: Date.now() };
         update(done);
         void saveMessage(projectId!, sessionId!, done, { telemetryFinalized: true });
       };
@@ -110,7 +111,10 @@ export function useLevChat(agent: LevAgentChoice) {
         reasoning: agent.reasoning ?? null,
         // The first turn names the session, so the session list reads well.
         titleGeneration: { enabled: true },
-        onRunCreated: (runId: string) => update({ runId }),
+        onRunCreated: (createdRunId: string) => {
+          runId = createdRunId;
+          update({ runId: createdRunId });
+        },
         handlers: {
           onDelta: (delta) => {
             reply += delta;

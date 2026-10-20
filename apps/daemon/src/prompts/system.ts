@@ -1566,7 +1566,7 @@ export function composeSystemPrompt({
 
   // The orchestrator directive extends whichever charter is above (it says so
   // itself), so it lands after them and before the pinned role-marker guard.
-  if (orchestrator && orchestrator.agents.length > 0) {
+  if (orchestrator && (orchestrator.agents.length > 0 || orchestrator.scope === 'everywhere')) {
     parts.push('\n\n---\n\n', renderOrchestratorDirective(orchestrator));
   }
 

@@ -216,6 +216,7 @@ import {
 } from '../runtimes/chat-prompt-inputs.js';
 import { createRunAnalyticsLifecycle } from '../services/run-analytics-lifecycle.js';
 import { readRunBudget } from '../run-budget.js';
+import { findOrchestratorProjectId } from './orchestrator.js';
 import {
   runTouchedArtifactPaths,
   validateChatProjectDeliverable,
@@ -1476,7 +1477,13 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
         typeof requestBody.projectId === 'string' && requestBody.projectId ? requestBody.projectId : null;
       const requestClientId =
         typeof requestBody.clientRequestId === 'string' ? requestBody.clientRequestId : '';
-      const projectRuns = requestProjectId ? design.runs.list({ projectId: requestProjectId }) : [];
+      // Lev (the general chat) delegates from its own space into any project;
+      // its tree then spans projects, so the limits count every run.
+      const levProjectId = findOrchestratorProjectId(db);
+      const parentIsLev = !!levProjectId && design.runs.get(requestedParentRunId)?.projectId === levProjectId;
+      const projectRuns = parentIsLev
+        ? design.runs.list({})
+        : requestProjectId ? design.runs.list({ projectId: requestProjectId }) : [];
       // A retry of a request that already created its run is not a new delegation.
       const isRetryOfExistingRun =
         requestClientId !== '' && projectRuns.some((run) => run.clientRequestId === requestClientId);
@@ -1488,6 +1495,7 @@ export function registerRunRoutes(app: Express, ctx: RegisterRunRoutesDeps) {
         const decision = evaluateDelegation({
           parentRunId: requestedParentRunId,
           projectId: requestProjectId,
+          parentMayCrossProjects: parentIsLev,
           targetAgentProfileId: profileOfConversation(requestBody.conversationId),
           getRun: (id) => design.runs.get(id),
           allRuns: () => projectRuns,

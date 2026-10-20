@@ -90,3 +90,14 @@ describe('resolveOrchestratorContext', () => {
     expect(resolve({ sessionMode: 'plan' })?.sessionMode).toBe('plan');
   });
 });
+
+describe('Lev on Home', () => {
+  it('coordinates every project even with no agents set up', () => {
+    const context = resolve({ profiles: [], inOrchestratorSpace: true, projects: [{ id: 'p1', name: 'Cafetería' }] });
+    expect(context).toMatchObject({ scope: 'everywhere', projects: [{ id: 'p1', name: 'Cafetería' }] });
+  });
+
+  it('is an ordinary run outside Lev\'s space when there are no agents', () => {
+    expect(resolve({ profiles: [] })).toBeNull();
+  });
+});

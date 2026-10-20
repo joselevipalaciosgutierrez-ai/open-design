@@ -251,3 +251,20 @@ describe('readRequestedParentRunId', () => {
     expect(readRequestedParentRunId({ parentRunId: 4 })).toBe('invalid');
   });
 });
+
+describe('Lev, the general chat', () => {
+  it('hands work to any project from its own space, with the same limits', () => {
+    const runs = [run('lev', { projectId: 'lev-space' })];
+    const decision = evaluateDelegation({
+      parentRunId: 'lev',
+      projectId: 'p2',
+      targetAgentProfileId: null,
+      getRun: (id) => runs.find((r) => r.id === id) ?? null,
+      allRuns: () => runs,
+      isTerminal: terminal,
+      profileOf: () => null,
+      parentMayCrossProjects: true,
+    });
+    expect(decision).toMatchObject({ ok: true, delegation: { parentRunId: 'lev', rootRunId: 'lev', depth: 1 } });
+  });
+});

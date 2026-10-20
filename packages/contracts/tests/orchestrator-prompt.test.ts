@@ -137,3 +137,21 @@ describe('orchestrator in OD Next', () => {
     ).not.toContain('name="orchestrator"');
   });
 });
+
+describe('Lev, the general orchestrator', () => {
+  it('lists the projects, creates and delegates across them, and asks before what cannot be undone', () => {
+    const text = renderOrchestratorDirective({
+      agents: [],
+      limits: { maxDepth: 2, maxRunsPerTree: 8, maxConcurrentPerTree: 3, maxInstancesPerAgent: 2 },
+      scope: 'everywhere',
+      projects: [{ id: 'p1', name: 'Cafetería' }],
+    });
+    expect(text).toContain('# Lev');
+    expect(text).toContain('Cafetería (id: p1)');
+    expect(text).toContain('project create');
+    expect(text).toContain('conversation new <projectId>');
+    expect(text).toContain('Deleting or archiving a project');
+    expect(text).toContain('Never emit `<od-switch-mode>`');
+    expect(text.length / 4).toBeLessThan(1200);
+  });
+});

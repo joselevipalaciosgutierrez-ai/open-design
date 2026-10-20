@@ -569,7 +569,7 @@ export function composeOdNextStrategyStableRequestContextV2(
       `<od-next-context kind="instruction" name="deck-framework">\n${escaped("Apply this host protocol only when creating or editing an HTML deck. Its presence does not request a deck or override the user's requested deliverable.\n\n" + directive)}\n</od-next-context>`,
     );
   }
-  if (context.orchestrator && context.orchestrator.agents.length > 0) {
+  if (context.orchestrator && (context.orchestrator.agents.length > 0 || context.orchestrator.scope === 'everywhere')) {
     // Host-owned static protocol text, not plugin or user input, so it bypasses
     // the guard for untrusted stable instructions the way the deck directive does.
     blocks.push(

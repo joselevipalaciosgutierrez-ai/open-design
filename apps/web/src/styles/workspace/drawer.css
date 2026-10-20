@@ -2733,3 +2733,42 @@
 .designs-empty-cta:active {
   transform: scale(0.98);
 }
+
+/* Project card: straight into the project's chat or design (owner: DesignsTab).
+   Quiet until the card is hovered or focused, always shown on touch screens. */
+.design-card-open-modes {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.design-card:hover .design-card-open-modes,
+.design-card:focus-within .design-card-open-modes {
+  opacity: 1;
+}
+@media (hover: none) {
+  .design-card-open-modes {
+    opacity: 1;
+  }
+}
+.design-card-open-mode {
+  padding: 3px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.design-card-open-mode:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+.design-card-open-mode:focus-visible {
+  outline: 2px solid var(--border-selected);
+  outline-offset: 2px;
+  opacity: 1;
+}

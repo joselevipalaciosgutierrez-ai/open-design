@@ -52,3 +52,17 @@ describe('GET /api/orchestrator', () => {
     expect(projects.some((project) => project.id === projectId)).toBe(false);
   });
 });
+
+describe('Lev orders', () => {
+  it('collects the runs a turn started, directly or through its delegates', async () => {
+    const { ordersOf } = await import('../../src/routes/orchestrator.js');
+    const runs = [
+      { id: 'lev-run', projectId: 'lev', delegation: null },
+      { id: 'b', projectId: 'p2', createdAt: 2, delegation: { parentRunId: 'lev-run', rootRunId: 'lev-run' } },
+      { id: 'a', projectId: 'p1', createdAt: 1, delegation: { parentRunId: 'lev-run', rootRunId: 'lev-run' } },
+      { id: 'grandchild', projectId: 'p1', createdAt: 3, delegation: { parentRunId: 'a', rootRunId: 'lev-run' } },
+      { id: 'other', projectId: 'p1', createdAt: 4, delegation: { parentRunId: 'x', rootRunId: 'x' } },
+    ];
+    expect(ordersOf('lev-run', runs).map((run) => run.id)).toEqual(['a', 'b', 'grandchild']);
+  });
+});

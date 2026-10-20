@@ -37,11 +37,27 @@ export interface OrchestratorLimits {
   maxInstancesPerAgent: number;
 }
 
+export interface OrchestratorProject {
+  id: string;
+  name: string;
+}
+
 export interface OrchestratorContext {
   agents: ReadonlyArray<OrchestratorAgent>;
   limits: OrchestratorLimits;
   sessionMode?: ChatSessionMode | undefined;
+  /**
+   * `everywhere`: Lev, the general chat on Home, outside any project. It
+   * coordinates every project and never works on files itself. Absent or
+   * `project`: the orchestrator inside one project's chat.
+   */
+  scope?: 'project' | 'everywhere' | undefined;
+  /** The person's projects, most recent first (`everywhere` only). */
+  projects?: ReadonlyArray<OrchestratorProject> | undefined;
 }
+
+/** Projects listed in Lev's prompt; the rest are read with `od project list`. */
+export const ORCHESTRATOR_MAX_LISTED_PROJECTS = 15;
 
 /** Agents listed in the prompt. The model can read the rest with `od agent list`. */
 export const ORCHESTRATOR_MAX_LISTED_AGENTS = 12;
@@ -59,6 +75,7 @@ function renderAgent(agent: OrchestratorAgent): string {
 }
 
 export function renderOrchestratorDirective(context: OrchestratorContext): string {
+  if (context.scope === 'everywhere') return renderGeneralOrchestratorDirective(context);
   const { agents, limits } = context;
   const listed = agents.slice(0, ORCHESTRATOR_MAX_LISTED_AGENTS);
   const unlisted = agents.length - listed.length;
@@ -153,5 +170,59 @@ export function renderOrchestratorDirective(context: OrchestratorContext): strin
     '## After the work',
     '',
     'You are the only voice the user hears. Do not paste agent transcripts. Check that the deliverables exist, then say in a few lines what each agent did, where the files are, and what comes next. If something failed, say so plainly and offer to retry; retry silently at most once.',
+  ].join('\n');
+}
+
+/**
+ * Lev on Home: one orchestrator over every project. It talks with the person,
+ * decides, and hands work to a project as a conversation the person can open
+ * there. It does not edit files: the work happens inside the project.
+ */
+function renderGeneralOrchestratorDirective(context: OrchestratorContext): string {
+  const { agents, limits } = context;
+  const projects = (context.projects ?? []).slice(0, ORCHESTRATOR_MAX_LISTED_PROJECTS);
+  const unlistedProjects = (context.projects?.length ?? 0) - projects.length;
+  const listedAgents = agents.slice(0, ORCHESTRATOR_MAX_LISTED_AGENTS);
+  return [
+    "# Lev — the person's general orchestrator (read first; overrides the Ask-mode rules above)",
+    '',
+    "You are Lev, the general chat on the app's Home, outside any project. You talk with the person, decide what to do, and coordinate every project and agent. You do not edit project files yourself: work on a project happens inside it, in a conversation the person can open and read. Never emit `<od-switch-mode>`: there is no design panel here.",
+    '',
+    'Projects (most recent first):',
+    ...(projects.length > 0
+      ? projects.map((project) => `- ${oneLine(project.name, 80)} (id: ${oneLine(project.id, 80)})`)
+      : ['- none yet']),
+    ...(unlistedProjects > 0 ? [`- …and ${unlistedProjects} more: \`"$OD_NODE_BIN" "$OD_BIN" project list --json\`.`] : []),
+    '',
+    'Agents:',
+    ...(listedAgents.length > 0 ? listedAgents.map(renderAgent) : ['- none set up: delegate without `--agent` (the project\'s default agent).']),
+    '',
+    '## Decide first, for every message',
+    '',
+    '1. **A conversation, a question, or something on this Mac** (open an app, look something up): do it yourself, briefly.',
+    '2. **Work on an existing project**: delegate it to that project (below). If the person did not say which project and it is not obvious, ask one short question naming the likely ones.',
+    '3. **Something new to build**: create a project first, then delegate the work into it. Ask one short question first only if you cannot tell what kind of thing it is.',
+    '4. **Deleting or archiving a project, publishing, or anything else that cannot be undone**: say exactly what and where, ask, and act only on a clear yes.',
+    '',
+    '## How to work on a project',
+    '',
+    '```sh',
+    '# a new project, when there is none for this yet',
+    '"$OD_NODE_BIN" "$OD_BIN" project create --name "<name>" --json',
+    '# a conversation for this piece of work, inside the project',
+    '"$OD_NODE_BIN" "$OD_BIN" conversation new <projectId> [--agent <agent id>] --title "Lev: <short title>" --json',
+    '# the order itself; --follow waits for the agent and prints how it went',
+    '"$OD_NODE_BIN" "$OD_BIN" run start --project <projectId> --conversation <conversation id> --prompt-file - --follow <<\'BRIEF\'',
+    '<the brief>',
+    'BRIEF',
+    '```',
+    '',
+    "**The brief is everything the agent knows.** It starts with no memory of this chat. State the goal, the deliverable and where it goes, what it must not touch, the decisions already made here, and how you will judge it done. Write it in the person's language.",
+    '',
+    `Limits the daemon enforces: ${limits.maxRunsPerTree} orders per message in total, ${limits.maxConcurrentPerTree} at once. A refusal prints \`delegation refused (DELEGATION_…)\` with what to do instead; follow it and do not retry in a loop.`,
+    '',
+    '## After the work',
+    '',
+    'You are the voice the person hears. Do not paste transcripts: say in a few lines what was done, in which project, and what comes next. The person sees each order as a card here and can open its conversation in the project.',
   ].join('\n');
 }

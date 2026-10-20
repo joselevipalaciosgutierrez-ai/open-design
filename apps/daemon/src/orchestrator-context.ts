@@ -6,9 +6,10 @@
  * the prompt text never has to guess its own situation. The directive itself
  * has one source: `@open-design/contracts` `orchestrator.ts`.
  */
-import type { AgentProfile, ChatSessionMode, OrchestratorContext } from '@open-design/contracts';
+import { isSystemProject, type AgentProfile, type ChatSessionMode, type OrchestratorContext } from '@open-design/contracts';
 
-import { getConversation, listAgentProfiles } from './db.js';
+import { getConversation, listAgentProfiles, listProjects } from './db.js';
+import { findOrchestratorProjectId } from './routes/orchestrator.js';
 import { DEFAULT_DELEGATION_LIMITS, type DelegationLimits } from './delegation.js';
 
 type Db = Parameters<typeof listAgentProfiles>[0];
@@ -20,6 +21,8 @@ export interface OrchestratorRunFacts {
   conversationId?: string | null;
   /** Internal design-system enrichment runs do one fixed job. */
   analyticsHints?: unknown;
+  /** The project the run belongs to: Lev's own space makes it the general orchestrator. */
+  projectId?: string | null;
 }
 
 export interface ResolveOrchestratorInput {
@@ -31,6 +34,10 @@ export interface ResolveOrchestratorInput {
   /** `plain` is API/BYOK: no shell, so nothing to delegate with. */
   streamFormat?: string | null | undefined;
   limits?: DelegationLimits;
+  /** The run is in Lev's space (the general chat on Home). */
+  inOrchestratorSpace?: boolean;
+  /** The person's projects, most recent first; listed for Lev. */
+  projects?: ReadonlyArray<{ id: string; name: string }>;
 }
 
 function isDesignSystemEnrichment(hints: unknown): boolean {
@@ -52,7 +59,8 @@ export function resolveOrchestratorContext(input: ResolveOrchestratorInput): Orc
   if (isDesignSystemEnrichment(run.analyticsHints)) return null;
   // The user picked an agent: they are talking to it directly.
   if (input.conversationAgentProfileId) return null;
-  if (input.profiles.length === 0) return null;
+  // Lev coordinates every project, with or without agents set up.
+  if (input.profiles.length === 0 && !input.inOrchestratorSpace) return null;
 
   const limits = input.limits ?? DEFAULT_DELEGATION_LIMITS;
   return {
@@ -71,6 +79,9 @@ export function resolveOrchestratorContext(input: ResolveOrchestratorInput): Orc
       maxInstancesPerAgent: limits.maxInstancesPerAgent,
     },
     sessionMode: input.sessionMode,
+    ...(input.inOrchestratorSpace
+      ? { scope: 'everywhere' as const, projects: input.projects ?? [] }
+      : {}),
   };
 }
 
@@ -92,8 +103,19 @@ export function resolveOrchestratorForRun(
   },
 ): OrchestratorContext | null {
   const conversationId = input.run.conversationId;
+  const levProjectId = findOrchestratorProjectId(db);
+  const inOrchestratorSpace = !!levProjectId && input.run.projectId === levProjectId;
   return resolveOrchestratorContext({
     ...input,
+    inOrchestratorSpace,
+    ...(inOrchestratorSpace
+      ? {
+          projects: (listProjects(db) as Array<{ id: string; name: string; updatedAt?: number; metadata?: unknown }>)
+            .filter((project) => !isSystemProject(project))
+            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+            .map((project) => ({ id: project.id, name: project.name })),
+        }
+      : {}),
     conversationAgentProfileId: conversationId
       ? (getConversation(db, conversationId)?.agentProfileId ?? null)
       : null,

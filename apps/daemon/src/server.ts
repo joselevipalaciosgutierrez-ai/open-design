@@ -9417,7 +9417,13 @@ export async function startServer({
     home: os.homedir(),
     listSkillIds: async () => (await listAllSkills()).map((skill) => skill.id),
   });
-  registerOrchestratorRoutes(app, { http: httpDeps, db, daemonUrl: () => daemonUrl });
+  registerOrchestratorRoutes(app, {
+    http: httpDeps,
+    db,
+    daemonUrl: () => daemonUrl,
+    listRuns: () => design.runs.list({}),
+    runsDir: path.join(RUNTIME_DATA_DIR, 'runs'),
+  });
   registerAgentAccessRoutes(app, {
     http: httpDeps,
     access: agentAccess,
@@ -11702,7 +11708,7 @@ export async function startServer({
         // The default assistant coordinates the user's agents when they have
         // some and chose none (see orchestrator-context.ts).
         orchestrator: resolveOrchestratorForRun(db, {
-          run: { ...run, analyticsHints: chatBody?.analyticsHints },
+          run: { ...run, projectId, analyticsHints: chatBody?.analyticsHints },
           sessionMode: runSessionMode,
           streamFormat: def?.streamFormat ?? 'plain',
         }),

@@ -1,3 +1,4 @@
+import { openProjectInMode } from "../state/open-project-in-mode";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Dialog, DialogDescription, DialogFooter, DialogTitle } from "@open-design/components";
@@ -10,7 +11,7 @@ import {
   trackProjectsListControlsClick,
   trackProjectsMorePopoverClick,
 } from "../analytics/events";
-import { useT } from "../i18n";
+import { useI18n, useT } from "../i18n";
 import { useWorkspaceContext } from "../collab/useWorkspaceContext";
 import { workspaceIdentityCacheKey } from "../collab/workspace-identity";
 import {
@@ -139,6 +140,7 @@ export function DesignsTab({
 	const renameTitleId = useId();
 	const confirmTitleId = useId();
 	const t = useT();
+	const { locale } = useI18n();
 	const analytics = useAnalytics();
 	const { context: workspaceContext, loading: workspaceContextLoading } = useWorkspaceContext();
 	// P0 page_view page_name=projects — fire once when the tab mounts so
@@ -1100,6 +1102,31 @@ export function DesignsTab({
 												{relativeTime(p.updatedAt, t)}
 											</span>
 										) : null}
+									</div>
+									{/* Straight into the project's chat or design, without Lev. */}
+									<div className="design-card-open-modes">
+										<button
+											type="button"
+											className="design-card-open-mode"
+											data-testid="design-card-open-chat"
+											onClick={(e) => {
+												e.stopPropagation();
+												void openProjectInMode(p.id, "chat");
+											}}
+										>
+											Chat
+										</button>
+										<button
+											type="button"
+											className="design-card-open-mode"
+											data-testid="design-card-open-design"
+											onClick={(e) => {
+												e.stopPropagation();
+												void openProjectInMode(p.id, "design");
+											}}
+										>
+											{locale.toLowerCase().startsWith("es") ? "Diseño" : "Design"}
+										</button>
 									</div>
 								</div>
 							</div>

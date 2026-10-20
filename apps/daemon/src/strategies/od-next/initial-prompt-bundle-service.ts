@@ -349,6 +349,7 @@ export function createOdNextInitialPromptBundleService(
           conversationId: conversationId ?? null,
           delegation: meta.delegation,
           analyticsHints: meta.analyticsHints,
+          projectId: typeof meta.projectId === 'string' ? meta.projectId : null,
         },
         sessionMode: runSessionMode,
         streamFormat: def.streamFormat ?? 'plain',

@@ -5,6 +5,7 @@ import { renderMarkdown } from '../../runtime/markdown';
 import { stripInternalControlMarkers } from '../../artifacts/internal-markers';
 import { useI18n } from '../../i18n';
 import { reportedUsageFromEvents, TurnMeter } from '../TurnMeter';
+import { LevOrders } from './LevOrders';
 import { LevSessions } from './LevSessions';
 import styles from './LevChat.module.css';
 
@@ -78,6 +79,7 @@ export function LevChat({ messages, streaming, error, onNewSession, onFold, curr
               ) : isLive ? (
                 <p className={styles.thinking}>{copy.thinking}</p>
               ) : null}
+              {message.runId ? <LevOrders runId={message.runId} live={isLive} /> : null}
               {!isLive && (message.runId || message.events?.length) ? (
                 <div className={styles.meta}>
                   <TurnMeter runId={message.runId} usage={reportedUsageFromEvents(message.events)} />

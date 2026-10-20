@@ -88,6 +88,8 @@ export interface EvaluateDelegationInput {
   /** Agent profile a run executes as; null for runs without one. */
   profileOf: (run: DelegationRun) => string | null;
   limits?: DelegationLimits;
+  /** The parent is Lev, in its own space: it may delegate to any project. */
+  parentMayCrossProjects?: boolean;
 }
 
 function refuse(
@@ -132,7 +134,9 @@ export function evaluateDelegation(input: EvaluateDelegationInput): DelegationDe
       'The run you are delegating from has already finished, so it can no longer start new runs.',
     );
   }
-  if (input.projectId !== (parent.projectId ?? null)) {
+  // Lev, the general chat, works from its own space and hands work to any
+  // project; every other orchestrator stays inside its project.
+  if (!input.parentMayCrossProjects && input.projectId !== (parent.projectId ?? null)) {
     return refuse(
       400,
       'DELEGATION_CROSS_PROJECT',
