@@ -57,7 +57,7 @@ describe("desktop BrowserWindow chrome options", () => {
     expect(runtimeSource).toContain('from "./splash-pixel-scan.js"');
     expect(runtimeSource).toContain("${SPLASH_PIXEL_SCAN_STYLE}");
     expect(runtimeSource).toContain("${SPLASH_PIXEL_SCAN_MARKUP}");
-    expect(runtimeSource).toContain("${splashPixelScanScript()}");
+    expect(runtimeSource).toContain("${splashPixelScanScript({ dark })}");
     expect(runtimeSource).not.toContain("splash-video");
     expect(runtimeSource).not.toContain("<video");
   });
