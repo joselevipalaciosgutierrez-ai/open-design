@@ -29,7 +29,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { FileOpsSummary } from '../../src/components/FileOpsSummary';
-import { CollabProvider } from '../../src/collab/collab-context';
+import { CollabProvider } from '../../src/runtime/local-workspace';
 import type { FileOpEntry } from '../../src/runtime/file-ops';
 import { workspaceContextFixture } from '../helpers/workspace-context';
 

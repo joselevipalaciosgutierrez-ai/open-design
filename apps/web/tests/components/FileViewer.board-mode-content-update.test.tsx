@@ -28,7 +28,7 @@ import type { ProjectFile } from '../../src/types';
 // do not depend on the asynchronous workspace-context probe (same shape as
 // FileViewer.srcdoc-reload-races.test.tsx).
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>();
+  const actual = await importOriginal<typeof import('../../src/runtime/local-workspace')>();
   return {
     ...actual,
     useWorkspaceContext: () => ({ context: null, loading: false }),

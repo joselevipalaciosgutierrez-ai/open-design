@@ -10,7 +10,7 @@ import {
 import {
   materializeWorkspaceScopedTeamResource,
   teamResourceMaterializationDir,
-} from '../src/collab/team-resource-materialization.js';
+} from '../src/project-authority.js';
 import {
   localPluginRegistryScope,
   resolveLocalPluginBySource,

@@ -31,7 +31,7 @@ import {
   selectProjectFileCover,
   type ProjectCoverOverride,
 } from '../components/project-cover';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 import { fetchProjectFiles, fetchProjectFileText } from '../providers/registry';
 import type { Project, ProjectFile } from '../types';
 

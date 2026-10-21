@@ -17,11 +17,11 @@ import {
   applyPlugin,
   resolvedWorkspaceContextForWrite,
 } from '../state/projects';
-import type { WorkspaceContextState } from '../collab/useWorkspaceContext';
+import type { WorkspaceContextState } from '../runtime/local-workspace';
 import {
   workspaceProjectHeaders,
   workspaceResourceUrl,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import { goBack, navigate } from '../router';
 import {
   createPluginUseHandoff,

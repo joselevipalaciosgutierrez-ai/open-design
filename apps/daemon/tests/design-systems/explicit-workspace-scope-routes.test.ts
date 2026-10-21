@@ -17,7 +17,7 @@ import {
   getWorkspaceResourceByResourceId,
   openDatabase,
 } from '../../src/db.js';
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
 import { registerDesignSystemRoutes } from '../../src/routes/design-systems.js';
 import { registerStaticResourceRoutes } from '../../src/routes/static-resource.js';
 import { registerBrandRoutes } from '../../src/brand-routes.js';

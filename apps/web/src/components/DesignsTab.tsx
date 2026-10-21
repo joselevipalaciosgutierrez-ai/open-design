@@ -13,8 +13,8 @@ import {
   trackProjectsMorePopoverClick,
 } from "../analytics/events";
 import { useI18n, useT } from "../i18n";
-import { useWorkspaceContext } from "../collab/useWorkspaceContext";
-import { workspaceIdentityCacheKey } from "../collab/workspace-identity";
+import { useWorkspaceContext } from "../runtime/local-workspace";
+import { workspaceIdentityCacheKey } from "../runtime/local-workspace";
 import {
 	getProjectCoverSnapshot,
 	projectCoverSnapshotKey,

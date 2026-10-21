@@ -25,9 +25,11 @@ import {
   openDatabase,
   upsertMessage,
 } from '../src/db.js';
-import { createAuthorizeProjectRequest } from '../src/collab/project-request-authority.js';
+import {
+  createAuthorizeProjectRequest,
+  workspaceContextFromDirectoryItem,
+} from '../src/project-authority.js';
 import { createEnforceWorkspaceProjectMutation } from '../src/routes/project/index.js';
-import { workspaceContextFromDirectoryItem } from '../src/collab/vela-workspace-context.js';
 import { registerRunRoutes } from '../src/routes/runs.js';
 import { connectorService } from '../src/connectors/service.js';
 

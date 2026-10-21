@@ -17,7 +17,7 @@ import { canDuplicatePluginPreview } from './plugins-home/duplicate';
 import { PluginDetailsModal } from './PluginDetailsModal';
 import type { PluginUseAction } from './plugins-home/useActions';
 import { useInView } from './plugins-home/useInView';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import { useAnalytics } from '../analytics/provider';
 import { trackCommunityTemplateClick, trackPageView } from '../analytics/events';
 import { workspaceAnalyticsDimensions } from '../analytics/workspace';

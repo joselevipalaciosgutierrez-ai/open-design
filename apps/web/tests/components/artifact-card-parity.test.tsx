@@ -29,7 +29,7 @@ import { AssistantMessage } from '../../src/components/AssistantMessage';
 import { FileOpsSummary } from '../../src/components/FileOpsSummary';
 import { RemixIcon } from '../../src/components/RemixIcon';
 import { REMIX_ICON_PATHS } from '../../src/components/remix-icon-paths';
-import { CollabProvider } from '../../src/collab/collab-context';
+import { CollabProvider } from '../../src/runtime/local-workspace';
 import type { ChatMessage, ProjectFile } from '../../src/types';
 import type { FileOpEntry } from '../../src/runtime/file-ops';
 import { workspaceContextFixture } from '../helpers/workspace-context';

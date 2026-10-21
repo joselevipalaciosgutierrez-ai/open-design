@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectView } from '../../src/components/ProjectView';
 import { useIframeKeepAlivePool } from '../../src/components/IframeKeepAlivePool';
-import { useProjectCollab, type ProjectCollab } from '../../src/collab/useProjectCollab';
+import { useProjectCollab, type ProjectCollab } from '../../src/runtime/local-workspace';
 import { useProjectFileEvents, type ProjectEvent } from '../../src/providers/project-events';
 import type {
   AgentInfo,
@@ -64,7 +64,7 @@ vi.mock('../../src/providers/project-events', () => ({
 }));
 
 vi.mock('../../src/collab/useProjectCollab', async () => {
-  const actual = await vi.importActual<typeof import('../../src/collab/useProjectCollab')>(
+  const actual = await vi.importActual<typeof import('../../src/runtime/local-workspace')>(
     '../../src/collab/useProjectCollab',
   );
   return {

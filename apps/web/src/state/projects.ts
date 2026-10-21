@@ -9,7 +9,7 @@
 import { coalescedGet, evictCoalescedGet } from '../lib/coalesced-get';
 import { isDaemonProxyConnectionFailure } from '../runtime/daemon-proxy-failure';
 import { BackoffController, type BackoffOptions } from '../lib/backoff';
-import { markProjectCreatedByViewer } from '../collab/useProjectCollab';
+import { markProjectCreatedByViewer } from '../runtime/local-workspace';
 import {
   API_ERROR_CODES,
   isSameWorkspacePrincipal,
@@ -48,12 +48,12 @@ import {
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
   workspaceResourceUrl,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import {
   currentWorkspaceAccountGeneration,
   currentWorkspaceContextRequestToken,
-} from '../collab/useWorkspaceContext';
-import type { WorkspaceResourceReadIdentity } from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
+import type { WorkspaceResourceReadIdentity } from '../runtime/local-workspace';
 import type {
   ChatMessage,
   Conversation,
@@ -67,7 +67,7 @@ import { boundedRequestErrorCode } from '../analytics/workspace';
 
 export type { PluginInstallOutcome } from '@open-design/contracts';
 export type { PluginShareAction } from '@open-design/contracts';
-export { workspaceProjectHeaders } from '../collab/workspace-identity';
+export { workspaceProjectHeaders } from '../runtime/local-workspace';
 
 export type WorkspaceProjectListView = 'all' | 'recent' | 'drafts' | 'team';
 

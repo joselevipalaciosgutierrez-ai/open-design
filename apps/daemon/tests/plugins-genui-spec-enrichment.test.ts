@@ -17,7 +17,7 @@ import Database from 'better-sqlite3';
 import express from 'express';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createAuthorizeProjectRequest } from '../src/collab/project-request-authority.js';
+import { createAuthorizeProjectRequest } from '../src/project-authority.js';
 import {
   ensureWorkspaceProject,
   getWorkspaceProject,

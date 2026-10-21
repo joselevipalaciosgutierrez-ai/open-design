@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { registerBrandRoutes, type BrandRoutesDeps } from '../src/brand-routes.js';
-import { createCreatedProjectWorkspaceResolver } from '../src/collab/created-project-workspace.js';
+import { createCreatedProjectWorkspaceResolver } from '../src/project-authority.js';
 import {
   closeDatabase,
   deleteWorkspaceResourceByResourceId,

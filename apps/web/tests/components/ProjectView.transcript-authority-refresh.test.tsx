@@ -6,7 +6,7 @@ import { forwardRef, useImperativeHandle, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectView } from '../../src/components/ProjectView';
-import type { ProjectWorkspaceScopeState } from '../../src/collab/useProjectWorkspaceScope';
+import type { ProjectWorkspaceScopeState } from '../../src/runtime/local-workspace';
 import { streamViaDaemon } from '../../src/providers/daemon';
 import {
   createConversation,
@@ -39,15 +39,15 @@ vi.mock('../../src/providers/daemon', () => ({
 }));
 vi.mock('../../src/providers/project-events', () => ({ useProjectFileEvents: vi.fn() }));
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({ context: workspace.caller, loading: false }),
 }));
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: () => workspace.scope,
 }));
 vi.mock('../../src/collab/useProjectCollab', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectCollab')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectCollab: () => ({
     enabled: true, member: null, present: [], publishedVersion: null,
     // Until initial scope/ownership confirmation, the real collab hook is

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
-import { workspaceProjectHeaders } from '../../../collab/workspace-identity';
+import { workspaceProjectHeaders } from '../../../runtime/local-workspace';
 
 const STORAGE_KEY = 'open-design:config';
 const TOGGLE_EVENT = 'open-design:critique-theater-toggle';

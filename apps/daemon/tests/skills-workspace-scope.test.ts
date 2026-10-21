@@ -36,7 +36,7 @@ import {
   openDatabase,
   updateWorkspaceResource,
 } from '../src/db.js';
-import { materializeWorkspaceScopedTeamResource } from '../src/collab/team-resource-materialization.js';
+import { materializeWorkspaceScopedTeamResource } from '../src/project-authority.js';
 import { workspaceTeamSkillBindingResourceId } from '../src/skills/workspace-team-binding.js';
 
 let server: http.Server;

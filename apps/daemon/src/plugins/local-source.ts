@@ -3,7 +3,7 @@ import type { InstalledPluginRecord } from '@open-design/contracts';
 import {
   readTeamResourceMaterialization,
   teamResourceMaterializationDir,
-} from '../collab/team-resource-materialization.js';
+} from '../project-authority.js';
 import { isSafePluginId } from './installer.js';
 import {
   getInstalledPlugin,

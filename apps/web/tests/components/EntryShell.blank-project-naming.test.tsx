@@ -25,7 +25,7 @@ import {
   notifyWorkspaceContextRefresh,
   resetTeamProjectsCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { workspaceDirectoryFixture } from '../helpers/workspace-context';
 import {
   fetchProjectFiles,

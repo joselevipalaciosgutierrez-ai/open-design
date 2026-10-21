@@ -30,7 +30,7 @@ import {
   getWorkspaceResourceByResourceId,
   updateWorkspaceResource,
 } from '../db.js';
-import { teamResourceWorkspaceRoot } from '../collab/team-resource-materialization.js';
+import { teamResourceWorkspaceRoot } from '../project-authority.js';
 
 type SqliteDb = Database.Database;
 

@@ -10,7 +10,7 @@ import {
 } from '../i18n/content';
 import { fetchSkill } from '../providers/registry';
 import { Icon } from './Icon';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 
 interface Props {
   skillId: string;

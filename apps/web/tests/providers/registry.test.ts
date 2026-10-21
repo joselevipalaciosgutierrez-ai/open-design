@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { installMockOpenDesignHost } from '@open-design/host/testing';
-import { advanceWorkspaceAccountGeneration } from '../../src/collab/workspace-identity';
+import { advanceWorkspaceAccountGeneration } from '../../src/runtime/local-workspace';
 import {
   buildWorkspacePermissions,
   buildWorkspaceSeatSummary,

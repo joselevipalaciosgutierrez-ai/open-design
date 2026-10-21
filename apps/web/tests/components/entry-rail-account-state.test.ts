@@ -4,7 +4,7 @@ import {
   resolveEntryRailAccountFooterState,
   requiresAmrReauthentication,
 } from '../../src/components/entry-rail-account-state';
-import type { WorkspaceContextState } from '../../src/collab/useWorkspaceContext';
+import type { WorkspaceContextState } from '../../src/runtime/local-workspace';
 
 const SIGNED_IN_CONTEXT = {
   workspaceId: 'workspace-1',

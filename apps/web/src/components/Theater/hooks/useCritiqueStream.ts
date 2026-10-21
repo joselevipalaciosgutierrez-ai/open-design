@@ -12,7 +12,7 @@ import {
   type CritiqueEventsConnection,
   type CritiqueEventsConnectionOptions,
 } from '../state/sse';
-import { workspaceIdentityCacheKey } from '../../../collab/workspace-identity';
+import { workspaceIdentityCacheKey } from '../../../runtime/local-workspace';
 
 export interface UseCritiqueStreamOptions extends CritiqueEventsConnectionOptions {
   /**

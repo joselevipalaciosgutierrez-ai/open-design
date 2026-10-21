@@ -40,7 +40,7 @@ vi.mock('../../src/collab/workspace-events', () => ({
 }));
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>();
+  const actual = await importOriginal<typeof import('../../src/runtime/local-workspace')>();
   return {
     ...actual,
     useWorkspaceContext: () => workspaceMock.state,
@@ -105,7 +105,7 @@ import { HomeView } from '../../src/components/HomeView';
 import {
   notifyWorkspaceContextRefresh,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 
 function teamContext(workspaceId: string, workspaceMemberId: string): WorkspaceCollabContext {
   return {

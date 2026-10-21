@@ -37,8 +37,8 @@ import {
   useProjectHoverCover,
 } from './entry-nav-rail/ProjectHoverPreview';
 import { DeleteMark, MoreDotsMark, RenameMark } from './entry-nav-rail/RailRecentRow';
-import { createSharedProjectPredicate } from '../collab/all-projects-list';
-import { fetchTeamProjectsCatalog } from '../collab/team-projects-catalog';
+import { createSharedProjectPredicate } from '../runtime/local-workspace';
+import { fetchTeamProjectsCatalog } from '../runtime/local-workspace';
 import { projectOwnedBySelf } from './project-actions/ownership';
 import {
   forgetOptimisticProjectOwnership,
@@ -46,8 +46,8 @@ import {
   optimisticProjectOwnershipScopeKey,
   projectOwnerMemberIdsWithOptimisticWitnesses,
   recordOptimisticProjectOwnership,
-} from '../collab/optimistic-project-ownership';
-import { currentWorkspaceAccountGeneration } from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
+import { currentWorkspaceAccountGeneration } from '../runtime/local-workspace';
 import { ProjectDeleteConfirmDialog } from './project-actions/ProjectDeleteConfirmDialog';
 import {
   type ProjectDeleteHandler,

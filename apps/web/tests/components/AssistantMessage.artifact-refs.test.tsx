@@ -22,7 +22,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AssistantMessage } from '../../src/components/AssistantMessage';
-import { CollabProvider } from '../../src/collab/collab-context';
+import { CollabProvider } from '../../src/runtime/local-workspace';
 import type { ChatMessage, ProjectFile } from '../../src/types';
 import { workspaceContextFixture } from '../helpers/workspace-context';
 

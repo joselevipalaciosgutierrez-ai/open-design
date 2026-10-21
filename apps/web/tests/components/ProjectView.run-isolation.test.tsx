@@ -11,7 +11,7 @@ import {
 } from '../../src/components/ProjectView';
 import { ProjectConversationsHttpError } from '../../src/state/projects';
 import type { SettingsSection } from '../../src/components/SettingsDialog';
-import type { ProjectWorkspaceScopeState } from '../../src/collab/useProjectWorkspaceScope';
+import type { ProjectWorkspaceScopeState } from '../../src/runtime/local-workspace';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 type AmrAuthRetryContinuation = any;
 import type {
@@ -168,7 +168,7 @@ vi.mock('../../src/providers/anthropic', () => ({
 }));
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspaceScopeMocks.ambientContext,
     loading: workspaceScopeMocks.ambientLoading,
@@ -200,12 +200,12 @@ vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
 // removes the whole failure mode — a new export is picked up automatically and
 // is always the real implementation.
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: () => workspaceScopeMocks.projectScope,
 }));
 
 vi.mock('../../src/collab/useProjectCollab', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectCollab')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectCollab: () => ({
     enabled: projectCollabMocks.enabled,
     member: null,

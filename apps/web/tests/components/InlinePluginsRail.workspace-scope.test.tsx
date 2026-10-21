@@ -37,7 +37,7 @@ vi.mock('../../src/collab/workspace-events', () => ({
 }));
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspace.context,
     loading: workspace.loading,
@@ -48,7 +48,7 @@ vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
 }));
 
 vi.mock('../../src/collab/collab-context', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/collab-context')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectCollabContext: () => ({
     workspaceContext: null,
     workspaceContextLoading: false,

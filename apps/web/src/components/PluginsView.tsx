@@ -93,11 +93,11 @@ import {
   currentWorkspaceAccountGeneration,
   useWorkspaceContext,
   workspaceIdentityCacheKey,
-} from '../collab/useWorkspaceContext';
+} from '../runtime/local-workspace';
 import {
   useWorkspaceInvalidation,
-} from '../collab/workspace-events';
-import { useWorkspaceSnapshotActivation } from '../collab/workspace-snapshot-activation';
+} from '../runtime/local-workspace';
+import { useWorkspaceSnapshotActivation } from '../runtime/local-workspace';
 
 type PluginsTab = 'installed' | 'available' | 'sources' | 'team';
 

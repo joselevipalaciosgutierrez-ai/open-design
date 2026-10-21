@@ -8,7 +8,7 @@ import {
 } from '@open-design/contracts/runtime/preview-build-focus';
 
 import { useT } from '../../i18n';
-import { appendResourceQuery } from '../../collab/workspace-identity';
+import { appendResourceQuery } from '../../runtime/local-workspace';
 import { projectRawUrl } from '../../providers/registry';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 import type { ProjectFile } from '../../types';

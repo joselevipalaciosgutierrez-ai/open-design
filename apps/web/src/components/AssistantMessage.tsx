@@ -22,7 +22,7 @@ import {
 import { Button } from "@open-design/components";
 import { navigate } from "../router";
 import { deleteProjectFile, projectFileUrl, uploadProjectFiles } from "../providers/registry";
-import { useProjectCollabContext } from "../collab/collab-context";
+import { useProjectCollabContext } from "../runtime/local-workspace";
 import { useAnalytics } from "../analytics/provider";
 import {
   trackAssistantFeedbackButtonClick,

@@ -3,7 +3,7 @@ import type {
   WorkspaceCollabContext,
 } from '@open-design/contracts';
 import { VisuallyHidden } from '@open-design/components';
-import { isTeamPlanTier } from '../collab/team-plan';
+import { isTeamPlanTier } from '../runtime/local-workspace';
 import { useI18n } from '../i18n';
 import { codingPlanQuotaView } from './coding-plan-usage-model';
 import styles from './CodingPlanUsage.module.css';

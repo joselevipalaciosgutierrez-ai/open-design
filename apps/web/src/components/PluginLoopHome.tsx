@@ -28,7 +28,7 @@ import { authorInitials, derivePluginSourceLinks } from '../runtime/plugin-sourc
 import { useAnalytics } from '../analytics/provider';
 import { trackPluginLoopClick } from '../analytics/events';
 import { navigate } from '../router';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 
 export interface PluginLoopSubmit {
   prompt: string;

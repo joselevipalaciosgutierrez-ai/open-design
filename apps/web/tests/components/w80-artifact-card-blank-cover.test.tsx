@@ -33,7 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ArtifactCards } from '../../src/components/FileOpsSummary';
 import { HtmlProjectCoverFrame } from '../../src/components/project-cover';
-import { CollabProvider } from '../../src/collab/collab-context';
+import { CollabProvider } from '../../src/runtime/local-workspace';
 import { workspaceContextFixture } from '../helpers/workspace-context';
 
 const PROJECT_ID = 'c7e3b234-2fb3-4f6e-8aae-a3a00697c476';

@@ -2,7 +2,7 @@ import type http from 'node:http';
 import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { registerProjectRoutes } from '../../src/routes/project/index.js';
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
 
 const WORKSPACE_ID = 'workspace-project-scope';
 const MEMBER_ID = 'member-project-scope';

@@ -65,7 +65,7 @@ vi.mock('../../src/components/ManualEditPanel', async (importOriginal) => {
 // authorization scope resolved from the first render so cache assertions do
 // not depend on the asynchronous workspace-context probe.
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>();
+  const actual = await importOriginal<typeof import('../../src/runtime/local-workspace')>();
   return {
     ...actual,
     useWorkspaceContext: () => ({ context: null, loading: false }),

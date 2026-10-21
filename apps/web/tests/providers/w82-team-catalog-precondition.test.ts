@@ -31,8 +31,8 @@ import {
   type WorkspaceCollabContext,
 } from '@open-design/contracts';
 
-import { fetchTeamProjectsCatalog } from '../../src/collab/team-projects-catalog';
-import { resetWorkspaceAccountGeneration } from '../../src/collab/workspace-identity';
+import { fetchTeamProjectsCatalog } from '../../src/runtime/local-workspace';
+import { resetWorkspaceAccountGeneration } from '../../src/runtime/local-workspace';
 
 function context(overrides: Partial<WorkspaceCollabContext> = {}): WorkspaceCollabContext {
   return {

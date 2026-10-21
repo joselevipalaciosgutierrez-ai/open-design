@@ -17,7 +17,7 @@ import type { RouteDeps } from '../server-context.js';
 import type {
   AuthorizeProjectRequest,
   AuthorizeProjectToolRequest,
-} from '../collab/project-request-authority.js';
+} from '../project-authority.js';
 import { proxyDispatcherRequestInit } from '../connectionTest.js';
 import {
   aihubmixCatalogUrl,

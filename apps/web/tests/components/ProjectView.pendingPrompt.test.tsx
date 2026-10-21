@@ -106,7 +106,7 @@ vi.mock('../../src/providers/project-events', () => ({
 }));
 
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: (projectId: string) => ({
     loading: false,
     scope: {

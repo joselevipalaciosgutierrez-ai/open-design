@@ -10,7 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 
-import { CollabProvider } from "../../src/collab/collab-context";
+import { CollabProvider } from "../../src/runtime/local-workspace";
 import {
   DesignFilesPanel,
   type DesignFilesNavState,

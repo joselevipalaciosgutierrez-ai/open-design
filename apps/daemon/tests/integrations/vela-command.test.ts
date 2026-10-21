@@ -21,11 +21,42 @@ vi.mock('@open-design/platform', async (importOriginal) => ({
 }));
 
 import * as diagnosticEvidence from '../../src/services/diagnostics-evidence.js';
-import { runVelaCommand } from '../../src/integrations/vela-command.js';
-import {
-  runVelaResourceBatchCommand,
-  runVelaResourceCommand,
-} from '../../src/collab/vela-cli-resource-adapter.js';
+import { runVelaCommand, velaWorkspaceCommandOptions } from '../../src/integrations/vela-command.js';
+
+const RESOURCE_COMMAND_TIMEOUTS_MS: Readonly<Record<string, number>> = {
+  pull: 30_000,
+  push: 600_000,
+  head: 60_000,
+  shared: 60_000,
+  remove: 60_000,
+};
+
+const runVelaResourceCommand = (args: string[], workspaceId?: string) => {
+  const workspaceOptions = velaWorkspaceCommandOptions(workspaceId);
+  const timeoutMs = RESOURCE_COMMAND_TIMEOUTS_MS[args[0] ?? ''];
+  return runVelaCommand(
+    ['resource', ...args],
+    {
+      ...workspaceOptions,
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    },
+  );
+};
+
+function runVelaResourceBatchCommand(
+  requests: readonly any[],
+  workspaceId: string,
+): Promise<string> {
+  const workspaceOptions = velaWorkspaceCommandOptions(workspaceId);
+  return runVelaCommand(
+    ['resource', 'pull-batch', '--requests-file', '-', '--json'],
+    {
+      ...workspaceOptions,
+      timeoutMs: 120_000,
+      input: JSON.stringify({ requests }),
+    },
+  );
+}
 
 function stoppedResult(
   matchedPids: number[],

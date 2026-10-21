@@ -5,7 +5,7 @@ import type {
 } from '@open-design/contracts';
 import { projectKindFromMetadataToTrackingOrLegacyDefault } from '@open-design/contracts/analytics';
 import type { RouteDeps } from '../../server-context.js';
-import type { BoundWorkspaceResourceMutationGate } from '../../collab/workspace-resource-mutation.js';
+import type { BoundWorkspaceResourceMutationGate } from '../../project-authority.js';
 import { getProject, isProjectCommentAnchorConversationId } from '../../db.js';
 
 export type ProjectCommentWorkspaceContextResolution =

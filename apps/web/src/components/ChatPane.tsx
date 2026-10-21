@@ -95,8 +95,8 @@ import type { Dict } from '../i18n/types';
 import { copyToClipboard } from '../lib/copy-to-clipboard';
 import { useLiquidGlass } from '../hooks/useLiquidGlass';
 import { fetchProjectMediaTasks, projectRawUrl } from '../providers/registry';
-import { appendResourceQuery } from '../collab/workspace-identity';
-import { useProjectCollabContext } from '../collab/collab-context';
+import { appendResourceQuery } from '../runtime/local-workspace';
+import { useProjectCollabContext } from '../runtime/local-workspace';
 import { takeComposerSeedFor } from '../state/libraryHandoff';
 import {
   formAnswersDisplayBody,

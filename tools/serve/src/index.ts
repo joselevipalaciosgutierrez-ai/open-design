@@ -1,10 +1,6 @@
 import { cac } from "cac";
 import type { ReleaseChannel } from "@open-design/release";
 
-import {
-  DEFAULT_COLLAB_CLOUD_PORT,
-  startCollabCloudFixtureServer,
-} from "./collab-cloud-fixture.js";
 import { startReleaseStorageFixtureServer } from "./release-storage-fixture.js";
 import { startUpdaterFixtureServer } from "./updater-fixture.js";
 
@@ -52,32 +48,6 @@ async function start(service: string, options: CliOptions): Promise<void> {
       printJson(server.info);
     } else {
       process.stdout.write(`tools-serve release-storage: ${server.info.endpointUrl} bucket=${server.info.bucket}\n`);
-    }
-
-    const shutdown = () => {
-      void server.close().finally(() => process.exit(0));
-    };
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
-    return;
-  }
-
-  if (service === "collab-cloud") {
-    // Default to the well-known collab-cloud port when the caller does not pin
-    // one, so two daemons can share a URL without discovering a dynamic port.
-    const rawPort = options.port;
-    const port = rawPort != null && rawPort !== "0" ? parsePort(rawPort) : DEFAULT_COLLAB_CLOUD_PORT;
-    const server = await startCollabCloudFixtureServer({
-      host: options.host,
-      port,
-      token: options.token,
-    });
-    if (options.json === true) {
-      printJson(server.info);
-    } else {
-      process.stdout.write(
-        `tools-serve collab-cloud: ${server.info.endpointUrl} (token=${server.info.token})\n`,
-      );
     }
 
     const shutdown = () => {

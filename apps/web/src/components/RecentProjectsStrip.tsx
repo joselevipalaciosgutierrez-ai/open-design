@@ -36,13 +36,13 @@ import { useProjectDuplicateFlow } from './project-actions/useProjectDuplicateFl
 import { useWorkspaceProjectMove } from './project-actions/useWorkspaceProjectMove';
 import { STATUS_LABEL_KEYS } from './DesignsTab';
 import { isDesignSystemProject, isPublishedDesignSystemProject } from './design-system-project';
-import type { SharedProjectPredicate } from '../collab/all-projects-list';
-import { useTeamMembers } from '../collab/useTeamMembers';
+import type { SharedProjectPredicate } from '../runtime/local-workspace';
+import { useTeamMembers } from '../runtime/local-workspace';
 import {
   notifyTeamProjectsChanged,
   useWorkspaceBilling,
   useWorkspaceContext,
-} from '../collab/useWorkspaceContext';
+} from '../runtime/local-workspace';
 import {
   canAccessWorkspaceInviteFlow,
   resolveWorkspaceInviteTarget,
@@ -55,7 +55,7 @@ import {
   type WorkspaceCollabContext,
   type WorkspaceProjectSummary,
 } from '@open-design/contracts';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
 import {
   THUMBNAIL_OVERSCAN_MARGIN,
   resumeThumbnailLoads,
@@ -79,7 +79,7 @@ import {
 // decision; re-exported so its existing importers keep resolving.
 export { deckPreviewSrcDoc } from '../lib/project-cover-pipeline';
 import { useInView } from './plugins-home/useInView';
-import { workspaceIdentityCacheKey } from '../collab/workspace-identity';
+import { workspaceIdentityCacheKey } from '../runtime/local-workspace';
 import { useAnalytics } from '../analytics/provider';
 import {
   trackProjectCollectionClick,

@@ -55,7 +55,7 @@ import {
 import {
   currentWorkspaceContextRequestToken,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 
 function personalWorkspaceContext(): WorkspaceCollabContext {
   return {

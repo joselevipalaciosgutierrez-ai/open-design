@@ -5,8 +5,8 @@ import { nextForkedConversationTitle } from '../../conversation-fork-title.js';
 import { getAgentProfile } from '../../db.js';
 import { backfillBrandExtractionTranscriptForProject } from '../../brands/index.js';
 import type { RouteDeps } from '../../server-context.js';
-import type { BoundWorkspaceResourceMutationGate } from '../../collab/workspace-resource-mutation.js';
-import type { AuthorizeProjectRequest } from '../../collab/project-request-authority.js';
+import type { BoundWorkspaceResourceMutationGate } from '../../project-authority.js';
+import type { AuthorizeProjectRequest } from '../../project-authority.js';
 import { TERMINAL_RUN_STATUSES } from '../../runtimes/runs.js';
 import { strategyTaskTurnsForRunIds } from '../../strategies/task-store.js';
 

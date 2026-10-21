@@ -5,7 +5,7 @@ import { useI18n } from '../i18n';
 import { getProjectDetail, listProjects } from '../state/projects';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 import { dirExists } from '../providers/registry';
-import { workspaceIdentityCacheKey } from '../collab/workspace-identity';
+import { workspaceIdentityCacheKey } from '../runtime/local-workspace';
 import { Icon } from './Icon';
 import styles from './ProjectReferenceModal.module.css';
 

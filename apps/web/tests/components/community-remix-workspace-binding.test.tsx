@@ -34,7 +34,7 @@ import {
   resetTeamProjectsCache,
   resetWorkspaceBillingCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import {
   daemonIsLive,
   fetchAgentsStream,

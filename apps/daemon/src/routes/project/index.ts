@@ -129,12 +129,12 @@ import {
   type VelaTeamProjectCatalogClient,
   type VelaTeamProjectRecord,
 } from '../../integrations/vela-team-projects.js';
-import type { ResourceHubPrincipal } from '../../collab/resource-principal.js';
+import type { ResourceHubPrincipal } from '../../project-authority.js';
 import {
   refuseTeamShareScope,
   type TeamShareScopeRefusal,
   type WorkspaceTypeRegistry,
-} from '../../collab/team-share-scope.js';
+} from '../../project-authority.js';
 import {
   headerValue,
   isWorkspaceResourceLocked as isWorkspaceLocked,
@@ -146,24 +146,24 @@ import {
   type WorkspaceResourceAccessInput,
   type WorkspaceResourceContext,
   type WorkspaceResourceMutationCapability,
-} from '../../collab/workspace-resource-mutation.js';
+} from '../../project-authority.js';
 import {
   resolveLocalProjectWorkspaceScope,
-} from '../../collab/project-workspace-scope.js';
+} from '../../project-authority.js';
 import {
   createAuthorizeProjectRequest,
   enforceLocalProjectDataPlaneRequest,
   type AuthorizeProjectRequest,
-} from '../../collab/project-request-authority.js';
+} from '../../project-authority.js';
 import {
   bindCreatedProjectToWorkspace,
   createCreatedProjectWorkspaceResolver,
   CreatedProjectWorkspaceResolutionError,
   localProjectWorkspaceAttribution,
   type CreatedProjectWorkspaceResolver,
-} from '../../collab/created-project-workspace.js';
+} from '../../project-authority.js';
 import { localPluginRegistryScope } from '../../plugins/local-source.js';
-import type { WorkspaceDirectoryFetchResult } from '../../collab/vela-workspace-context.js';
+import type { WorkspaceDirectoryFetchResult } from '../../project-authority.js';
 import { cancelRunsOwnedBy } from './cancel-owned-runs.js';
 
 export function rewriteOutsideExecutableHtmlRanges(

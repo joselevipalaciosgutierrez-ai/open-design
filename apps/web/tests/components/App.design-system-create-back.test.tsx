@@ -33,7 +33,7 @@ import {
 } from '../../src/providers/registry';
 import { fetchAmrModels, fetchVelaLoginStatus } from '../../src/providers/daemon';
 import { listProjects, listTemplates } from '../../src/state/projects';
-import { resetWorkspaceContextCache } from '../../src/collab/useWorkspaceContext';
+import { resetWorkspaceContextCache } from '../../src/runtime/local-workspace';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import { workspaceDirectoryFixture } from '../helpers/workspace-context';
 

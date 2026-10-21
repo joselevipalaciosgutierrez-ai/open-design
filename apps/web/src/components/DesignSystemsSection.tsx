@@ -14,8 +14,8 @@ import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { Icon } from './Icon';
 import { orderDesignSystemGroups } from './design-system-group-order';
 import { AnimatePresence } from 'motion/react';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
-import { workspaceIdentityCacheKey } from '../collab/workspace-identity';
+import { useWorkspaceContext } from '../runtime/local-workspace';
+import { workspaceIdentityCacheKey } from '../runtime/local-workspace';
 
 // Sibling Settings section that hosts the design-systems registry.
 // Lifted out of the previous LibrarySection so each surface (functional

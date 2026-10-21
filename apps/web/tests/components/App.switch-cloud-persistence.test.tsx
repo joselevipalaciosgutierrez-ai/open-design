@@ -33,7 +33,7 @@ import { listProjects, listTemplates } from '../../src/state/projects';
 import {
   resetWorkspaceBillingCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { resetWorkspaceDirectoryCache } from '../../src/components/EntryNavRail';
 
 const PROJECT_ROUTE: Route = {
@@ -52,7 +52,7 @@ vi.mock('../../src/router', () => ({
 
 vi.mock('../../src/collab/useProjectRouteWorkspaceContext', async (importOriginal) => {
   const actual = await importOriginal<
-    typeof import('../../src/collab/useProjectRouteWorkspaceContext')
+    typeof import('../../src/runtime/local-workspace')
   >();
   return {
     ...actual,

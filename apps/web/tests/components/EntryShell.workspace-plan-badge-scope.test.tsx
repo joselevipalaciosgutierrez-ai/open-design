@@ -44,7 +44,7 @@ import {
   resetTeamProjectsCache,
   resetWorkspaceBillingCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { resetWorkspaceDirectoryCache } from '../../src/components/EntryNavRail';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import { I18nProvider } from '../../src/i18n';

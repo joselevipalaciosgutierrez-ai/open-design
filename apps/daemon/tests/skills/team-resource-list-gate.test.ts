@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { materializeWorkspaceScopedTeamResource } from '../../src/collab/team-resource-materialization.js';
+import { materializeWorkspaceScopedTeamResource } from '../../src/project-authority.js';
 import { closeDatabase, ensureWorkspaceResource, openDatabase, updateWorkspaceResource } from '../../src/db.js';
 import * as designSystems from '../../src/design-systems/index.js';
 import { createDesignSystemServerServices } from '../../src/design-systems/server-services.js';

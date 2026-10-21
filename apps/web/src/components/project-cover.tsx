@@ -1,5 +1,5 @@
 import { MOTION_PREVIEW_OUTPUT_HEADER } from '@open-design/contracts/runtime/motion-source-player';
-import { appendResourceQuery } from '../collab/workspace-identity';
+import { appendResourceQuery } from '../runtime/local-workspace';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { bindMotionPreviewActivity, unbindMotionPreviewActivity } from '../runtime/motion-preview-activity';
 import type { WorkspaceCollabContext } from '@open-design/contracts';

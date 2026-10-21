@@ -5,7 +5,7 @@ import type { TrackingProjectCollectionPage } from '@open-design/contracts/analy
 import { useAnalytics } from '../../analytics/provider';
 import { trackWorkspaceProjectActionResult } from '../../analytics/events';
 import { workspaceAnalyticsDimensions } from '../../analytics/workspace';
-import { notifyTeamProjectsChanged } from '../../collab/useWorkspaceContext';
+import { notifyTeamProjectsChanged } from '../../runtime/local-workspace';
 import { moveWorkspaceProject, workspaceProjectMoveErrorCode } from '../../state/projects';
 import type { Project } from '../../types';
 

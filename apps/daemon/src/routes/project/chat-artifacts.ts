@@ -16,7 +16,7 @@
 
 import type { Express, Request, Response } from 'express';
 
-import type { AuthorizeProjectRequest } from '../../collab/project-request-authority.js';
+import type { AuthorizeProjectRequest } from '../../project-authority.js';
 import type { RouteDeps } from '../../server-context.js';
 import { createChatArtifactBlobStore } from '../../chat-artifacts/blob-store.js';
 import {

@@ -14,7 +14,7 @@ import {
   type UserDesignSystemInput,
   updateUserDesignSystemRevisionStatus,
 } from '../../src/design-systems/index.js';
-import { teamResourceWorkspaceRoot } from '../../src/collab/team-resource-materialization.js';
+import { teamResourceWorkspaceRoot } from '../../src/project-authority.js';
 
 describe('design system generation jobs', () => {
   let root: string;

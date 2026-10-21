@@ -16,8 +16,8 @@ import { localizeRunFailureReason } from '../i18n/runErrors';
 import type { Dict } from '../i18n/types';
 import { useAnalytics } from '../analytics/provider';
 import { trackAutomationsClick } from '../analytics/events';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { useWorkspaceContext } from '../runtime/local-workspace';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 import { listProjects } from '../state/projects';
 
 // Shared translator signature: every sub-component in this file is module-scoped,

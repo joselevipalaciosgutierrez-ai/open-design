@@ -9,7 +9,7 @@ import type {
 
 import { ExtensionsMarketplace } from '../../src/components/PluginsView';
 import { I18nProvider } from '../../src/i18n';
-import { workspaceProjectHeaders } from '../../src/collab/workspace-identity';
+import { workspaceProjectHeaders } from '../../src/runtime/local-workspace';
 import { workspaceContextFixture } from '../helpers/workspace-context';
 
 vi.mock('../../src/analytics/provider', async (importOriginal) => ({
@@ -21,7 +21,7 @@ let workspaceContext: WorkspaceCollabContext | null;
 let workspaceContextLoading: boolean;
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspaceContext,
     loading: workspaceContextLoading,

@@ -6,7 +6,7 @@ import {
 } from '@open-design/host';
 import { pickLocalFolderPath } from '../state/projects';
 import { resolvedWorkspaceContextForWrite } from '../state/projects';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import { formatPickAndImportFailure } from '../utils/pickAndImportError';
 
 interface UseOpenFolderImportArgs {

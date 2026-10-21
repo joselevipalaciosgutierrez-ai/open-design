@@ -12,7 +12,7 @@ import type {
 } from '../design-systems/index.js';
 import type { DesignTokenContractRebuildPreparation } from '../design-systems/token-contract-rebuild.js';
 import { workspaceTeamDesignSystemBindingResourceId } from '../design-systems/workspace-team-binding.js';
-import { teamResourceWorkspaceRoot } from '../collab/team-resource-materialization.js';
+import { teamResourceWorkspaceRoot } from '../project-authority.js';
 import type {
   DesignSystemGenerationJob,
   DesignSystemRevisionInput,
@@ -27,7 +27,7 @@ import {
   resolveOptionalLocalWorkspaceRequestAuthority,
   type VerifyWorkspaceRequestAuthority,
   type WorkspaceResourceAccessInput,
-} from '../collab/workspace-resource-mutation.js';
+} from '../project-authority.js';
 import type { Project, ProjectFile } from '@open-design/contracts';
 
 type DbHandle = ReturnType<typeof openDatabase>;

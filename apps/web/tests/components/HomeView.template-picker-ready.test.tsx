@@ -32,7 +32,7 @@ vi.mock('../../src/components/home-hero/PlaceholderCarousel', () => ({
 }));
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({ context: null, loading: false, failure: 'unsupported' as const }),
 }));
 

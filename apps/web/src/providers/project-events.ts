@@ -15,7 +15,7 @@ import {
 import {
   workspaceIdentityCacheKey,
   workspaceResourceUrl,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 export interface ProjectFileChangeEvent {
   type: 'file-changed';
   path: string;

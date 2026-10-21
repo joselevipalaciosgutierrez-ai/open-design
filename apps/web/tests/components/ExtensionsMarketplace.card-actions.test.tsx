@@ -56,7 +56,7 @@ let workspaceContext: unknown = null;
 
 // Spread the real module — see the note in ExtensionsMarketplace.team-scope.test.tsx.
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({ context: workspaceContext, loading: false, refresh: vi.fn() }),
   useWorkspaceBilling: () => null,
 }));

@@ -30,7 +30,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectView } from '../../src/components/ProjectView';
-import type { ProjectWorkspaceScopeState } from '../../src/collab/useProjectWorkspaceScope';
+import type { ProjectWorkspaceScopeState } from '../../src/runtime/local-workspace';
 import { steerChatRun, streamViaDaemon } from '../../src/providers/daemon';
 import {
   createConversation,
@@ -89,7 +89,7 @@ vi.mock('../../src/providers/daemon', () => ({
 }));
 
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: () => workspaceScopeMocks.projectScope,
 }));
 

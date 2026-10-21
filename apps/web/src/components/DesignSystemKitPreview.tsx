@@ -12,14 +12,14 @@ import {
   designSystemLogoHost,
   isUserSystem,
 } from './design-system-metadata';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import {
   beginWorkspaceResourceScopedRead,
   resolveWorkspaceResourceReadIdentity,
   workspaceResourceReadIdentityFromContext,
   workspaceResourceReadIdentityKey,
   type WorkspaceResourceReadIdentity,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 
 interface DesignSystemKitPreviewProps {
   system: DesignSystemSummary;

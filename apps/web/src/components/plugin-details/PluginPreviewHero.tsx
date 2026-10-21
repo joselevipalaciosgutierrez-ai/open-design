@@ -11,7 +11,7 @@
 
 import { useMemo, useState } from 'react';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
-import { workspaceResourceUrl } from '../../collab/workspace-identity';
+import { workspaceResourceUrl } from '../../runtime/local-workspace';
 import { Icon } from '../Icon';
 
 export interface PluginExampleEntry {

@@ -2035,7 +2035,7 @@ describe('EntryShell onboarding OpenDesign AMR runtime', () => {
     // in its signed-out shape (still showing "Sign in to use OpenDesign
     // Cloud") right after a successful onboarding sign-in.
     const { WORKSPACE_CONTEXT_REFRESH_EVENT, WORKSPACE_BILLING_REFRESH_EVENT, TEAM_PROJECTS_CHANGED_EVENT } =
-      await import('../../src/collab/useWorkspaceContext');
+      await import('../../src/runtime/local-workspace');
     const contextRefresh = vi.fn();
     const billingRefresh = vi.fn();
     const teamProjectsChanged = vi.fn();

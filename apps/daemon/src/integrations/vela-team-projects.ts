@@ -1,5 +1,5 @@
 import type { ProjectSyncState } from '@open-design/contracts';
-import type { ResourceHubPrincipal } from '../collab/resource-principal.js';
+import type { ResourceHubPrincipal } from '../project-authority.js';
 
 export type VelaTeamProjectSyncState =
   | 'pending_upload'

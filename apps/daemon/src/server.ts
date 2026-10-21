@@ -3,7 +3,7 @@
 import { usesProductionMarker, composeResumedRequest } from './strategies/od-next/request-resume.js';
 import { todoSnapshotHasUnfinishedWork } from '@open-design/contracts';
 import { createUserDesignSystem } from './design-systems/index.js';
-import { resolveWorkspaceScope } from './collab/workspace-scope.js';
+import { resolveWorkspaceScope } from './project-authority.js';
 import { startEvidenceDelivery } from './services/evidence-delivery.js';
 import type {
   DesktopExportArtifactInput,
@@ -279,8 +279,8 @@ import {
   materializePulledTeamMirror,
   teamProjectMaterializationMatches,
   teamProjectMaterializationSupersedes,
-} from './collab/team-mirror-materializer.js';
-import { recoverAuthorizedTeamProjectPromotions } from './collab/team-mirror-promotion.js';
+} from './project-authority.js';
+import { recoverAuthorizedTeamProjectPromotions } from './project-authority.js';
 import {
   amrAccountFailureDetails,
   classifyAmrAccountFailureSignal,
@@ -397,7 +397,7 @@ import {
   bindCreatedProjectToWorkspace,
   createCreatedProjectWorkspaceResolver,
   sendCreatedProjectWorkspaceError,
-} from './collab/created-project-workspace.js';
+} from './project-authority.js';
 import {
   applyDiffReviewDecisionToCwd,
   applyPlugin,
@@ -948,38 +948,38 @@ import { registerMemoryRoutes } from './routes/memory.js';
 import {
   createCollabPresenceCloudClient,
   registerCollabPresenceRoutes,
-} from './routes/collab-presence.js';
+} from './project-authority.js';
 import {
   registerCollabSyncRoutes,
   type TeamMirrorPullScope,
-} from './routes/collab-sync.js';
+} from './project-authority.js';
 import {
   emitWorkspaceEventToAllScopes,
   emitWorkspaceEventToScope,
   registerCollabContextRoutes,
-} from './routes/collab-context.js';
+} from './project-authority.js';
 import { registerTeamResourceRoutes } from './routes/team-resources.js';
 import { registerTeamResourceShareRoutes } from './routes/team-resource-share.js';
-import { createCollabRuntime } from './collab/runtime.js';
-import { createSqlitePublicFilePublicationStore } from './collab/public-file-publication-store.js';
+import { createCollabRuntime } from './project-authority.js';
+import { createSqlitePublicFilePublicationStore } from './project-authority.js';
 import {
   createActiveWorkspaceSelectionStore,
-} from './collab/active-workspace-selection.js';
+} from './project-authority.js';
 import {
   headerValue,
   resolveOptionalLocalWorkspaceRequestAuthority,
   workspaceResourceContext,
   workspaceResourceContextFromRequest,
-} from './collab/workspace-resource-mutation.js';
+} from './project-authority.js';
 import {
   createAuthorizeProjectRequest,
-} from './collab/project-request-authority.js';
-import { withLastKnownWorkspaceContext } from './collab/workspace-context.js';
+} from './project-authority.js';
+import { withLastKnownWorkspaceContext } from './project-authority.js';
 import {
   createWorkspaceTypeRegistry,
   impossibleTeamShareRows,
   projectCollabScope,
-} from './collab/team-share-scope.js';
+} from './project-authority.js';
 
 import {
   AmrWorkspaceScopeRequiredError,
@@ -994,23 +994,23 @@ import {
   resolveVelaWorkspaceHubEventsEndpoint,
   velaWorkspaceDirectoryIdentity,
   workspaceContextFromDirectoryItem,
-} from './collab/vela-workspace-context.js';
-import { verifyWorkspaceRequestContext } from './collab/request-workspace-context.js';
+} from './project-authority.js';
+import { verifyWorkspaceRequestContext } from './project-authority.js';
 import {
   createWorkspaceBillingRuntimeCoordinator,
   shouldEmitWorkspaceBillingRuntimeNudge,
   WorkspaceBillingAccessRevokedError,
-} from './collab/workspace-billing-runtime.js';
+} from './project-authority.js';
 import {
   AUTHORITATIVE_PROJECT_PRESENCE_CAPABILITY,
   CODING_PLAN_USAGE_EVENTS_CAPABILITY,
   startHubEventsSubscriber,
   WORKSPACE_DIRECTORY_EVENTS_CAPABILITY,
-} from './collab/hub-events-subscriber.js';
+} from './project-authority.js';
 import {
   createWorkspaceAuthorityHealthCoordinator,
   resolveWorkspaceAuthorityCacheMode,
-} from './collab/workspace-authority-health.js';
+} from './project-authority.js';
 import {
   recordWorkspaceAuthorityDecision,
   recordWorkspaceAuthorityInvalidation,
@@ -1021,46 +1021,46 @@ import {
 import {
   createWorkspaceHubSubscriptionManager,
   type WorkspaceHubSubscriptionManager,
-} from './collab/workspace-hub-subscriptions.js';
+} from './project-authority.js';
 import {
   activeTeamWorkspaceIdentity,
   createProactiveContentPull,
   type ProactiveContentPullTarget,
-} from './collab/proactive-content-pull.js';
+} from './project-authority.js';
 import {
   backgroundPullMaxEntriesFromEnv,
   backgroundPullMaxCumulativeEntriesFromEnv,
   createBackgroundPullSizeGuard,
-} from './collab/background-pull-size-guard.js';
+} from './project-authority.js';
 import {
   inspectAuthorizedTeamProjectPull,
-} from './collab/authorized-team-project-pull.js';
-import { createProjectContentTransferStateStore } from './collab/project-content-transfer-state.js';
+} from './project-authority.js';
+import { createProjectContentTransferStateStore } from './project-authority.js';
 import {
   emitSharedProjectPullTiming,
   sharedProjectPullProfileEnabled,
-} from './collab/pull-profile.js';
-import { createSyncDigestReader } from './collab/sync-digest.js';
+} from './project-authority.js';
+import { createSyncDigestReader } from './project-authority.js';
 import {
   createCollabSyncSnapshotStore,
   parseMemberDirectorySnapshot,
   parseTeamProjectSnapshot,
-} from './collab/sync-snapshot-store.js';
-import { createPersistentSyncCache } from './collab/persistent-sync-cache.js';
-import { createSwrCache } from './collab/swr-cache.js';
+} from './project-authority.js';
+import { createPersistentSyncCache } from './project-authority.js';
+import { createSwrCache } from './project-authority.js';
 import {
   COLLAB_VELA_FANOUT_CONCURRENCY,
   ConcurrencyGate,
-} from './collab/concurrency-gate.js';
+} from './project-authority.js';
 import {
   createTeamResourceListCache,
   invalidateTeamResourceListingCaches,
-} from './collab/team-resource-list-cache.js';
-import { createVelaResourcePullBatcher } from './collab/vela-cli-resource-pull-batcher.js';
+} from './project-authority.js';
+import { createVelaResourcePullBatcher } from './project-authority.js';
 import {
   createRememberedTeamResourceScopes,
   type RememberedTeamResourceScopeLease,
-} from './collab/remembered-team-resource-scopes.js';
+} from './project-authority.js';
 
 import {
   fetchBillingCheckoutUrl,
@@ -1069,20 +1069,20 @@ import {
   fetchVelaWorkspaceBillingProjection,
   isVelaWorkspaceAuthorizationError,
 } from './integrations/vela-billing.js';
-import { createAccountBillingSummaryCache } from './collab/account-billing-summary-cache.js';
-import { createEventRefreshCoordinator } from './collab/event-refresh-coordinator.js';
-import { createWorkspaceExactAuthorityCache } from './collab/workspace-exact-authority-cache.js';
-import { createCollabPublishWatcher } from './collab/collab-publish-watcher.js';
-import { createOwnedContentSync, type OwnedContentSync } from './collab/owned-content-sync.js';
-import { createSqliteOwnedContentStore, type OwnedContentScope } from './collab/owned-content-store.js';
-import { applyOwnedProjectContent, ownedContentFingerprint } from './collab/owned-content-files.js';
+import { createAccountBillingSummaryCache } from './project-authority.js';
+import { createEventRefreshCoordinator } from './project-authority.js';
+import { createWorkspaceExactAuthorityCache } from './project-authority.js';
+import { createCollabPublishWatcher } from './project-authority.js';
+import { createOwnedContentSync, type OwnedContentSync } from './project-authority.js';
+import { createSqliteOwnedContentStore, type OwnedContentScope } from './project-authority.js';
+import { applyOwnedProjectContent, ownedContentFingerprint } from './project-authority.js';
 import {
   isUnmaterializedSharedPlaceholder,
   SHARED_PROJECT_PLACEHOLDER_METADATA_KEY,
-} from './collab/shared-project-placeholder.js';
-import { recoverPersistedTeamShareOwnership } from './collab/persisted-team-share.js';
-import { resolveProjectShareDir } from './collab/project-share-dir.js';
-import { createTeamProjectsLister } from './collab/team-projects.js';
+} from './project-authority.js';
+import { recoverPersistedTeamShareOwnership } from './project-authority.js';
+import { resolveProjectShareDir } from './project-authority.js';
+import { createTeamProjectsLister } from './project-authority.js';
 import {
   createTeamResourceShareService,
   teamResourceRequestScopeFromContext,
@@ -1092,27 +1092,27 @@ import {
   type TeamResourceShareRecord,
   type TeamResourceSharedReadOptions,
   type TeamResourceShareService,
-} from './collab/team-resource-share.js';
+} from './project-authority.js';
 import {
   materializeWorkspaceScopedTeamResource,
   readTeamResourceMaterialization,
   teamResourceMaterializationDir,
   teamResourceSourceKey,
   teamResourceWorkspaceRoot,
-} from './collab/team-resource-materialization.js';
-import { createTeamResourceVersionStore } from './collab/team-resource-version-store.js';
+} from './project-authority.js';
+import { createTeamResourceVersionStore } from './project-authority.js';
 import {
   contextToResourceHubPrincipal,
   type ResourceHubPrincipal,
-} from './collab/resource-principal.js';
-import { createCollabCloudClientFromEnv } from './integrations/collab-cloud.js';
-import { createCollabCloudService } from './collab/collab-cloud-service.js';
+} from './project-authority.js';
+import { createCollabCloudClientFromEnv } from './project-authority.js';
+import { createCollabCloudService } from './project-authority.js';
 import {
   commentRelayLocalBindingMatches,
   createCommentRelayOutboxStore,
-} from './collab/comment-relay-outbox.js';
-import { createWorkspaceInvalidationPoller } from './collab/workspace-invalidation-poller.js';
-import { createWorkspaceExactContextCache } from './collab/workspace-exact-context-cache.js';
+} from './project-authority.js';
+import { createWorkspaceInvalidationPoller } from './project-authority.js';
+import { createWorkspaceExactContextCache } from './project-authority.js';
 import {
   handleHubProjectMetadataChanged,
   handleHubTeamProjectsChanged,
@@ -1122,21 +1122,21 @@ import {
   reconcilerRemoteTeamProjects,
   type LocalTeamProjectBinding,
   type WorkspaceProjectsReconcilerDeps,
-} from './collab/workspace-projects-reconciler.js';
+} from './project-authority.js';
 import {
   createWorkspaceTeamResourceEventCoordinator,
   reconcileWorkspaceResourcesWithRemote,
   type LocalTeamResourceBinding,
   type MaterializedTeamResourceRef,
   type WorkspaceTeamResourceRefreshReason,
-} from './collab/workspace-resources-reconciler.js';
-import { createVelaCliCollabClientFromEnv } from './collab/vela-cli-collab-client.js';
+} from './project-authority.js';
+import { createVelaCliCollabClientFromEnv } from './project-authority.js';
 import {
   createScopedVelaTeamProjectCatalogClientCache,
   createVelaCliTeamProjectCatalogClientFromEnv,
   createVelaCliTeamProjectCatalogFromEnv,
-} from './collab/vela-cli-team-projects.js';
-import { createTeamProjectsChangeEmitter } from './collab/team-projects-change-emitter.js';
+} from './project-authority.js';
+import { createTeamProjectsChangeEmitter } from './project-authority.js';
 import { registerTelemetryRoutes } from './routes/telemetry.js';
 import {
   assembleExample,
@@ -4117,7 +4117,7 @@ export async function startServer({
    */
   async function resolveDesignSystemWorkspaceContext(
     req: any,
-  ): Promise<import('./collab/workspace-resource-mutation.js').WorkspaceResourceContext | null> {
+  ): Promise<import('./project-authority.js').WorkspaceResourceContext | null> {
     const claimed = workspaceResourceContextFromRequest(req);
     // A completely headerless local/signed-out request is the explicit legacy
     // lane: built-ins plus unclaimed local resources, and new resources remain
@@ -4171,7 +4171,7 @@ export async function startServer({
   const createWorkspaceOwnedDesignSystemForContext = (
     root: string,
     input: UserDesignSystemInput,
-    context: import('./collab/workspace-resource-mutation.js').WorkspaceResourceContext | null,
+    context: import('./project-authority.js').WorkspaceResourceContext | null,
   ) => persistWorkspaceOwnedDesignSystem(root, input, context, {
     listReservedResourceIds: reservedDesignSystemResourceIds,
     ensureWorkspaceResource: (resourceType, workspaceId, resourceId, envelope) => {
@@ -6963,7 +6963,7 @@ export async function startServer({
     scope: TeamResourceRequestScope,
   ): Promise<boolean> => {
     const { runVelaResourceCommand } = await import(
-      './collab/vela-cli-resource-adapter.js'
+      './project-authority.js'
     );
     const stdout = await runVelaResourceCommand(
       ['shared', '--json'],
@@ -7431,7 +7431,7 @@ export async function startServer({
       if (!command) {
         command = createSwrCache(
           async () => {
-            const { runVelaResourceCommand } = await import('./collab/vela-cli-resource-adapter.js');
+            const { runVelaResourceCommand } = await import('./project-authority.js');
             return runVelaResourceCommand(['shared', '--json'], key);
           },
           () => key,
@@ -7481,12 +7481,12 @@ export async function startServer({
     if (args.length === 2 && args[0] === 'shared' && args[1] === '--json') {
       if (!workspaceId?.trim()) throw new Error('explicit workspace scope is required');
       if (readOptions?.authoritative) {
-        const { runVelaResourceCommand } = await import('./collab/vela-cli-resource-adapter.js');
+        const { runVelaResourceCommand } = await import('./project-authority.js');
         return runVelaResourceCommand(args, workspaceId);
       }
       return sharedTeamResourcesCommand(workspaceId);
     }
-    const { runVelaResourceCommand } = await import('./collab/vela-cli-resource-adapter.js');
+    const { runVelaResourceCommand } = await import('./project-authority.js');
     return runVelaResourceCommand(args, workspaceId);
   };
   const designSystemsTeamResourceShare = createTeamResourceShareService({

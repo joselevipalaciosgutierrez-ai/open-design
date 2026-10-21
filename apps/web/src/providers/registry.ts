@@ -105,8 +105,8 @@ import {
   workspaceResourceUrl,
   workspaceAccountScopedCacheKey,
   currentWorkspaceAccountGeneration,
-} from '../collab/workspace-identity';
-import { PublicFilePublishError } from '../collab/public-file-publish';
+} from '../runtime/local-workspace';
+import { PublicFilePublishError } from '../runtime/local-workspace';
 import { clientRequestIdHeaders, withDaemonFailure } from '../analytics/failure-detail';
 
 /**

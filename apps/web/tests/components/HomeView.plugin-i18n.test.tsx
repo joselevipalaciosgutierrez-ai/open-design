@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>();
+  const actual = await importOriginal<typeof import('../../src/runtime/local-workspace')>();
   return {
     ...actual,
     useWorkspaceContext: () => ({

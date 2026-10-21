@@ -1,6 +1,6 @@
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 import { Icon } from './Icon';
-import { canShowWorkspaceSettings } from '../collab/settings-access';
+import { canShowWorkspaceSettings } from '../runtime/local-workspace';
 import { useT } from '../i18n';
 import styles from './SettingsWorkspaceSection.module.css';
 

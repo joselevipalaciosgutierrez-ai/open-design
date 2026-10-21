@@ -20,7 +20,7 @@ import type {
   FinalizeProviderProtocol,
   WorkspaceCollabContext,
 } from '@open-design/contracts';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 
 // 130 000 ms = daemon timeout (120 s) + 10 s buffer so the daemon's
 // own retry/timeout layer always wins under normal failure modes.

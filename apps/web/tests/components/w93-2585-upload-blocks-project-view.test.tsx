@@ -49,7 +49,7 @@ import {
 import {
   resetTeamProjectsCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import { resetProjectDisplaySnapshots } from '../../src/state/project-display-cache';
 

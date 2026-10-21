@@ -15,34 +15,34 @@ afterEach(() => __resetWorkspaceAuthorityMetricsForTests());
 describe('workspace authority metrics', () => {
   it('exports bounded decision, suppression, invalidation, health, age, and revocation series', async () => {
     recordWorkspaceAuthorityDecision({
-      mode: 'legacy',
+      mode: 'bounded',
       source: 'cache',
       reason: 'lease_hit',
       outcome: 'allow',
       ageMs: 1_250,
     });
     recordWorkspaceAuthoritySuppressedRequest({
-      mode: 'legacy',
+      mode: 'bounded',
       source: 'directory',
       reason: 'lease_hit',
     });
     recordWorkspaceAuthorityInvalidation({
-      mode: 'adaptive',
+      mode: 'authoritative',
       source: 'current',
       reason: 'auth_reject',
     });
     recordWorkspaceAuthorityRealtimeTransition({
-      mode: 'adaptive',
+      mode: 'authoritative',
       healthy: false,
       memberEvents: true,
       listenerStatus: true,
       sourceGap: true,
     });
-    recordWorkspaceAuthorityRevocationClear('adaptive', 2.5);
+    recordWorkspaceAuthorityRevocationClear('authoritative', 2.5);
 
     const text = await register.metrics();
     expect(text).toContain(
-      'open_design_workspace_authority_decisions_total{mode="legacy",source="cache",reason="lease_hit",outcome="allow"} 1',
+      'open_design_workspace_authority_decisions_total{mode="bounded",source="cache",reason="lease_hit",outcome="allow"} 1',
     );
     expect(text).toContain(
       'open_design_workspace_authority_suppressed_requests_total{mode="legacy",source="directory",reason="lease_hit"} 1',

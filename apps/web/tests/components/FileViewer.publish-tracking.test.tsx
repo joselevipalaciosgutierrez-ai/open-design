@@ -21,7 +21,7 @@ import { FileViewer } from '../../src/components/FileViewer';
 import {
   CollabProvider,
   type CollabContextValue,
-} from '../../src/collab/collab-context';
+} from '../../src/runtime/local-workspace';
 import type { ProjectFile } from '../../src/types';
 
 const analytics = vi.hoisted(() => ({

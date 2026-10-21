@@ -99,11 +99,11 @@ import { emptyManualEditStyles } from '../../src/edit-mode/types';
 import { __resetPreviewIsolationCache } from '../../src/runtime/powered-preview';
 import { installPreviewIframeMessageObserver } from '../../src/observability/iframe-error';
 import { readExpandedIndexCss } from '../helpers/read-expanded-css';
-import { resetWorkspaceContextCache } from '../../src/collab/useWorkspaceContext';
+import { resetWorkspaceContextCache } from '../../src/runtime/local-workspace';
 import {
   CollabProvider,
   type CollabContextValue,
-} from '../../src/collab/collab-context';
+} from '../../src/runtime/local-workspace';
 import {
   buildWorkspacePermissions,
   buildWorkspaceSeatSummary,

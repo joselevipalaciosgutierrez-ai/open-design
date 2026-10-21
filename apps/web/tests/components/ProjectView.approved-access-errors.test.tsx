@@ -40,14 +40,14 @@ vi.mock('../../src/analytics/provider', () => ({ useAnalytics: () => ({ track: v
 vi.mock('../../src/router', () => ({ navigate: vi.fn() }));
 vi.mock('../../src/providers/anthropic', () => ({ streamMessage: vi.fn() }));
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({ context: workspace, loading: false }),
   lastResolvedTeamProjects: () => [],
   lastResolvedWorkspaceContext: () => workspace,
   useWorkspaceBilling: () => null,
 }));
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: () => ({
     loading: false,
     scope: {
@@ -57,7 +57,7 @@ vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => (
   }),
 }));
 vi.mock('../../src/collab/useProjectCollab', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectCollab')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   // These are the existing hook's three settled/pending projections, not new
   // production permissions. ProjectView must keep denied and pending distinct.
   useProjectCollab: () => ({

@@ -39,7 +39,7 @@ import path from 'node:path';
 import express from 'express';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
 import {
   closeDatabase,
   ensureWorkspaceResource,

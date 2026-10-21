@@ -6,11 +6,12 @@ import {
   TeamResourceCopyForbiddenError,
   type TeamResourceState,
 } from '@open-design/contracts';
-import type {
-  TeamResourceKind,
-  TeamResourceKey,
-  TeamResourceStateProvider,
-} from '../collab/team-resource-state.js';
+export type TeamResourceKind = 'design-system' | 'plugin' | 'skill';
+export type TeamResourceKey = { kind: TeamResourceKind; resourceId: string };
+export interface TeamResourceStateProvider {
+  resolve: (key: TeamResourceKey) => Promise<any>;
+  set?: (key: TeamResourceKey, state: any) => void;
+}
 
 export interface RegisterTeamResourceRoutesDeps {
   teamResources: TeamResourceStateProvider;

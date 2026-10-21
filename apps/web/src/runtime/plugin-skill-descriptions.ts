@@ -242,4 +242,4 @@ export async function loadPluginSkillDescriptions(
   );
 }
 import type { WorkspaceCollabContext } from '@open-design/contracts';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceProjectHeaders } from './local-workspace';

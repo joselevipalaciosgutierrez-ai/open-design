@@ -11,8 +11,8 @@ import {
   appendResourceQuery,
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
-} from '../collab/workspace-identity';
-import { useProjectCollabContext } from '../collab/collab-context';
+} from '../runtime/local-workspace';
+import { useProjectCollabContext } from '../runtime/local-workspace';
 import { buildSrcdoc } from '../runtime/srcdoc';
 import type { LiveArtifactWorkspaceEntry, ProjectFile, ProjectFileKind, ProjectFolder } from '../types';
 import {
@@ -23,7 +23,7 @@ import {
 import { isVisualStabilityMode } from '../utils/visualStability';
 import type { PluginFolderAgentAction } from './design-files/pluginFolderActions';
 import { getPluginFolderCandidates } from './design-files/pluginFolders';
-import { FileSyncBadge } from '../collab/FileSyncBadge';
+import { FileSyncBadge } from '../runtime/local-workspace';
 import { Icon } from './Icon';
 import { LiveArtifactBadges } from './LiveArtifactBadges';
 import { RemixIcon } from './RemixIcon';

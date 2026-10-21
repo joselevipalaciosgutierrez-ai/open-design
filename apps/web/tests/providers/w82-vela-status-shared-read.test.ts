@@ -47,7 +47,7 @@ import { isAmrLoggedIn } from '../../src/message-center-client';
 import {
   advanceWorkspaceAccountGeneration,
   resetWorkspaceAccountGeneration,
-} from '../../src/collab/workspace-identity';
+} from '../../src/runtime/local-workspace';
 
 const fetchCalls: string[] = [];
 let release: Array<() => void> = [];

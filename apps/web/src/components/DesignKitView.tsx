@@ -38,7 +38,7 @@ import {
 import {
   workspaceIdentityCacheKey,
   workspaceResourceUrl,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import { buildSrcdoc } from '../runtime/srcdoc';
 import {
   fontStack,

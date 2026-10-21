@@ -13,7 +13,7 @@ import {
 import {
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
-} from '../../../collab/workspace-identity';
+} from '../../../runtime/local-workspace';
 
 export type ReplaySpeed = 'paused' | 'instant' | 'live' | { intervalMs: number };
 

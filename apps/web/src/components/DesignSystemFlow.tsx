@@ -131,8 +131,8 @@ import type {
   TrackingDesignSystemsEntryFrom,
 } from '@open-design/contracts/analytics';
 import { useI18n } from '../i18n';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
-import { workspaceIdentityCacheKey } from '../collab/workspace-identity';
+import { useWorkspaceContext } from '../runtime/local-workspace';
+import { workspaceIdentityCacheKey } from '../runtime/local-workspace';
 
 // Source counts the embedded DS creation flow can report back to its
 // wrapper at Generate-click time. OnboardingView uses this to emit the

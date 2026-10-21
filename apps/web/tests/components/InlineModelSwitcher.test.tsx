@@ -8,7 +8,7 @@ const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
 const AMR_LOGIN_TIMEOUT_MS = 60000;
 import { fetchProviderModels } from '../../src/providers/provider-models';
 import { providerModelsCacheKey } from '../../src/components/providerModelsCache';
-import { resetWorkspaceContextCache } from '../../src/collab/useWorkspaceContext';
+import { resetWorkspaceContextCache } from '../../src/runtime/local-workspace';
 import type { AgentInfo, AppConfig, ProviderModelOption } from '../../src/types';
 import { workspaceDirectoryFixture } from '../helpers/workspace-context';
 

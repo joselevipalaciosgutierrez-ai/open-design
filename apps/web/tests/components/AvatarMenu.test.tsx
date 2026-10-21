@@ -9,10 +9,10 @@ import {
   type WorkspaceCollabContext,
 } from '@open-design/contracts';
 
-import { workspaceBillingSummaryForContext } from '../../src/collab/useWorkspaceContext';
+import { workspaceBillingSummaryForContext } from '../../src/runtime/local-workspace';
 import { AvatarMenu } from '../../src/components/AvatarMenu';
 import { providerModelsCacheKey } from '../../src/components/providerModelsCache';
-import type { ProjectWorkspaceScopeState } from '../../src/collab/useProjectWorkspaceScope';
+import type { ProjectWorkspaceScopeState } from '../../src/runtime/local-workspace';
 import type { AgentInfo, AppConfig, ExecMode } from '../../src/types';
 
 const { openExternalUrlMock } = vi.hoisted(() => ({

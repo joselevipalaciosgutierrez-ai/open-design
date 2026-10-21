@@ -17,14 +17,14 @@ import type { DesignSystemDetail, DesignSystemSummary } from '../types';
 import { DesignSpecView } from './DesignSpecView';
 import { DesignSystemKitPreview } from './DesignSystemKitPreview';
 import { PreviewModal } from './PreviewModal';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import {
   beginWorkspaceResourceScopedRead,
   resolveWorkspaceResourceReadIdentity,
   workspaceResourceReadIdentityFromContext,
   workspaceResourceReadIdentityKey,
   type WorkspaceResourceReadIdentity,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 
 interface Props {
   system: DesignSystemSummary;

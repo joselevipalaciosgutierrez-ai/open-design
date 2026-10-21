@@ -7,7 +7,7 @@ import type { DaemonStreamOptions } from '../../src/providers/daemon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectView } from '../../src/components/ProjectView';
-import type { ProjectWorkspaceScopeState } from '../../src/collab/useProjectWorkspaceScope';
+import type { ProjectWorkspaceScopeState } from '../../src/runtime/local-workspace';
 import type { ChatRunStatusResponse, WorkspaceCollabContext } from '@open-design/contracts';
 import type {
   AgentInfo,
@@ -96,7 +96,7 @@ vi.mock('../../src/router', () => ({ navigate: vi.fn() }));
 vi.mock('../../src/providers/anthropic', () => ({ streamMessage: vi.fn() }));
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspaceScopeMocks.ambientContext,
     loading: false,
@@ -109,12 +109,12 @@ vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
 }));
 
 vi.mock('../../src/collab/useProjectWorkspaceScope', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectWorkspaceScope')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectWorkspaceScope: () => workspaceScopeMocks.projectScope,
 }));
 
 vi.mock('../../src/collab/useProjectCollab', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useProjectCollab')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useProjectCollab: () => ({
     enabled: false,
     member: null,

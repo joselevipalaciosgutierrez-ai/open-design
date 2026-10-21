@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
-import { teamResourceWorkspaceRoot } from '../../src/collab/team-resource-materialization.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
+import { teamResourceWorkspaceRoot } from '../../src/project-authority.js';
 import {
   closeDatabase,
   ensureWorkspaceResource,

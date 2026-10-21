@@ -40,8 +40,8 @@ import {
   renderPluginBriefTemplate,
   resolvedWorkspaceContextForWrite,
 } from '../state/projects';
-import { useProjectCollabContext } from '../collab/collab-context';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useProjectCollabContext } from '../runtime/local-workspace';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import { useI18n } from '../i18n';
 import { ContextChipStrip } from './ContextChipStrip';
 import { InlinePluginsRail } from './InlinePluginsRail';

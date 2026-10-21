@@ -180,7 +180,7 @@ async function checkAmrFundingFeedback(..._args: any[]): Promise<any> { return n
 function amrBalanceBlockedDialog(..._args: any[]): any { return 'upgrade'; }
 function amrBalanceDialogUpgradeIntent(..._args: any[]): any { return 'pricing'; }
 function amrBalanceUpgradeIntent(..._args: any[]): any { return 'pricing'; }
-function resolveAmrBalanceBranch(..._args: any[]): any { return null; }
+function resolveAmrBalanceBranch(..._args: any[]): any { return { tier: 'below_max', audience: 'personal' }; }
 function AmrBalanceDialog(_props: any): null { return null; }
 function AmrOwnerTopUpDialog(_props: any): null { return null; }
 import { markHistoryReplayLanded } from './chat/useCharReveal';
@@ -294,20 +294,20 @@ import { Icon } from './Icon';
 import { useWorkspaceTabsDockRef } from './workspaceTabsDock';
 import { localizePluginTitle } from './plugins-home/localization';
 import { DesignSystemPicker } from './DesignSystemPicker';
-import { PresenceBar } from '../collab/PresenceBar';
-import { useProjectCollab } from '../collab/useProjectCollab';
+import { PresenceBar } from '../runtime/local-workspace';
+import { useProjectCollab } from '../runtime/local-workspace';
 import { OwnedContentUpdate } from './OwnedContentUpdate';
 import {
   currentUserDirectoryEntry,
   useTeamMembers,
-} from '../collab/useTeamMembers';
-import { currentWorkspaceAccountGeneration, workspaceIdentityCacheKey } from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
+import { currentWorkspaceAccountGeneration, workspaceIdentityCacheKey } from '../runtime/local-workspace';
 import {
   useWorkspaceBillingResponse,
   useWorkspaceContext,
   workspaceBillingSummaryForContext,
   workspaceIdentityCanBillAmr,
-} from '../collab/useWorkspaceContext';
+} from '../runtime/local-workspace';
 import {
   projectWorkspaceContext,
   projectWorkspaceScopeAuthorizesAmr,
@@ -316,13 +316,13 @@ import {
   runWorkspaceIdentity,
   runWorkspacePersonalAdoptionWitness,
   useProjectWorkspaceScope,
-} from '../collab/useProjectWorkspaceScope';
+} from '../runtime/local-workspace';
 import {
   CollabProvider,
   type CollabContextValue,
   type ProjectResourceAuthority,
-} from '../collab/collab-context';
-import { persistCommentAnchors } from '../collab/comment-anchor-client';
+} from '../runtime/local-workspace';
+import { persistCommentAnchors } from '../runtime/local-workspace';
 import type { AnchorWriteBack } from '../comments';
 import { PluginDetailsModal } from './PluginDetailsModal';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';

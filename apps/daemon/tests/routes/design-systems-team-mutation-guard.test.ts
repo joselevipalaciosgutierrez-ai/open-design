@@ -25,7 +25,7 @@ import {
   getWorkspaceResourceByResourceId,
   openDatabase,
 } from '../../src/db.js';
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
 
 let server: http.Server | null = null;
 let tempDir: string | null = null;

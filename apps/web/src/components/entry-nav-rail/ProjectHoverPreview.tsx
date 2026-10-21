@@ -24,7 +24,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 
-import { workspaceIdentityCacheKey } from '../../collab/workspace-identity';
+import { workspaceIdentityCacheKey } from '../../runtime/local-workspace';
 import {
   getProjectCoverSnapshot,
   projectCoverSnapshotKey,

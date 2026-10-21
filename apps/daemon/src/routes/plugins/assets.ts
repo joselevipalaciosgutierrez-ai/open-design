@@ -5,7 +5,7 @@ import type { WorkspaceCollabContext } from '@open-design/contracts';
 import {
   resolveOptionalLocalWorkspaceRequestAuthority,
   type VerifyWorkspaceRequestAuthority,
-} from '../../collab/workspace-resource-mutation.js';
+} from '../../project-authority.js';
 
 export interface RegisterPluginAssetRoutesDeps {
   db: PluginDbLike;

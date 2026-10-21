@@ -42,7 +42,7 @@ import {
   notifyWorkspaceContextRefresh,
   resetTeamProjectsCache,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import { workspaceDirectoryFixture } from '../helpers/workspace-context';
 

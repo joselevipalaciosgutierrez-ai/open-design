@@ -26,10 +26,12 @@ import {
   createSnapshot,
   linkSnapshotToProject,
 } from '../src/plugins/snapshots.js';
-import { createAuthorizeProjectRequest } from '../src/collab/project-request-authority.js';
-import { resolveOptionalLocalWorkspaceRequestAuthority } from '../src/collab/workspace-resource-mutation.js';
+import {
+  createAuthorizeProjectRequest,
+  resolveOptionalLocalWorkspaceRequestAuthority,
+  workspaceContextFromDirectoryItem,
+} from '../src/project-authority.js';
 import { createEnforceWorkspaceProjectMutation } from '../src/routes/project/index.js';
-import { workspaceContextFromDirectoryItem } from '../src/collab/vela-workspace-context.js';
 import { registerRunRoutes } from '../src/routes/runs.js';
 import { connectorService } from '../src/connectors/service.js';
 import { upsertInstalledPlugin } from '../src/plugins/registry.js';

@@ -16,14 +16,14 @@ import {
   listPlugins,
   resolvedWorkspaceContextForWrite,
 } from '../state/projects';
-import { useProjectCollabContext } from '../collab/collab-context';
+import { useProjectCollabContext } from '../runtime/local-workspace';
 import {
   currentWorkspaceAccountGeneration,
   useWorkspaceContext,
   workspaceIdentityCacheKey,
-} from '../collab/useWorkspaceContext';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
-import { useWorkspaceSnapshotActivation } from '../collab/workspace-snapshot-activation';
+} from '../runtime/local-workspace';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
+import { useWorkspaceSnapshotActivation } from '../runtime/local-workspace';
 import { useI18n } from '../i18n';
 import { localizePluginDescription, localizePluginTitle } from './plugins-home/localization';
 

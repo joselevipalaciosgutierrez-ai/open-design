@@ -103,7 +103,7 @@ let workspaceAccountGeneration = 0;
 // (beginWorkspaceScopedRead / workspaceIdentityCacheKey), and a mock that
 // replaces the whole module leaves them undefined at call time.
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspaceContext,
     loading: workspaceContextLoading,

@@ -15,20 +15,20 @@ import {
 import {
   enforceTeamResourceCopyAllowed,
   type TeamResourceStateProvider,
-} from '../../collab/team-resource-state.js';
+} from '../../project-authority.js';
 import {
   enforceVerifiedWorkspaceResourceMutation,
   resolveOptionalLocalWorkspaceRequestAuthority,
   type VerifyWorkspaceRequestAuthority,
-} from '../../collab/workspace-resource-mutation.js';
+} from '../../project-authority.js';
 import {
   authorizeCreatedProjectWorkspace,
   bindCreatedProjectToWorkspace,
   sendCreatedProjectWorkspaceError,
-} from '../../collab/created-project-workspace.js';
-import type { WorkspaceDirectoryFetchResult } from '../../collab/vela-workspace-context.js';
+} from '../../project-authority.js';
+import type { WorkspaceDirectoryFetchResult } from '../../project-authority.js';
 import type { PluginShareAction } from '../../services/plugin-share-tasks.js';
-import type { AuthorizeProjectRequest } from '../../collab/project-request-authority.js';
+import type { AuthorizeProjectRequest } from '../../project-authority.js';
 import { workspaceTeamPluginBindingResourceId } from '../../plugins/registry.js';
 import { localPluginRegistryScope } from '../../plugins/local-source.js';
 import {

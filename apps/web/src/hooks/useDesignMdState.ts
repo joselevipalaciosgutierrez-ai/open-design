@@ -18,7 +18,7 @@ import { listConversations } from '../state/projects';
 import {
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 
 const DESIGN_MD = 'DESIGN.md';
 

@@ -12,7 +12,7 @@ import {
 import { CritiqueTheaterMount } from '../../../src/components/Theater/CritiqueTheaterMount';
 import type { CritiqueAction } from '../../../src/components/Theater/state/reducer';
 import type { CritiqueEventsConnectionOptions } from '../../../src/components/Theater/state/sse';
-import { WORKSPACE_CONTEXT_REFRESH_EVENT } from '../../../src/collab/useWorkspaceContext';
+import { WORKSPACE_CONTEXT_REFRESH_EVENT } from '../../../src/runtime/local-workspace';
 
 afterEach(() => {
   cleanup();

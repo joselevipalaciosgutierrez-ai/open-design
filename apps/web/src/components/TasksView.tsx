@@ -29,12 +29,12 @@ import {
   type AutomationTemplateKind,
 } from './NewAutomationModal';
 import { describeRoutineSchedule } from './routineScheduleLabels';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import { listProjects } from '../state/projects';
 import {
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 
 type ProjectSummary = { id: string; name: string };

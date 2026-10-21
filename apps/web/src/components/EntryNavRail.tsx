@@ -81,7 +81,7 @@ import { projectOwnedBySelf } from './project-actions/ownership';
 import { useProjectDeleteFlow } from './project-actions/useProjectDeleteFlow';
 import { useProjectDuplicateFlow } from './project-actions/useProjectDuplicateFlow';
 import { useWorkspaceProjectMove } from './project-actions/useWorkspaceProjectMove';
-import type { SharedProjectPredicate } from '../collab/all-projects-list';
+import type { SharedProjectPredicate } from '../runtime/local-workspace';
 import { acknowledgeProjectCompletion, useProjectRunStatuses } from '../hooks/useProjectRunStatuses';
 import { MessageCenter } from './MessageCenter';
 import type { EntrySettingsSection } from './EntrySettingsMenu';
@@ -98,8 +98,8 @@ import {
   workspaceBillingBalanceUsd,
   workspaceBillingSummaryForContext,
   workspaceIdentityCacheKey,
-} from '../collab/useWorkspaceContext';
-import { canUpgradeFromPlanTier, isMaxPlanTier, resolvePlanLabelTier } from '../collab/team-plan';
+} from '../runtime/local-workspace';
+import { canUpgradeFromPlanTier, isMaxPlanTier, resolvePlanLabelTier } from '../runtime/local-workspace';
 import {
   AMR_CONSOLE_AUTO_RECHARGE_INTENT,
   AMR_CONSOLE_RECHARGE_INTENT,
@@ -107,7 +107,7 @@ import {
   amrConsoleUrlForWorkspace,
   amrPlansUrlForProfile,
 } from '../runtime/run-failure-ui';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
 import { resolveDeepSeekV4FlashCampaignAudience } from '../campaigns/deepseek-v4-flash';
 import { useDeepSeekV4FlashCampaignVisibility } from '../campaigns/use-deepseek-v4-flash-campaign';
 import type { EntryHomeView } from '../router';

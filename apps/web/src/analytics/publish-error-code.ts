@@ -15,7 +15,7 @@
 
 import type { TrackingPublishErrorCode } from '@open-design/contracts/analytics';
 
-import { publicFilePublishFailureKey } from '../collab/public-file-publish';
+import { publicFilePublishFailureKey } from '../runtime/local-workspace';
 
 export function publishErrorCode(err: unknown): TrackingPublishErrorCode {
   return publicFilePublishFailureKey(err) === 'fileViewer.publishFileRequiresWorkspace'

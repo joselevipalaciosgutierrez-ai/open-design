@@ -30,7 +30,7 @@ import type { WorkspaceCollabContext } from '@open-design/contracts';
 import {
   workspaceProjectHeaders,
   workspaceResourceUrl,
-} from '../collab/workspace-identity';
+} from './local-workspace';
 import { sourceHasLegacyDeckScreenSlides } from './deck-slide-structure';
 
 // Re-exported so app components can gate desktop-only export paths without

@@ -63,8 +63,8 @@ import {
   resetWorkspaceContextCache,
   currentWorkspaceAccountGeneration,
   workspaceIdentityCacheKey,
-} from '../../src/collab/useWorkspaceContext';
-import { runWorkspaceIdentity } from '../../src/collab/useProjectWorkspaceScope';
+} from '../../src/runtime/local-workspace';
+import { runWorkspaceIdentity } from '../../src/runtime/local-workspace';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import {
   projectDisplaySnapshotKey,

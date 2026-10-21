@@ -3,7 +3,7 @@ import {
   TeamResourceShareForbiddenError,
   type TeamResourceRequestScope,
   type TeamResourceShareService,
-} from '../collab/team-resource-share.js';
+} from '../project-authority.js';
 
 export interface PreparedLinkedProjectShare {
   projectId: string;

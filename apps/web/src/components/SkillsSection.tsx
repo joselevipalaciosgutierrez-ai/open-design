@@ -23,11 +23,11 @@ import {
   currentWorkspaceAccountGeneration,
   useWorkspaceContext,
   workspaceIdentityCacheKey,
-} from '../collab/useWorkspaceContext';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
+} from '../runtime/local-workspace';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
 import { SkillScopesPanel, useSkillScopesCopy } from './SkillScopesPanel';
 import scopeStyles from './SkillScopesPanel.module.css';
-import { useWorkspaceSnapshotActivation } from '../collab/workspace-snapshot-activation';
+import { useWorkspaceSnapshotActivation } from '../runtime/local-workspace';
 
 // Functional skills only — design templates render in EntryView's
 // Templates tab and are managed under their own daemon registry. See

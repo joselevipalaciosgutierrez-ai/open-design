@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { isVisualStabilityMode } from '../../../utils/visualStability';
-import { workspaceResourceUrl } from '../../../collab/workspace-identity';
+import { workspaceResourceUrl } from '../../../runtime/local-workspace';
 import type { DesignPreviewSpec } from '../preview';
 
 interface Props {

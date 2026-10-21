@@ -100,7 +100,7 @@ import {
   type InlineMentionEntity,
 } from '../utils/inlineMentions';
 import { workspaceContextLinkedDir, workspaceContextLinkedDirs } from './workspace-context';
-import { useProjectCollabContext } from '../collab/collab-context';
+import { useProjectCollabContext } from '../runtime/local-workspace';
 import {
   LexicalComposerInput,
   type LexicalComposerInputHandle,

@@ -124,18 +124,18 @@ import {
 const AMR_LOGIN_STATUS_EVENT = 'open-design:amr-login-status';
 function amrLoginStatusEventReason(_event: Event): string | null { return null; }
 function isAmrSessionAuthenticated(_status: any): boolean { return false; }
-import { CollabDemoView } from './collab/CollabDemoView';
+import { CollabDemoView } from './runtime/local-workspace';
 import {
   WorkspaceMemberDirectoryPreloader,
-} from './collab/WorkspaceMemberDirectoryPreloader';
+} from './runtime/local-workspace';
 import {
   beginTeamProjectMetadataRefresh,
   fetchTeamProjectCatalogEntry as fetchScopedTeamProjectCatalogEntry,
   fetchTeamProjectsCatalog,
-} from './collab/team-projects-catalog';
-import { useWorkspaceInvalidation } from './collab/workspace-events';
-import { useWorkspaceSnapshotActivation } from './collab/workspace-snapshot-activation';
-import { workspaceProjectHeaders } from './collab/workspace-identity';
+} from './runtime/local-workspace';
+import { useWorkspaceInvalidation } from './runtime/local-workspace';
+import { useWorkspaceSnapshotActivation } from './runtime/local-workspace';
+import { workspaceProjectHeaders } from './runtime/local-workspace';
 import {
   beginWorkspaceScopedRead,
   currentWorkspaceAccountGeneration,
@@ -147,13 +147,13 @@ import {
   workspaceBillingSummaryForContext,
   workspaceIdentityCacheKey,
   workspaceResourceReadContext,
-} from './collab/useWorkspaceContext';
+} from './runtime/local-workspace';
 import {
   projectResourceReadsCanStart,
   useProjectRouteWorkspaceContext,
-} from './collab/useProjectRouteWorkspaceContext';
-import { resolvePlanTier } from './collab/team-plan';
-import { deriveTabIdentityScope, UNSET_ACCOUNT_BUCKET } from './collab/tab-scope';
+} from './runtime/local-workspace';
+import { resolvePlanTier } from './runtime/local-workspace';
+import { deriveTabIdentityScope, UNSET_ACCOUNT_BUCKET } from './runtime/local-workspace';
 import { CommunityView } from './components/CommunityView';
 import { seedHomeComposerPrompt } from './components/HomeView';
 import {

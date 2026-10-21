@@ -22,7 +22,7 @@ import { EntryNavRail, resetWorkspaceDirectoryCache } from '../../src/components
 import {
   resetWorkspaceContextCache,
   useWorkspaceContext,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { resetCoalescedGet } from '../../src/lib/coalesced-get';
 import { I18nProvider } from '../../src/i18n';
 

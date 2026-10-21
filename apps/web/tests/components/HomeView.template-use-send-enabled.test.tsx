@@ -34,7 +34,7 @@ let workspaceContextForTest: WorkspaceCollabContext | null = null;
 const reloadTeamProjects = vi.fn();
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: workspaceContextForTest,
     loading: false,

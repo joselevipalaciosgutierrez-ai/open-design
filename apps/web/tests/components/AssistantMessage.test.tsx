@@ -10,7 +10,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AssistantMessage } from '../../src/components/AssistantMessage';
-import { CollabProvider } from '../../src/collab/collab-context';
+import { CollabProvider } from '../../src/runtime/local-workspace';
 import * as registry from '../../src/providers/registry';
 import type { ChatMessage, ProjectFile } from '../../src/types';
 import { workspaceContextFixture } from '../helpers/workspace-context';

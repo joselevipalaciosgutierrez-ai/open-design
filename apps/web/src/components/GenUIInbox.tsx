@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 
 interface SurfaceRow {
   id: string;

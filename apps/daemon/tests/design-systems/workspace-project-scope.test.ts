@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { materializeWorkspaceScopedTeamResource } from '../../src/collab/team-resource-materialization.js';
+import { materializeWorkspaceScopedTeamResource } from '../../src/project-authority.js';
 import {
   closeDatabase,
   ensureWorkspaceProject,

@@ -14,7 +14,7 @@ import type {
   GenUISurfaceSpec,
   WorkspaceCollabContext,
 } from '@open-design/contracts';
-import { workspaceResourceUrl } from '../collab/workspace-identity';
+import { workspaceResourceUrl } from '../runtime/local-workspace';
 
 export interface PendingSurface {
   // The surface descriptor as declared in `od.genui.surfaces[]`.

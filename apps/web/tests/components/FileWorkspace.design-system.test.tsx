@@ -15,7 +15,7 @@ import { FileWorkspace } from '../../src/components/FileWorkspace';
 import {
   CollabProvider,
   type CollabContextValue,
-} from '../../src/collab/collab-context';
+} from '../../src/runtime/local-workspace';
 import type { AgentEvent, DesignSystemSummary, ProjectFile } from '../../src/types';
 
 const registryMocks = vi.hoisted(() => ({

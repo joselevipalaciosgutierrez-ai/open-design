@@ -8,7 +8,7 @@ import type {
   WorkspaceCollabContext,
 } from '@open-design/contracts';
 import { projectFileUrl } from './registry';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 import type { StreamHandlers } from './anthropic';
 import { parseSseFrame } from './sse';
 import { isAnthropicSupportedImagePath } from '../utils/apiProtocol';

@@ -39,7 +39,7 @@ import type { ChatMessage, OpenTabsState, ProjectFile, ProjectFolder } from '../
 import {
   CollabProvider,
   type CollabContextValue,
-} from '../../src/collab/collab-context';
+} from '../../src/runtime/local-workspace';
 import { IframeKeepAliveProvider } from '../../src/components/IframeKeepAlivePool';
 import { navigate } from '../../src/router';
 

@@ -1,4 +1,4 @@
-import type { SharedProjectPredicate } from '../../collab/all-projects-list';
+import type { SharedProjectPredicate } from '../../runtime/local-workspace';
 
 /**
  * Whether the signed-in member may mutate (rename / duplicate / move / delete)

@@ -36,13 +36,13 @@ import { newInsertId, readAnalyticsContext } from '../analytics.js';
 import type { AnalyticsContext } from '../analytics.js';
 import { spawnEnvForAgent } from '../agents.js';
 import { agentCliEnvForAgent, readAppConfig } from '../app-config.js';
-import type { AuthorizeProjectRequest } from '../collab/project-request-authority.js';
+import type { AuthorizeProjectRequest } from '../project-authority.js';
 import { validateLocalDaemonRequest } from '../http/local-daemon-request.js';
 import {
   workspaceResourceContextFromRequest,
   type BoundWorkspaceResourceMutationGate,
   type WorkspaceResourceAccessInput,
-} from '../collab/workspace-resource-mutation.js';
+} from '../project-authority.js';
 import {
   codexSessionIdFromRunEvents,
   readCodexRolloutFirstCall,

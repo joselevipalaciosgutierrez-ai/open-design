@@ -20,8 +20,8 @@ import {
 import { Button } from '@open-design/components';
 import { Icon } from './Icon';
 import { useI18n } from '../i18n';
-import { workspaceInviteErrorMessageKey } from '../collab/invite-error-copy';
-import { workspaceProjectHeaders } from '../collab/workspace-identity';
+import { workspaceInviteErrorMessageKey } from '../runtime/local-workspace';
+import { workspaceProjectHeaders } from '../runtime/local-workspace';
 import { useAnalytics } from '../analytics/provider';
 import {
   trackWorkspaceInviteClick,

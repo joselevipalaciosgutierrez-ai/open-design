@@ -12,7 +12,7 @@ import { PluginsView } from '../../src/components/PluginsView';
 import {
   notifyWorkspaceContextRefresh,
   resetWorkspaceContextCache,
-} from '../../src/collab/useWorkspaceContext';
+} from '../../src/runtime/local-workspace';
 import { I18nProvider } from '../../src/i18n';
 import { fetchSkills } from '../../src/providers/registry';
 import { listPluginMarketplaces, listPlugins } from '../../src/state/projects';
@@ -23,7 +23,7 @@ vi.mock('../../src/analytics/provider', async (importOriginal) => {
 });
 
 vi.mock('../../src/collab/useWorkspaceContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/collab/useWorkspaceContext')>()),
+  ...(await importOriginal<typeof import('../../src/runtime/local-workspace')>()),
   useWorkspaceContext: () => ({
     context: currentWorkspaceContext,
     loading: currentWorkspaceLoading,

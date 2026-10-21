@@ -41,12 +41,12 @@ import {
   useWorkspaceBillingResponse,
   useWorkspaceContext,
   workspaceBillingSummaryForContext,
-} from '../collab/useWorkspaceContext';
+} from '../runtime/local-workspace';
 import {
   projectWorkspaceContext,
   projectWorkspaceScopeReady,
   type ProjectWorkspaceScopeState,
-} from '../collab/useProjectWorkspaceScope';
+} from '../runtime/local-workspace';
 
 interface Props {
   config: AppConfig;

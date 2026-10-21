@@ -159,9 +159,9 @@ import {
   workspaceResourceReadContext,
   workspaceBillingBalanceUsd,
   workspaceBillingSummaryForContext,
-} from '../collab/useWorkspaceContext';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
-import { resolvePlanLabelTier } from '../collab/team-plan';
+} from '../runtime/local-workspace';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
+import { resolvePlanLabelTier } from '../runtime/local-workspace';
 import { resolveDeepSeekV4FlashCampaignAudience } from '../campaigns/deepseek-v4-flash';
 import { useDeepSeekV4FlashCampaignVisibility } from '../campaigns/use-deepseek-v4-flash-campaign';
 import { WorkbenchCampaignBadge } from './WorkbenchCampaignBadge';
@@ -171,13 +171,13 @@ import {
   beginWorkspaceScopedRead,
   workspaceIdentityCacheKey,
   workspaceProjectHeaders,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import {
   buildAllProjectsList,
   buildDraftsList,
   createSharedProjectPredicate,
   reconcileSharedProjectCatalogFields,
-} from '../collab/all-projects-list';
+} from '../runtime/local-workspace';
 import {
   forgetOptimisticProjectOwnership,
   optimisticProjectOwnershipScopeKey,
@@ -185,7 +185,7 @@ import {
   reconcileOptimisticProjectOwnership,
   recordOptimisticProjectOwnership,
   type OptimisticProjectOwnershipWitnesses,
-} from '../collab/optimistic-project-ownership';
+} from '../runtime/local-workspace';
 import type { ModelCapabilityTag } from './modelCapabilityTags';
 import { LanguageMenu } from './LanguageMenu';
 import { IntegrationsView, type IntegrationTab } from './IntegrationsView';

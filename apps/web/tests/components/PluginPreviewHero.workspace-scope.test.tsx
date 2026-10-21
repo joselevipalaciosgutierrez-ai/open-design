@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
 import { PluginPreviewHero } from '../../src/components/plugin-details/PluginPreviewHero';
-import { notifyWorkspaceContextRefresh } from '../../src/collab/useWorkspaceContext';
+import { notifyWorkspaceContextRefresh } from '../../src/runtime/local-workspace';
 import { workspaceContextFixture } from '../helpers/workspace-context';
 
 afterEach(() => {

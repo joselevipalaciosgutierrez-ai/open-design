@@ -21,8 +21,8 @@ vi.mock('../src/collab/workspace-events', () => ({
 
 import { fetchProjectFiles, fetchRecentLinkedDirs } from '../src/providers/registry';
 import { listConversations, loadTabs } from '../src/state/projects';
-import { CollabClient, fetchProjectCollabStatus } from '../src/collab/collab-client';
-import { useProjectWorkspaceScope } from '../src/collab/useProjectWorkspaceScope';
+import { CollabClient, fetchProjectCollabStatus } from '../src/runtime/local-workspace';
+import { useProjectWorkspaceScope } from '../src/runtime/local-workspace';
 import {
   bootstrapExceptionTracking,
   getAnalyticsClient,

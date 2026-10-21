@@ -10,7 +10,7 @@ import {
   type DeliveryStatusResponse,
 } from '@open-design/contracts';
 import type { RouteDeps } from '../server-context.js';
-import type { AuthorizeProjectRequest } from '../collab/project-request-authority.js';
+import type { AuthorizeProjectRequest } from '../project-authority.js';
 
 export interface RegisterDeliveryRoutesDeps
   extends RouteDeps<'db' | 'http' | 'paths' | 'projectStore' | 'validation'> {

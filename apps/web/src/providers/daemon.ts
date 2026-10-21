@@ -59,7 +59,7 @@ function isRunCancelOrigin(value: unknown): value is RunCancelOrigin {
 import { workspaceProjectHeaders } from '../state/projects';
 import { canRetainSuccessfulRunForBlockedStrategy } from '../runtime/blocked-strategy-result';
 import { coalescedGet } from '../lib/coalesced-get';
-import { currentWorkspaceAccountGeneration } from '../collab/workspace-identity';
+import { currentWorkspaceAccountGeneration } from '../runtime/local-workspace';
 
 /**
  * Returns the front-end carrier that's about to send this request:

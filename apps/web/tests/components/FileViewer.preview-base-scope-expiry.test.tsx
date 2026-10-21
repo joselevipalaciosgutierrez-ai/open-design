@@ -31,7 +31,7 @@ import {
 import {
   CollabProvider,
   type CollabContextValue,
-} from '../../src/collab/collab-context';
+} from '../../src/runtime/local-workspace';
 import { FileViewer } from '../../src/components/FileViewer';
 import type { ProjectFile } from '../../src/types';
 

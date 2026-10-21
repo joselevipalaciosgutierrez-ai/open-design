@@ -19,12 +19,12 @@ import { trackDesignSystemEditClick } from '../analytics/events';
 import { requestHomeChip } from '../runtime/home-intent';
 import { brandSummaryToKit } from '../runtime/design-kit';
 import { DesignKitView } from './DesignKitView';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 import {
   resolveWorkspaceResourceReadIdentity,
   workspaceProjectHeaders,
   workspaceResourceReadIdentityKey,
-} from '../collab/workspace-identity';
+} from '../runtime/local-workspace';
 import styles from './BrandPreviewCard.module.css';
 
 // Re-exports preserving the previous public surface of this module.

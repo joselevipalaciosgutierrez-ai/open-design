@@ -6,7 +6,7 @@ import { useBrandExtract } from '../runtime/useBrandExtract';
 import type { BrandReference } from '../runtime/brand-references';
 import { BrandReferencePicker } from './BrandReferencePicker';
 import styles from './NewBrandModal.module.css';
-import { useWorkspaceContext } from '../collab/useWorkspaceContext';
+import { useWorkspaceContext } from '../runtime/local-workspace';
 
 interface Props {
   open: boolean;

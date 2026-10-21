@@ -1,11 +1,60 @@
 import type { Express, Request, Response } from 'express';
-import {
-  TeamResourceAuthorityUnavailableError,
-  TeamResourceShareForbiddenError,
-  type TeamResourceRequestScope,
-  type TeamResourceShareRecord,
-  type TeamResourceShareService,
-} from '../collab/team-resource-share.js';
+export class TeamResourceShareForbiddenError extends Error {
+  constructor() {
+    super('workspace_resource_share_denied');
+    this.name = 'TeamResourceShareForbiddenError';
+  }
+}
+
+export class TeamResourceAuthorityUnavailableError extends Error {
+  readonly status = 503;
+  readonly code = 'WORKSPACE_RESOURCE_AUTHORITY_UNAVAILABLE';
+  readonly retryable = true;
+
+  constructor(cause?: unknown) {
+    super('team resource authority is temporarily unavailable', { cause });
+    this.name = 'TeamResourceAuthorityUnavailableError';
+  }
+}
+
+export interface TeamResourceShareRecord {
+  id: string;
+  hubResourceId?: string;
+  title?: string;
+  description?: string;
+  ownerMemberId?: string;
+  canUnshare?: boolean;
+  versionId?: string;
+  version?: number;
+}
+
+export interface TeamResourceRequestScope {
+  principal: {
+    memberId: string;
+    teamId: string;
+    role: any;
+    lifecycleState: any;
+    workspaceType?: any;
+  };
+  canShare: boolean;
+}
+
+export interface TeamResourceSharedReadOptions {
+  authoritative?: boolean;
+  [key: string]: any;
+}
+
+export interface TeamResourceShareService {
+  share(resourceId: string, scope: TeamResourceRequestScope): Promise<{ version: number } | null>;
+  unshare(resourceId: string, scope: TeamResourceRequestScope): Promise<boolean>;
+  sharedIds(scope: TeamResourceRequestScope): Promise<string[]>;
+  sharedResources(
+    scope: TeamResourceRequestScope,
+    options?: TeamResourceSharedReadOptions,
+  ): Promise<TeamResourceShareRecord[]>;
+  isShared(resourceId: string, scope: TeamResourceRequestScope): boolean;
+  readonly configured: boolean;
+}
 
 export interface TeamResourceShareListing {
   ids: string[];
@@ -127,7 +176,7 @@ export function registerTeamResourceShareRoutes(
       res.json(await deps.listTeam(scope));
       return;
     }
-    const resources = await share.sharedResources(scope);
+    const resources = share.sharedResources ? await share.sharedResources(scope) : [];
     if (deps.syncSharedResource) {
       await Promise.all(resources.map((resource) => deps.syncSharedResource?.(resource, scope)));
     }

@@ -50,7 +50,7 @@ import {
   useWorkspaceBillingResponse,
   useWorkspaceContext,
   workspaceBillingBalanceUsd,
-} from '../collab/useWorkspaceContext';
+} from '../runtime/local-workspace';
 import { KNOWN_PROVIDERS } from '../state/config';
 import { fetchProviderModels } from '../providers/provider-models';
 import { SUGGESTED_MODELS_BY_PROTOCOL } from '../state/apiProtocols';

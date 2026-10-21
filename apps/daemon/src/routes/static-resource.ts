@@ -10,7 +10,7 @@ import { TeamResourceCopyForbiddenError } from '@open-design/contracts';
 import {
   enforceTeamResourceCopyAllowed,
   type TeamResourceStateProvider,
-} from '../collab/team-resource-state.js';
+} from '../project-authority.js';
 import { detectAgents, detectAgentsStream } from '../agents.js';
 import {
   SkillImportError,
@@ -34,7 +34,7 @@ import {
   enforceVerifiedWorkspaceResourceMutation,
   resolveOptionalLocalWorkspaceRequestAuthority,
   type VerifyWorkspaceRequestAuthority,
-} from '../collab/workspace-resource-mutation.js';
+} from '../project-authority.js';
 import { listCodexPets, readCodexPetSpritesheet } from '../codex-pets.js';
 import { syncCommunityPets } from '../community-pets-sync.js';
 import {

@@ -176,11 +176,11 @@ import {
   useWorkspaceContext,
   workspaceBillingBalanceUsd,
   workspaceBillingSummaryForContext,
-} from '../collab/useWorkspaceContext';
-import { canUpgradeFromPlanTier, resolvePlanTier } from '../collab/team-plan';
+} from '../runtime/local-workspace';
+import { canUpgradeFromPlanTier, resolvePlanTier } from '../runtime/local-workspace';
 import { planBadgeTierForWorkspace } from './PlanWordmark';
 import { workspaceUpgradeUrl } from './EntryNavRail';
-import { canShowWorkspaceSettings } from '../collab/settings-access';
+import { canShowWorkspaceSettings } from '../runtime/local-workspace';
 import { ConnectorsBrowser } from './ConnectorsBrowser';
 import { MemoryModelInline } from './MemoryModelInline';
 import { MemorySection } from './MemorySection';
@@ -208,7 +208,7 @@ import {
   projectWorkspaceContext,
   projectWorkspaceScopeReady,
   useProjectWorkspaceScope,
-} from '../collab/useProjectWorkspaceScope';
+} from '../runtime/local-workspace';
 import {
   applyAppearanceToDocument,
   resolveAccentColor,

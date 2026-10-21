@@ -117,9 +117,9 @@ import {
   currentWorkspaceAccountGeneration,
   useWorkspaceContext,
   workspaceResourceReadContext,
-} from '../collab/useWorkspaceContext';
-import { useWorkspaceInvalidation } from '../collab/workspace-events';
-import { useWorkspaceSnapshotActivation } from '../collab/workspace-snapshot-activation';
+} from '../runtime/local-workspace';
+import { useWorkspaceInvalidation } from '../runtime/local-workspace';
+import { useWorkspaceSnapshotActivation } from '../runtime/local-workspace';
 import {
   buildHomeMediaComposer,
   homeMediaSurfaceForChipId,

@@ -1,4 +1,4 @@
-import type { WorkspaceContextState } from '../collab/useWorkspaceContext';
+import type { WorkspaceContextState } from '../runtime/local-workspace';
 
 export type EntryRailAccountFooterState = 'hidden' | 'syncing' | 'recovering' | 'sign-in';
 

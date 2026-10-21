@@ -11,7 +11,7 @@ import {
   getWorkspaceResourceByResourceId,
   openDatabase,
 } from '../../src/db.js';
-import { workspaceContextFromDirectoryItem } from '../../src/collab/vela-workspace-context.js';
+import { workspaceContextFromDirectoryItem } from '../../src/project-authority.js';
 import { registerDesignSystemRoutes } from '../../src/routes/design-systems.js';
 
 const DESIGN_SYSTEM_ID = 'user:workspace-a-system';
