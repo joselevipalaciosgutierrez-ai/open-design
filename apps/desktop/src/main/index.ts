@@ -106,11 +106,7 @@ export {
   type PickAndImportFolderResult,
 } from "./runtime.js";
 
-const AMR_PROFILE_ENV_KEY = "OPEN_DESIGN_AMR_PROFILE";
-const AMR_PROFILE_AGENT_ID = "amr";
-const AMR_ENVIRONMENT_PROFILES = ["prod", "test", "feature-test", "local"] as const;
 const APP_CONFIG_CHANGED_IPC_CHANNEL = "od:app-config-changed";
-type AmrEnvironmentProfile = (typeof AMR_ENVIRONMENT_PROFILES)[number];
 type DesktopAppConfigPrefs = {
   agentModels?: Record<string, { model?: string; reasoning?: string }>;
   agentCliEnv?: Record<string, Record<string, string>>;
@@ -290,67 +286,6 @@ function resolveDaemonBaseUrl(
   ]);
 }
 
-export function normalizeAmrEnvironmentProfile(profile: unknown): AmrEnvironmentProfile {
-  if (typeof profile !== "string") return "prod";
-  const trimmed = profile.trim();
-  return AMR_ENVIRONMENT_PROFILES.includes(trimmed as AmrEnvironmentProfile)
-    ? (trimmed as AmrEnvironmentProfile)
-    : "prod";
-}
-
-export function mergeAmrEnvironmentProfileConfig(
-  config: DesktopAppConfigPrefs,
-  profile: AmrEnvironmentProfile,
-): DesktopAppConfigPrefs {
-  if (!AMR_ENVIRONMENT_PROFILES.includes(profile)) {
-    throw new Error(
-      `AMR Environment Profile must be prod, test, feature-test, or local: ${String(profile)}`,
-    );
-  }
-  const currentProfile = normalizeAmrEnvironmentProfile(
-    config.agentCliEnv?.[AMR_PROFILE_AGENT_ID]?.[AMR_PROFILE_ENV_KEY],
-  );
-  const shouldClearAmrModel = currentProfile !== profile;
-  const hadAmrModel =
-    shouldClearAmrModel && Object.prototype.hasOwnProperty.call(config.agentModels ?? {}, AMR_PROFILE_AGENT_ID);
-  const nextAgentModels = { ...(config.agentModels ?? {}) };
-  if (shouldClearAmrModel) {
-    delete nextAgentModels[AMR_PROFILE_AGENT_ID];
-  }
-  return {
-    ...config,
-    ...(Object.keys(nextAgentModels).length > 0
-      ? { agentModels: nextAgentModels }
-      : hadAmrModel
-        ? { agentModels: {} }
-        : {}),
-    agentCliEnv: {
-      ...(config.agentCliEnv ?? {}),
-      [AMR_PROFILE_AGENT_ID]: {
-        ...(config.agentCliEnv?.[AMR_PROFILE_AGENT_ID] ?? {}),
-        [AMR_PROFILE_ENV_KEY]: profile,
-      },
-    },
-  };
-}
-
-export function createAmrEnvironmentProfileMenuItems(
-  selectedProfile: AmrEnvironmentProfile,
-  onSelect: (profile: AmrEnvironmentProfile) => void,
-): MenuItemConstructorOptions[] {
-  return [
-    {
-      label: "AMR Profile",
-      submenu: AMR_ENVIRONMENT_PROFILES.map((profile) => ({
-        label: profile,
-        type: "radio" as const,
-        checked: selectedProfile === profile,
-        click: () => onSelect(profile),
-      })),
-    },
-  ];
-}
-
 export function resolveAboutPanelVersion(options: Pick<DesktopMainOptions, "update">): string | null {
   const version = options.update?.currentVersion?.trim();
   return version == null || version.length === 0 ? null : version;
@@ -410,63 +345,15 @@ function installDesktopMenu(
   },
 ): DesktopMenuController {
   let developMenuVisible = false;
-  let lastKnownAmrProfile: AmrEnvironmentProfile = "prod";
   let updateMenuLabels = DEFAULT_DESKTOP_UPDATE_MENU_LABELS;
   let updateStatus = options.updater.snapshot();
   const developMenuAccelerator = process.platform === "darwin" ? "Command+Option+Shift+D" : "Control+Alt+Shift+D";
 
-  const showDevelopMenuError = (message: string, error: unknown): void => {
-    const detail = error instanceof Error ? error.message : String(error);
-    dialog.showErrorBox(message, detail);
-  };
-
   const discoverAppConfigBaseUrl = resolveDaemonBaseUrl(options);
 
-  const readCurrentAmrProfile = async (): Promise<AmrEnvironmentProfile> => {
-    const baseUrl = await discoverAppConfigBaseUrl();
-    const config = await readAppConfigFromDaemon(baseUrl);
-    return normalizeAmrEnvironmentProfile(config.agentCliEnv?.[AMR_PROFILE_AGENT_ID]?.[AMR_PROFILE_ENV_KEY]);
-  };
-
-  const writeCurrentAmrProfile = async (profile: AmrEnvironmentProfile): Promise<AmrEnvironmentProfile> => {
-    const baseUrl = await discoverAppConfigBaseUrl();
-    const config = await readAppConfigFromDaemon(baseUrl);
-    const nextConfig = mergeAmrEnvironmentProfileConfig(config, profile);
-    const writtenConfig = await writeAppConfigToDaemon(baseUrl, nextConfig);
-    return normalizeAmrEnvironmentProfile(
-      writtenConfig.agentCliEnv?.[AMR_PROFILE_AGENT_ID]?.[AMR_PROFILE_ENV_KEY],
-    );
-  };
-
-  const selectAmrProfile = (profile: AmrEnvironmentProfile): void => {
-    void writeCurrentAmrProfile(profile)
-      .then((writtenProfile) => {
-        lastKnownAmrProfile = writtenProfile;
-        for (const window of BrowserWindow.getAllWindows()) {
-          window.webContents.send(APP_CONFIG_CHANGED_IPC_CHANNEL);
-        }
-        rebuild();
-      })
-      .catch((error: unknown) => {
-        showDevelopMenuError("AMR Environment Profile switch failed", error);
-      });
-  };
-
   const toggleDevelopMenu = (): void => {
-    if (developMenuVisible) {
-      developMenuVisible = false;
-      rebuild();
-      return;
-    }
-    void readCurrentAmrProfile()
-      .then((profile) => {
-        lastKnownAmrProfile = profile;
-        developMenuVisible = true;
-        rebuild();
-      })
-      .catch((error: unknown) => {
-        showDevelopMenuError("Develop menu unavailable", error);
-      });
+    developMenuVisible = !developMenuVisible;
+    rebuild();
   };
 
   const exportDiagnostics = () => {
@@ -556,7 +443,7 @@ function installDesktopMenu(
         ? [
             {
               label: "Develop",
-              submenu: createAmrEnvironmentProfileMenuItems(lastKnownAmrProfile, selectAmrProfile),
+              submenu: [],
             },
           ]
         : []),

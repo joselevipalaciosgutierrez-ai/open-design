@@ -120,7 +120,7 @@ cli.command('verify-runtime', 'Verify installed prerelease Vela/OpenCode identit
   .option('--expected-vela <version>', 'exact Vela version from the reviewed dependency pin')
   .option('--expected-opencode <version>', 'exact OpenCode version from the reviewed Vela release')
   .option('--json', 'print JSON evidence (also the default)')
-  .action(async (options: { resources: string; manifest: string; expectedVela: string; expectedOpencode: string }) => {
+  .action(async (options: { resources: string; manifest: string; expectedVela?: string; expectedOpencode: string }) => {
     const { verifyPackagedRuntime } = await import('./resources/runtime-verification.js');
     printJson(await verifyPackagedRuntime({ ...options, expectedOpenCode: options.expectedOpencode }));
   });

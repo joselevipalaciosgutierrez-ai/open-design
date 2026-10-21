@@ -741,7 +741,7 @@ describe('buildPackagedDaemonSpawnEnv', () => {
   });
 
   it.each(['feature-test', 'test'] as const)(
-    'enables the vela-cli workspace-team transport for a %s build with an injected vela web origin',
+    'leaves the workspace-team transport off for a %s build when cloud is removed',
     (amrProfile) => {
       const env = buildPackagedDaemonSpawnEnv(fakePaths(), {
         appVersion: null,
@@ -752,11 +752,11 @@ describe('buildPackagedDaemonSpawnEnv', () => {
         velaWebUrl: 'https://vela.example.invalid',
       });
       expect(env.OPEN_DESIGN_AMR_PROFILE).toBe(amrProfile);
-      expect(env.OD_WORKSPACE_CONTEXT_SOURCE).toBe('vela');
-      expect(env.OD_TEAM_PROJECTS_TRANSPORT).toBe('vela-cli');
-      expect(env.OD_COLLAB_TRANSPORT).toBe('vela-cli');
-      expect(env.OD_RESOURCE_TRANSPORT).toBe('vela-cli');
-      expect(env.OD_VELA_WEB_URL).toBe('https://vela.example.invalid');
+      expect('OD_WORKSPACE_CONTEXT_SOURCE' in env).toBe(false);
+      expect('OD_TEAM_PROJECTS_TRANSPORT' in env).toBe(false);
+      expect('OD_COLLAB_TRANSPORT' in env).toBe(false);
+      expect('OD_RESOURCE_TRANSPORT' in env).toBe(false);
+      expect('OD_VELA_WEB_URL' in env).toBe(false);
     },
   );
 
@@ -803,7 +803,7 @@ describe('buildPackagedDaemonSpawnEnv', () => {
 
   // Workspace Team is released, so a prod bundle handed an origin now turns the
   // transports on — that is the shipping path for stable users.
-  it('enables the workspace-team transport for a prod build with an injected vela web origin', () => {
+  it('leaves the workspace-team transport off when cloud is removed', () => {
     const env = buildPackagedDaemonSpawnEnv(fakePaths(), {
       appVersion: null,
       amrProfile: 'prod',
@@ -812,11 +812,11 @@ describe('buildPackagedDaemonSpawnEnv', () => {
       requireDesktopAuth: true,
       velaWebUrl: 'https://open-design.ai/cloud',
     });
-    expect(env.OD_WORKSPACE_CONTEXT_SOURCE).toBe('vela');
-    expect(env.OD_TEAM_PROJECTS_TRANSPORT).toBe('vela-cli');
-    expect(env.OD_COLLAB_TRANSPORT).toBe('vela-cli');
-    expect(env.OD_RESOURCE_TRANSPORT).toBe('vela-cli');
-    expect(env.OD_VELA_WEB_URL).toBe('https://open-design.ai/cloud');
+    expect('OD_WORKSPACE_CONTEXT_SOURCE' in env).toBe(false);
+    expect('OD_TEAM_PROJECTS_TRANSPORT' in env).toBe(false);
+    expect('OD_COLLAB_TRANSPORT' in env).toBe(false);
+    expect('OD_RESOURCE_TRANSPORT' in env).toBe(false);
+    expect('OD_VELA_WEB_URL' in env).toBe(false);
   });
 
   // The profile allowlist remains the load-bearing half of the gate for every

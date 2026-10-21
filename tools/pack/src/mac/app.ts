@@ -25,7 +25,6 @@ import {
   resolveNodePtyRuntimeArch,
 } from "../node-pty-runtime.js";
 import { copyBundledResourceTrees, packBundledDshRuntime } from "../resources/index.js";
-import { copyOptionalVelaCliBinary } from "../vela-cli.js";
 import { electronBuilderVersionForAppVersion } from "../versioning/index.js";
 import { runEsbuild, runNpmInstall, runPnpm } from "./commands.js";
 import {
@@ -150,11 +149,6 @@ export async function copyResourceTree(config: ToolPackConfig, paths: MacPaths):
   });
   await packBundledDshRuntime({
     workspaceRoot: config.workspaceRoot,
-    resourceRoot: paths.resourceRoot,
-  });
-  await copyOptionalVelaCliBinary({
-    platform: "mac",
-    requireBundled: config.requireVelaCli,
     resourceRoot: paths.resourceRoot,
   });
 }
