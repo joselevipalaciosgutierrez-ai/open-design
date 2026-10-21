@@ -17,7 +17,7 @@
 //  3. daemon 的失败分类器**认得**这段文本:`failure_detail = upstream_5xx`、
 //     `retryable: true`、`user_action: 'retry'`(实测,非推测);
 //  4. web 的 `AGENT_AGNOSTIC_DETAIL_FAILURE_UI` **没有 `upstream_5xx` 这一行**
-//     —— `amr-guidance.ts` 里 `daemonNamedTheFailure` 的注释自己点了名:
+//     —— `run-failure-ui.ts` 里 `daemonNamedTheFailure` 的注释自己点了名:
 //     「there are both futile ones (`spawn_enoexec`, `cli_version_incompatible`)
 //     and genuinely transient ones (`upstream_5xx`, `provider_high_demand`)」。
 //     于是整轮落到最后那张通用卡:`messageKey: null` → 标题「任务执行失败」。

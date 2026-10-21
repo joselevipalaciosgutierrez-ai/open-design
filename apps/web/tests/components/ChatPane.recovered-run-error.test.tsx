@@ -31,7 +31,7 @@ import { forwardRef } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ChatPane } from '../../src/components/ChatPane';
-import { resolveRunFailureUi } from '../../src/runtime/amr-guidance';
+import { resolveRunFailureUi } from '../../src/runtime/run-failure-ui';
 import type { AppConfig, ChatMessage } from '../../src/types';
 
 const translate = (key: string, vars?: Record<string, string | number>) => {

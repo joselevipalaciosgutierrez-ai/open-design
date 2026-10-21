@@ -1,5 +1,4 @@
 import type { WorkspaceContextState } from '../collab/useWorkspaceContext';
-import { planUnlimitedTier } from '../runtime/amr-unlimited-models';
 
 export type EntryRailAccountFooterState = 'hidden' | 'syncing' | 'recovering' | 'sign-in';
 
@@ -9,7 +8,6 @@ export function shouldShowCreditsBalance(input: {
   tier: string | null | undefined;
   balanceUsd: string | null | undefined;
 }): boolean {
-  if (planUnlimitedTier(input.tier) === null) return true;
   const raw = input.balanceUsd?.trim() ?? '';
   if (!raw) return true;
   const amount = Number(raw);

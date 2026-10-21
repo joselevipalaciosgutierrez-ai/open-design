@@ -8,11 +8,9 @@ import {
   EntryShell,
   ONBOARDING_LOCAL_AUTO_TEST_DELAY_MS,
 } from '../../src/components/EntryShell';
-import {
-  AMR_LOGIN_POLL_INTERVAL_MS,
-  AMR_LOGIN_STATUS_EVENT,
-  AMR_LOGIN_TIMEOUT_MS,
-} from '../../src/components/amrLoginPolling';
+const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
+const AMR_LOGIN_STATUS_EVENT = 'open-design:amr-login-status';
+const AMR_LOGIN_TIMEOUT_MS = 60000;
 import { I18nProvider } from '../../src/i18n';
 import { fetchProjectFiles } from '../../src/providers/registry';
 import type { AgentInfo, AppConfig } from '../../src/types';

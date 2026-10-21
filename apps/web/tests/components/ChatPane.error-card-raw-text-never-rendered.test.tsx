@@ -9,7 +9,7 @@
 // **任何一个不成立**,原文就直接上卡面:
 //
 //  · `runFailureUi` 为 null ⟺ `retryAssistant` 为 null(`resolveRunFailureUi`
-//    永远返回对象,不返回 null —— 见 `amr-guidance.ts` 末尾那张通用卡)。而
+//    永远返回对象,不返回 null —— 见 `run-failure-ui.ts` 末尾那张通用卡)。而
 //    `retryableAssistantMessage` 要求**转录的最后一条**是终态失败的助手消息。
 //    宿主自己会在一轮之后补发助手消息(`ProjectView` 的 brand-browser-assist 卡,
 //    `appendConversationMessage(...role: 'assistant'...)`,没有 `runStatus`),

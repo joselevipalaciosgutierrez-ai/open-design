@@ -104,7 +104,7 @@ describe('G16 · 环境类报错卡的固定按钮', () => {
 
   it('固定动作不额外生成另一张 Cloud 指导卡', () => {
     const { container } = renderPane({ onOpenSettings: vi.fn(), onRetry: vi.fn() });
-    expect(container.querySelector('.amr-guidance')).toBeNull();
+    expect(container.querySelector('.run-failure-ui')).toBeNull();
   });
 });
 
@@ -113,7 +113,7 @@ describe('S30 · 环境类报错卡的文案', () => {
    * ⚠️ 这张卡**没有**用产品文档 S30 的润色列。S30 那张润色表只写了一行,
    * 「场景内的情况」写死是「地区不支持」;而这张卡服务的五个 detail 里没有一个
    * 是地区拦截(真正的地区信号 `Country, region, or territory not supported`
-   * 落在 `upstream_client_error`)。判据全文在 `amr-guidance.ts` 的
+   * 落在 `upstream_client_error`)。判据全文在 `run-failure-ui.ts` 的
    * `clientEnvironmentCard` 文档注释里。此处改用补充文档 revision 96 为证书专门批准的文案。
    */
   it('卡面逐字使用产品补充文档的证书标题和正文', () => {

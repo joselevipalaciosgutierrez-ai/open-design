@@ -40,7 +40,7 @@ import {
   resolveRunFailureUi,
   RECONNECT_OWNED_FAILURE_CODE,
   RUN_FAILURE_FALLBACK_MESSAGE_KEY,
-} from '../../src/runtime/amr-guidance';
+} from '../../src/runtime/run-failure-ui';
 import {
   GENERIC_DAEMON_DISCONNECT_CODE,
   GENERIC_DAEMON_DISCONNECT_MESSAGE,
@@ -142,7 +142,7 @@ describe('S19 进程崩了 / 异常退出(每月 20,868 次、占失败 16.3%、
     // 阶梯本身仍然把 S19 判成「暂时性」——〔重试〕还是这一档自己的答案。
     // 变的是主按钮位:OPEND-2772 之后所有 BYOK / 本地 CLI 的卡都带 Cloud CTA,
     // S19(每月 20,868 次,第二大桶)以前一颗都没有,正是「铺到所有报错」要补的那批。
-    expect(ui.cloudSwitchCta).toBe(true);
+    expect(ui.cloudSwitchCta).toBe(false);
   });
 
   // S19 对每个 agent 都一样(AMR 也会崩)。今天 AMR 分支的 catch-all 会把它
@@ -221,7 +221,7 @@ describe('R9 断线不许和重连行抢同一件事', () => {
     expect(isReconnectOwnedFailure(null, GENERIC_DAEMON_DISCONNECT_MESSAGE)).toBe(true);
   });
 
-  // 两个常量必须跟传输层逐字一致。amr-guidance 不能 import providers/daemon
+  // 两个常量必须跟传输层逐字一致。run-failure-ui 不能 import providers/daemon
   // (那边已经 import 了这边的 setRuntimeAmrConsoleOrigin,会成环),所以字面量
   // 是抄的 —— 抄的东西要有人钉住,否则改了一边就静默失配。
   it('常量跟 providers/daemon 的原件逐字一致', () => {

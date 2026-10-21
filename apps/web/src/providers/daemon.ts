@@ -10,7 +10,6 @@
  *                 non-zero (tail appended to the error message).
  */
 import type { AgentEvent, ChatCommentAttachment, ChatMessage } from '../types';
-import type { AmrEntryAttribution } from '../analytics/amr-attribution';
 import type {
   AmrAuthErrorKind,
   AmrAuthNetworkPath,
@@ -58,7 +57,6 @@ function isRunCancelOrigin(value: unknown): value is RunCancelOrigin {
   return typeof value === 'string' && RUN_CANCEL_ORIGINS.has(value);
 }
 import { workspaceProjectHeaders } from '../state/projects';
-import { setRuntimeAmrConsoleOrigin } from '../runtime/amr-guidance';
 import { canRetainSuccessfulRunForBlockedStrategy } from '../runtime/blocked-strategy-result';
 import { coalescedGet } from '../lib/coalesced-get';
 import { currentWorkspaceAccountGeneration } from '../collab/workspace-identity';
@@ -1397,12 +1395,6 @@ export async function fetchVelaLoginStatus(options: { refresh?: boolean } = {}):
     const read = await readVelaLoginStatus(options);
     if (!read.ok) return null;
     const status = read.body as VelaLoginStatus;
-    // Every AMR status read refreshes the runtime console origin, so the console
-    // links stay correct no matter which surface (login pill, model switcher,
-    // avatar menu, low-balance dialog) triggered the fetch. Doing it here rather
-    // than in each caller is what keeps the origin out of web source: no caller
-    // needs to know the hostname of the environment it is pointed at.
-    setRuntimeAmrConsoleOrigin(status.consoleOrigin);
     return status;
   } catch {
     return null;
@@ -1443,7 +1435,7 @@ export interface StartVelaLoginResult {
 }
 
 export async function startVelaLogin(
-  attribution?: AmrEntryAttribution | null,
+  attribution?: Record<string, unknown> | null,
   odDeviceId?: string | null,
   authAttemptId?: string,
 ): Promise<StartVelaLoginResult> {

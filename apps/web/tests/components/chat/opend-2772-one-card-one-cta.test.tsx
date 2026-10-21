@@ -146,7 +146,7 @@ describe('OPEND-2772 · 一次失败只出一张卡', () => {
     const { container } = renderFailure({ agentId: 'claude', code: 'AGENT_AUTH_REQUIRED' });
 
     expect(screen.getAllByTestId('chat-run-error-card')).toHaveLength(1);
-    expect(screen.queryByTestId('amr-guidance')).toBeNull();
+    expect(screen.queryByTestId('run-failure-ui')).toBeNull();
     expect(
       container.querySelector('[data-user-action-card="hosted-agent-suggestion"]'),
     ).toBeNull();
@@ -286,7 +286,7 @@ describe('OPEND-2772 · AMR 自己不许被劝去买 AMR', () => {
       (b) => (b.textContent ?? '').trim() === CLOUD_CTA,
     );
     expect(hits).toHaveLength(0);
-    expect(screen.queryByTestId('amr-guidance')).toBeNull();
+    expect(screen.queryByTestId('run-failure-ui')).toBeNull();
     expect(Array.from(screen.getByTestId('chat-run-error-card').querySelectorAll('button'),
       (button) => button.dataset.testid)).toEqual([
       'chat-error-contact-support', 'chat-error-export-logs', 'chat-error-retry',

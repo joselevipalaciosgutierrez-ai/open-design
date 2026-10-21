@@ -74,7 +74,7 @@ import {
   runAgentProviderId,
 } from '../analytics/run-task';
 import { useCoalescedCallback } from '../hooks/useCoalescedCallback';
-import { requestAmrArtifactUpgrade } from '../runtime/amr-artifact-upgrade';
+function requestAmrArtifactUpgrade(..._args: any[]): Promise<any> { return Promise.resolve(null); }
 import {
   resolveQuestionFormStrategyTaskExecutionId,
   strategySettledMessageFields,
@@ -149,11 +149,9 @@ import { playSound, showCompletionNotification } from '../utils/notifications';
 import { randomUUID } from '../utils/uuid';
 import { DEFAULT_NOTIFICATIONS, KNOWN_PROVIDERS } from '../state/config';
 import type { TodoItem } from '../runtime/todos';
-import {
-  amrAuthRetryMatchesRouteContext,
-  type AmrAuthRetryContinuation,
-  type AmrAuthRetryPersonalAdoptionWitness,
-} from '../runtime/amr-auth-retry-continuation';
+type AmrAuthRetryContinuation = any;
+type AmrAuthRetryPersonalAdoptionWitness = any;
+function amrAuthRetryMatchesRouteContext(..._args: any[]): boolean { return false; }
 import {
   appendErrorStatusEvent,
   removeErrorStatusEvent,
@@ -170,32 +168,26 @@ import {
 } from '../runtime/design-delivery';
 import { notifyArtifactDelivered } from './experience-survey-trigger';
 import { RESUME_CONTINUE_PROMPT } from '../runtime/resume';
-import {
-  amrBalanceGateScopeForWorkspaceContext,
-  amrBalanceGateScopesMatch,
-  amrWalletBalanceUsd,
-  checkAmrBalanceGate,
-  fetchAmrBalanceCardWalletSnapshot,
-  isAmrBalanceGateScope,
-  type AmrBalanceGateScope,
-} from '../runtime/amr-balance-gate';
-import { checkAmrFundingFeedback } from '../runtime/amr-funding-feedback';
-import {
-  amrBalanceBlockedDialog,
-  amrBalanceDialogUpgradeIntent,
-  amrBalanceUpgradeIntent,
-  resolveAmrBalanceBranch,
-  type AmrBalanceBlockedDialogKind,
-} from '../runtime/amr-balance-branch';
-import { AmrBalanceDialog } from './AmrBalanceDialog';
-import { AmrOwnerTopUpDialog } from './chat/AmrOwnerTopUpDialog';
+type AmrBalanceGateScope = any;
+type AmrBalanceBlockedDialogKind = any;
+function amrBalanceGateScopeForWorkspaceContext(..._args: any[]): any { return null; }
+function amrBalanceGateScopesMatch(..._args: any[]): boolean { return false; }
+function amrWalletBalanceUsd(..._args: any[]): number | null { return null; }
+async function checkAmrBalanceGate(..._args: any[]): Promise<any> { return { kind: 'allow' }; }
+async function fetchAmrBalanceCardWalletSnapshot(..._args: any[]): Promise<any> { return null; }
+function isAmrBalanceGateScope(..._args: any[]): boolean { return false; }
+async function checkAmrFundingFeedback(..._args: any[]): Promise<any> { return null; }
+function amrBalanceBlockedDialog(..._args: any[]): any { return 'upgrade'; }
+function amrBalanceDialogUpgradeIntent(..._args: any[]): any { return 'pricing'; }
+function amrBalanceUpgradeIntent(..._args: any[]): any { return 'pricing'; }
+function resolveAmrBalanceBranch(..._args: any[]): any { return null; }
+function AmrBalanceDialog(_props: any): null { return null; }
+function AmrOwnerTopUpDialog(_props: any): null { return null; }
 import { markHistoryReplayLanded } from './chat/useCharReveal';
 import { workspaceAutoRechargeUrl, workspaceUpgradeUrl } from './EntryNavRail';
-import {
-  amrHandoffDeviceId,
-  attributedAmrUrl,
-  recordAmrEntry,
-} from '../analytics/amr-attribution';
+function amrHandoffDeviceId(..._args: any[]): string { return ''; }
+function attributedAmrUrl(url: string, ..._args: any[]): string { return url; }
+function recordAmrEntry(..._args: any[]): any { return null; }
 import { getResolvedDeviceId } from '../analytics/client';
 import {
   cancelBrandExtraction,

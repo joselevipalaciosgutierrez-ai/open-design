@@ -41,19 +41,15 @@ import {
   trackOnboardingRuntimeScanResult,
   trackPageView,
 } from '../analytics/events';
-import {
-  amrHandoffDeviceId,
-  recordAmrEntry,
-  type AmrEntryAttribution,
-} from '../analytics/amr-attribution';
 import { getResolvedDeviceId } from '../analytics/client';
-import {
-  beginAmrAuthTracking,
-  confirmAmrAuthTracking,
-  observeAmrAuthTracking,
-  reconcileAmrAuthAttemptId,
-  resolveAmrAuthTracking,
-} from '../analytics/amr-auth';
+type AmrEntryAttribution = any;
+function recordAmrEntry(..._args: any[]): any { return null; }
+function amrHandoffDeviceId(..._args: any[]): string { return ''; }
+function beginAmrAuthTracking(..._args: any[]): any { return null; }
+function confirmAmrAuthTracking(..._args: any[]): any { return null; }
+function observeAmrAuthTracking(..._args: any[]): any { return null; }
+function reconcileAmrAuthAttemptId(..._args: any[]): any { return null; }
+function resolveAmrAuthTracking(..._args: any[]): any { return null; }
 import {
   clearOnboardingSessionId,
   getOrCreateOnboardingSessionId,
@@ -112,21 +108,19 @@ import { LibrarySection } from './LibrarySection';
 import { UpdaterPopup } from './UpdaterPopup';
 import { WhatsNewPopup } from './WhatsNewPopup';
 import { DeepSeekHarnessSetupDialog } from './DeepSeekHarnessSetupDialog';
-import type { HomeAmrBalanceGateBlock } from './HomeAmrBalanceGateDialogs';
-import {
-  amrBalanceBlockedDialog,
-  amrBalanceDialogUpgradeIntent,
-  resolveAmrBalanceBranch,
-} from '../runtime/amr-balance-branch';
+export type HomeAmrBalanceGateBlock = any;
+function amrBalanceBlockedDialog(..._args: any[]): any { return 'upgrade'; }
+function amrBalanceDialogUpgradeIntent(..._args: any[]): any { return 'pricing'; }
+function resolveAmrBalanceBranch(..._args: any[]): any { return null; }
 import { installDeepSeekHarnessCompanion } from '../providers/agent-companion';
-import {
-  amrBalanceGateFromMemory,
-  amrBalanceGateScopeForWorkspaceContext,
-  checkAmrBalanceGate,
-  retryUnavailableAmrBalanceGate,
-  type AmrBalanceGateScope,
-} from '../runtime/amr-balance-gate';
-import { cachedHomeAmrFundingBlock, checkAmrFundingFeedback, invalidateAmrFundingFeedback } from '../runtime/amr-funding-feedback';
+type AmrBalanceGateScope = any;
+function amrBalanceGateFromMemory(..._args: any[]): any { return null; }
+function amrBalanceGateScopeForWorkspaceContext(..._args: any[]): any { return null; }
+async function checkAmrBalanceGate(..._args: any[]): Promise<any> { return { kind: 'allow' }; }
+async function retryUnavailableAmrBalanceGate<T>(fn: () => Promise<T>): Promise<T> { return fn(); }
+function cachedHomeAmrFundingBlock(..._args: any[]): any { return null; }
+async function checkAmrFundingFeedback(..._args: any[]): Promise<any> { return null; }
+function invalidateAmrFundingFeedback(..._args: any[]): void {}
 import { HomeView, seedHomeComposerPrompt } from './HomeView';
 import { IslandBridge } from './lev/IslandBridge';
 import { entryStrategyRoutingFields } from './entry-strategy-routing';
@@ -226,13 +220,11 @@ import {
   startVelaLogin,
   type VelaLoginStatus,
 } from '../providers/daemon';
-import {
-  AMR_LOGIN_POLL_INTERVAL_MS,
-  amrLoginPollOutcome,
-  isAmrSessionAuthenticated,
-  notifyAmrLoginStatusChanged,
-} from './amrLoginPolling';
-import { closeAmrActivationWindowBestEffort } from './AmrLoginPill';
+const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
+function amrLoginPollOutcome(..._args: any[]): any { return null; }
+function isAmrSessionAuthenticated(..._args: any[]): boolean { return false; }
+function notifyAmrLoginStatusChanged(..._args: any[]): void {}
+function closeAmrActivationWindowBestEffort(..._args: any[]): void {}
 import { isMacPlatform } from '../utils/platform';
 import { smoothScrollToTop } from '../utils/smoothScrollToTop';
 import { summarizeProjectNameFromPrompt } from '../utils/projectName';
@@ -251,7 +243,7 @@ import {
 } from './entryRailBridge';
 import { resolveByokModelPreference } from './byok/validation';
 import onboardingWelcomeStyles from './OnboardingWelcome.module.css';
-import { AmrActivationHintText } from './AmrActivationHintText';
+function AmrActivationHintText(_props: any): null { return null; }
 
 // How long a cloud sign-in waits for the browser before offering to reopen it.
 const ACTIVATION_HINT_DELAY_MS = 5000;
@@ -3721,11 +3713,7 @@ function OnboardingView({
 
   const primaryActionLabel = t('settings.onboardingContinue');
 
-  // Cloud remains the primary identity path. Local CLI and BYOK are independent
-  // direct setup paths; authenticated users keep the full source chooser.
   if (step === 0) {
-    const cloudBusy = amrLoginBusy;
-    const amrStatusResolving = !amrStatusResolved;
     return (
       <section
         className="onboarding-view onboarding-view--cloud"
@@ -3736,75 +3724,24 @@ function OnboardingView({
             <h1 className="onboarding-cloud__title">{t('settings.onboardingCloudTitle')}</h1>
             <p className="onboarding-cloud__body">{t('settings.onboardingCloudBody')}</p>
             <div className={onboardingWelcomeStyles.signInAction}>
-              {!amrSignedIn && !amrStatusResolving && !cloudBusy ? (
-                <span className={onboardingWelcomeStyles.creditCorner}>
-                  <span
-                    className={`${onboardingWelcomeStyles.credits} od-tooltip`}
-                    data-tooltip={t('settings.onboardingFreeCreditsHint')}
-                    aria-label={t('settings.onboardingFreeCreditsHint')}
-                    tabIndex={0}
-                  >
-                    <span className={onboardingWelcomeStyles.creditLabel}>
-                      {t('settings.onboardingFreeCredits')}
-                    </span>
-                  </span>
-                </span>
-              ) : null}
               <button
                 type="button"
                 className="onboarding-cloud__primary"
                 onClick={() => {
-                  if (amrStatusResolving) return;
-                  if (amrSignedIn) {
-                    recordAmrEntry(analytics.track, 'onboarding_amr_card', new Date(), {
-                      metricsConsent: config.telemetry?.metrics === true,
-                    });
-                    recordAmrEntry(
-                      analytics.track,
-                      'onboarding_amr_sign_in_continue',
-                      new Date(),
-                      {
-                        metricsConsent: config.telemetry?.metrics === true,
-                        reuseExistingFrom: ['onboarding_amr_card'],
-                      },
-                    );
-                    continueAfterCloudSignIn();
-                    return;
-                  }
-                  void handleCloudSignIn();
+                  emitOnboardingClick('local_coding_agent', 'select_runtime', {
+                    runtime_type: 'local_cli',
+                  });
+                  setRuntime('local');
+                  void scanCliAgents({ preferExisting: true });
+                  setStep(2);
                 }}
-                disabled={cloudBusy || amrLoginCancelPending || amrStatusResolving}
-                aria-busy={cloudBusy || amrStatusResolving ? true : undefined}
               >
-                <Icon name="log-in" size={17} />
-                <span>
-                  {cloudBusy
-                    ? t('settings.amrSigningIn')
-                    : amrStatusResolving
-                      ? t('common.loading')
-                      : amrSignedIn
-                        ? t('settings.onboardingCloudContinue')
-                        : t('settings.onboardingCloudSignIn')}
-                </span>
+                <Icon name="robot" size={17} />
+                <span>{t('settings.onboardingContinue')}</span>
               </button>
             </div>
-            {amrLoginError ? (
-              <span className="onboarding-cloud__error" role="alert">
-                {amrLoginError}
-              </span>
-            ) : null}
-            {/* Everything under the primary button shares one grid cell, so
-                the cell is always as tall as its tallest state and switching
-                between "own AI" choices and the pending sign-in controls never
-                moves the button. The idle layer stays mounted (hidden) while
-                signing in to keep reserving that height. */}
             <div className={onboardingWelcomeStyles.belowAction}>
-              <div
-                className={`${onboardingWelcomeStyles.belowLayer} ${
-                  cloudBusy ? onboardingWelcomeStyles.belowLayerHidden : ''
-                }`}
-                aria-hidden={cloudBusy ? true : undefined}
-              >
+              <div className={onboardingWelcomeStyles.belowLayer}>
                 <div className={onboardingWelcomeStyles.alternatives}>
                   <div className={onboardingWelcomeStyles.divider}>
                     {t('settings.onboardingOwnAi')}
@@ -3840,44 +3777,6 @@ function OnboardingView({
                   </div>
                 </div>
               </div>
-              {cloudBusy ? (
-                <div className={onboardingWelcomeStyles.belowLayer}>
-                  {/* Manual device-auth fallback, mirroring Settings' AmrLoginPill:
-                      vela auto-opens the browser, but when that fails silently (e.g.
-                      corp-managed hosts) the pending login otherwise looks like a
-                      dead button — surface the activation link the status poll
-                      already carries. */}
-                  {amrStatus?.activationUrl
-                  && (activationHintDue || amrStatus.browserOpenFailed) ? (
-                    <p className="onboarding-cloud__activation" role="status">
-                      <span>
-                        {amrStatus.browserOpenFailed
-                          ? <AmrActivationHintText browserOpenFailed />
-                          : t('settings.onboardingActivationPrompt')}
-                      </span>
-                      <a
-                        className="onboarding-cloud__activation-link"
-                        href={amrStatus.activationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {amrStatus.browserOpenFailed
-                          ? t('settings.amrActivationOpen')
-                          : t('settings.onboardingActivationReopen')}
-                        <Icon name="external-link" size={12} />
-                      </a>
-                    </p>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="onboarding-cloud__cancel"
-                    onClick={handleCancelAmrLogin}
-                    disabled={amrLoginCancelPending}
-                  >
-                    {t('settings.amrCancelSignIn')}
-                  </button>
-                </div>
-              ) : null}
             </div>
           </div>
           <footer className="onboarding-cloud__footer">

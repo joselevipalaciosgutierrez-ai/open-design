@@ -14,12 +14,10 @@ import {
 } from '@open-design/contracts/analytics';
 import { useAnalytics } from '../analytics/provider';
 import { byokErrorCode } from '../analytics/byok-error-code';
-import {
-  amrHandoffDeviceId,
-  attributedAmrUrl,
-  recordAmrEntry,
-  type TrackingAmrEntrySource,
-} from '../analytics/amr-attribution';
+type TrackingAmrEntrySource = string;
+function recordAmrEntry(..._args: any[]): any {
+  return null;
+}
 import { getResolvedDeviceId } from '../analytics/client';
 import {
   trackByokPreflightBlocked,
@@ -44,14 +42,18 @@ import type { Dict } from '../i18n/types';
 import { AgentIcon } from './AgentIcon';
 import { AgentDiagnosticRow } from './AgentDiagnosticRow';
 import { DeepSeekHarnessSetupDialog } from './DeepSeekHarnessSetupDialog';
-import { AmrLoginPill } from './AmrLoginPill';
 import { PlanBadge } from './PlanBadge';
 import { orderAgentsWithOpenDesignFirst } from './agentOrdering';
-import {
-  AMR_LOGIN_STATUS_EVENT,
-  amrLoginStatusEventReason,
-  isAmrSessionAuthenticated,
-} from './amrLoginPolling';
+function AmrLoginPill(_props: any): null {
+  return null;
+}
+const AMR_LOGIN_STATUS_EVENT = 'open-design:amr-login-status';
+function amrLoginStatusEventReason(_event: Event): string | null {
+  return null;
+}
+function isAmrSessionAuthenticated(_status: any): boolean {
+  return false;
+}
 import {
   fetchAmrWalletSnapshot,
   fetchVelaLoginStatus,
@@ -59,7 +61,7 @@ import {
   type VelaLoginStatus,
 } from '../providers/daemon';
 import { installDeepSeekHarnessCompanion } from '../providers/agent-companion';
-import { amrProfileBadgeLabel } from '../runtime/amr-guidance';
+import { amrProfileBadgeLabel } from '../runtime/run-failure-ui';
 import {
   availableVisibleAgentCount,
   deepSeekHarnessNeedsSetup,
@@ -2413,17 +2415,9 @@ export function SettingsDialog({
   };
   const attributedAmrSettingsUrl = (
     url: string,
-    sourceDetail: TrackingAmrEntrySource,
+    _sourceDetail: TrackingAmrEntrySource,
   ) => {
-    const attribution = recordAmrEntry(analytics.track, sourceDetail, new Date(), {
-      metricsConsent: cfg.telemetry?.metrics === true,
-    });
-    const deviceId = amrHandoffDeviceId({
-      metricsConsent: cfg.telemetry?.metrics === true,
-      resolvedDeviceId: getResolvedDeviceId(),
-      installationId: cfg.installationId,
-    });
-    return attributedAmrUrl(url, attribution, deviceId);
+    return url;
   };
   const openAgentFixUrl = (
     url: string | undefined,

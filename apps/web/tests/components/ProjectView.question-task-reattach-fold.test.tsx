@@ -171,10 +171,6 @@ vi.mock('../../src/providers/project-events', () => ({
   useProjectFileEvents: vi.fn(),
 }));
 
-vi.mock('../../src/runtime/amr-balance-gate', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/runtime/amr-balance-gate')>()),
-  checkAmrBalanceGate: (...args: unknown[]) => checkAmrBalanceGate(...args),
-}));
 
 vi.mock('../../src/runtime/brands', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/runtime/brands')>()),

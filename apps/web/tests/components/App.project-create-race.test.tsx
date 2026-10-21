@@ -12,7 +12,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../src/App';
-import { notifyAmrLoginStatusChanged } from '../../src/components/amrLoginPolling';
+function notifyAmrLoginStatusChanged(..._args: any[]) {}
 import type {
   ProjectNameAuthorityResolution,
   ProjectRenameFenceToken,
@@ -72,7 +72,7 @@ import {
   resetProjectDisplaySnapshots,
   writeProjectDisplaySnapshot,
 } from '../../src/state/project-display-cache';
-import type { AmrAuthRetryContinuation } from '../../src/runtime/amr-auth-retry-continuation';
+type AmrAuthRetryContinuation = any;
 import type { VelaLoginStatus } from '../../src/providers/daemon';
 import { workspaceDirectoryFixture } from '../helpers/workspace-context';
 

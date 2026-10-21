@@ -3,7 +3,7 @@ import { zhCN } from '../../src/i18n/locales/zh-CN';
 import {
   daemonFailureVerdictFrom,
   resolveRunFailureUi,
-} from '../../src/runtime/amr-guidance';
+} from '../../src/runtime/run-failure-ui';
 
 /*
  * 用户实测(打包版 0.21.1-beta.7,2026-09-06 20:41,run 4c91590e):
@@ -23,7 +23,7 @@ import {
  * 分类器 `run-failure-classification.ts` 的 `modelUnavailableDetail()` 就是靠
  * 「requires a newer version of codex」这条正则命中的。
  *
- * 界面上这两样一样都没到。原因是 `amr-guidance.ts` 的三张查找表里,
+ * 界面上这两样一样都没到。原因是 `run-failure-ui.ts` 的三张查找表里,
  * `model_unavailable` 这一族的 failure_detail 一行都没有 ——
  * `cli_version_incompatible` / `model_not_found` / `model_not_supported` /
  * `model_disabled` / `local_model_not_loaded` 全都查不到。
@@ -102,7 +102,7 @@ describe('模型不可用:daemon 已经命名的病因,不该在界面上退回�
    * 声明它该落到哪一对键上,而不是断言五个 detail 命中同一个 titleKey。
    *
    * 「模型不存在」那半仍留在 `title.modelUnavailable` 上:文档给它的终稿标题是
-   * 「未找到 {模型名}」,而报错卡拿不到模型名(见 amr-guidance 里那条注释),
+   * 「未找到 {模型名}」,而报错卡拿不到模型名(见 run-failure-ui 里那条注释),
    * 所以那一格等数据通路,先不换文案。
    */
   const CARD_BY_DETAIL: ReadonlyArray<readonly [string, string, string]> = [

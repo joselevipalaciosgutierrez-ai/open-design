@@ -30,25 +30,22 @@ import {
   modelIdForTracking,
 } from '@open-design/contracts/analytics';
 import { useAnalytics } from '../analytics/provider';
-import {
-  amrHandoffDeviceId,
-  attributedAmrUrl,
-  recordAmrEntry,
-  type AmrEntryAttribution,
-} from '../analytics/amr-attribution';
-import { amrPlansUrlForProfile } from '../runtime/amr-guidance';
 import { getResolvedDeviceId } from '../analytics/client';
 import {
   trackDeepSeekCampaignModelBenefitSurfaceView,
   trackExecutionSettingsPopoverClick,
 } from '../analytics/events';
-import {
-  beginAmrAuthTracking,
-  confirmAmrAuthTracking,
-  observeAmrAuthTracking,
-  reconcileAmrAuthAttemptId,
-  resolveAmrAuthTracking,
-} from '../analytics/amr-auth';
+
+type AmrEntryAttribution = { entryId: string; source: string; sourceDetail: string; occurredAt: string };
+const amrHandoffDeviceId = (_opts: unknown): string => '';
+const attributedAmrUrl = (url: any, _attribution?: any, _deviceId?: any): string => url ?? '';
+const recordAmrEntry = (..._args: unknown[]) => null;
+const amrPlansUrlForProfile = (_profile?: unknown): string => '';
+const beginAmrAuthTracking = (..._args: unknown[]): any => undefined;
+const confirmAmrAuthTracking = (..._args: unknown[]) => {};
+const observeAmrAuthTracking = (..._args: unknown[]) => {};
+const reconcileAmrAuthAttemptId = (..._args: unknown[]): any => null;
+const resolveAmrAuthTracking = (..._args: unknown[]) => {};
 import {
   useWorkspaceBillingResponse,
   useWorkspaceContext,
@@ -73,15 +70,13 @@ import { AgentIcon } from './AgentIcon';
 import { Icon } from './Icon';
 import { modelProviderIconSrc } from './modelProviderIcon';
 import { PlanBadge } from './PlanBadge';
-import {
-  AMR_LOGIN_STATUS_EVENT,
-  AMR_LOGIN_POLL_INTERVAL_MS,
-  AMR_LOGIN_STARTUP_SETTLE_MS,
-  amrLoginPollOutcome,
-  amrLoginStatusEventReason,
-  isAmrSessionAuthenticated,
-  notifyAmrLoginStatusChanged,
-} from './amrLoginPolling';
+const AMR_LOGIN_STATUS_EVENT = 'od:amr-login-status';
+const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
+const AMR_LOGIN_STARTUP_SETTLE_MS = 1500;
+const amrLoginPollOutcome = (..._args: unknown[]) => 'stopped';
+const amrLoginStatusEventReason = (..._args: unknown[]) => null;
+const isAmrSessionAuthenticated = (..._args: unknown[]) => false;
+const notifyAmrLoginStatusChanged = (..._args: unknown[]) => {};
 import { orderAgentsWithOpenDesignFirst } from './agentOrdering';
 import { anchorSelectionInView } from './pickerSelectionAnchor';
 import {

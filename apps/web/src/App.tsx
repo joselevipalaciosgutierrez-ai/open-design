@@ -42,10 +42,8 @@ import type {
   OptimisticProjectCreationHandoff,
   ProjectTitleHint,
 } from './components/EntryShell';
-import {
-  HomeAmrBalanceGateDialogs,
-  type HomeAmrBalanceGateBlock,
-} from './components/HomeAmrBalanceGateDialogs';
+function HomeAmrBalanceGateDialogs(_props: any): null { return null; }
+type HomeAmrBalanceGateBlock = any;
 import type { IntegrationTab } from './components/IntegrationsView';
 import { MarketplaceView } from './components/MarketplaceView';
 import { PluginDetailView } from './components/PluginDetailView';
@@ -67,8 +65,8 @@ import {
 import { ProjectCreationPendingView } from './components/ProjectCreationPendingView';
 import { rememberProjectSessionMode } from './state/project-session-mode-hint';
 import { projectsForWorkspaceChrome } from './runtime/workspace-chrome-projects';
-import { AmrArtifactUpgradeGate } from './components/AmrArtifactUpgradeGate';
-import { AmrArtifactUpgradeHomeCard } from './components/AmrArtifactUpgradeHomeCard';
+function AmrArtifactUpgradeGate(_props: any): null { return null; }
+function AmrArtifactUpgradeHomeCard(_props: any): null { return null; }
 import { ExperienceSurvey } from './components/ExperienceSurvey';
 import { TooltipLayer } from './components/TooltipLayer';
 import { UpdateDialog } from './components/UpdateDialog';
@@ -123,11 +121,9 @@ import {
   listProjectRunsWithScope,
   type VelaLoginStatus,
 } from './providers/daemon';
-import {
-  AMR_LOGIN_STATUS_EVENT,
-  amrLoginStatusEventReason,
-  isAmrSessionAuthenticated,
-} from './components/amrLoginPolling';
+const AMR_LOGIN_STATUS_EVENT = 'open-design:amr-login-status';
+function amrLoginStatusEventReason(_event: Event): string | null { return null; }
+function isAmrSessionAuthenticated(_status: any): boolean { return false; }
 import { CollabDemoView } from './collab/CollabDemoView';
 import {
   WorkspaceMemberDirectoryPreloader,
@@ -188,21 +184,15 @@ import { isMacPlatform } from './utils/platform';
 import { randomUUID } from './utils/uuid';
 import { summarizeProjectNameFromPrompt } from './utils/projectName';
 import { armCompletionFeedbackOnFirstGesture } from './utils/notifications';
-import {
-  amrArtifactUpgradeHomeMockOffer,
-  type AmrArtifactUpgradeHomeOffer,
-} from './runtime/amr-artifact-upgrade';
-import {
-  amrBalanceGateScopeForWorkspaceContext,
-  amrBalanceGateScopesMatch,
-  type AmrBalanceGateScope,
-} from './runtime/amr-balance-gate';
-import {
-  AMR_AUTH_RETRY_CONTINUATION_TTL_MS,
-  amrAuthRetryMatchesRouteContext,
-  routeStillMatchesAmrAuthRetryContinuation,
-  type AmrAuthRetryContinuation,
-} from './runtime/amr-auth-retry-continuation';
+function amrArtifactUpgradeHomeMockOffer(..._args: any[]): any { return null; }
+type AmrArtifactUpgradeHomeOffer = any;
+function amrBalanceGateScopeForWorkspaceContext(..._args: any[]): any { return null; }
+function amrBalanceGateScopesMatch(..._args: any[]): boolean { return false; }
+type AmrBalanceGateScope = any;
+const AMR_AUTH_RETRY_CONTINUATION_TTL_MS = 60000;
+function amrAuthRetryMatchesRouteContext(..._args: any[]): boolean { return false; }
+function routeStillMatchesAmrAuthRetryContinuation(..._args: any[]): boolean { return false; }
+type AmrAuthRetryContinuation = any;
 import { installFontRecovery } from './runtime/font-recovery';
 import {
   runWithConcurrency,
@@ -5768,7 +5758,7 @@ function AppInner() {
               }}
               onDismiss={() => {
                 if (amrArtifactUpgradeHomeMock) return;
-                setAmrArtifactUpgradeHomeOffer((current) =>
+                setAmrArtifactUpgradeHomeOffer((current: any) =>
                   current?.sessionKey === amrArtifactUpgradeHomeOffer.sessionKey
                     ? null
                     : current,

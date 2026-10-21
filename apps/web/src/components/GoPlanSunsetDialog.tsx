@@ -2,14 +2,12 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Dialog } from '@open-design/components';
 
-import { attributedAmrUrl, recordAmrEntry } from '../analytics/amr-attribution';
 import {
   trackGoPlanSunsetModalClick,
   trackGoPlanSunsetModalSurfaceView,
 } from '../analytics/events';
 import { useAnalytics } from '../analytics/provider';
 import { useI18n } from '../i18n';
-import { amrPlansUrlForProfile } from '../runtime/amr-guidance';
 import styles from './GoPlanSunsetDialog.module.css';
 
 type DismissElement = 'acknowledge' | 'close';
@@ -143,21 +141,6 @@ export function GoPlanSunsetDialog({
   const viewSubscriptions = () => {
     if (dismissing) return;
     trackClick('view_other_subscriptions');
-    const attribution = recordAmrEntry(
-      analytics.track,
-      'go_plan_sunset_modal',
-      new Date(),
-      {
-        metricsConsent,
-        campaignId: 'go_plan_sunset_202608',
-        conversionSource: 'go_plan_sunset_modal',
-      },
-    );
-    window.open(
-      attributedAmrUrl(amrPlansUrlForProfile(profile), attribution),
-      '_blank',
-      'noopener,noreferrer',
-    );
   };
 
   if (!active || typeof document === 'undefined') return null;

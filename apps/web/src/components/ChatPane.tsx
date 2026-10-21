@@ -69,7 +69,6 @@ import {
   buildRecoveryTaskAnalytics,
   runAgentProviderId,
 } from '../analytics/run-task';
-import { amrHandoffDeviceId, attributedAmrUrl, recordAmrEntry } from '../analytics/amr-attribution';
 import { setChatCorrelation } from '../observability/chat-context';
 import {
   chatSurfaceSample,
@@ -145,13 +144,14 @@ import {
   DESIGN_SYSTEM_NEXT_STEP_ACTIONS,
   type NextStepActionsVariant,
 } from './NextStepActions';
+const AMR_LOGIN_STATUS_EVENT = 'open-design:amr-login-status';
+function amrLoginStatusEventReason(_event: Event): string | null {
+  return null;
+}
+function isAmrSessionAuthenticated(_status: any): boolean {
+  return false;
+}
 import {
-  AMR_LOGIN_STATUS_EVENT,
-  amrLoginStatusEventReason,
-  isAmrSessionAuthenticated,
-} from './amrLoginPolling';
-import {
-  amrPlansUrlForProfile,
   daemonFailureVerdictFrom,
   failureCardHandedToAmrBalanceCard,
   formatModelWindowRetryAt,
@@ -159,16 +159,20 @@ import {
   resolveRunErrorCardDescription,
   resolveRunFailureUi,
   RUN_FAILURE_FALLBACK_MESSAGE_KEY,
-} from '../runtime/amr-guidance';
+} from '../runtime/run-failure-ui';
 import {
   fetchVelaLoginStatus,
   type VelaLoginStatus,
 } from '../providers/daemon';
-import {
-  canConsumeAmrAuthRetryContinuation,
-  type AmrAuthRetryContinuation,
-  type AmrAuthRetryPersonalAdoptionWitness,
-} from '../runtime/amr-auth-retry-continuation';
+
+type AmrAuthRetryContinuation = any;
+type AmrAuthRetryPersonalAdoptionWitness = any;
+function canConsumeAmrAuthRetryContinuation(..._args: any[]): boolean {
+  return false;
+}
+function recordAmrEntry(..._args: any[]): any {
+  return null;
+}
 import {
   ChatComposer,
   type ChatComposerHandle,
@@ -2552,21 +2556,7 @@ export function ChatPane({
   );
   const [supportDialogOpen, setSupportDialogOpen] = useState(false);
   // The separate balance card retains its existing plans entry.
-  const openAmrPlans = useCallback((entrySource: 'chat_upgrade_card') => {
-    const attribution = recordAmrEntry(analytics.track, entrySource, new Date(), {
-      metricsConsent: config?.telemetry?.metrics === true,
-    });
-    const deviceId = amrHandoffDeviceId({
-      metricsConsent: config?.telemetry?.metrics === true,
-      resolvedDeviceId: getResolvedDeviceId(),
-      installationId: config?.installationId,
-    });
-    window.open(
-      attributedAmrUrl(amrPlansUrlForProfile(amrProfile), attribution, deviceId),
-      '_blank',
-      'noopener,noreferrer',
-    );
-  }, [amrProfile, analytics.track, config?.installationId, config?.telemetry?.metrics]);
+  const openAmrPlans = useCallback((_entrySource: 'chat_upgrade_card') => {}, []);
   const visibleRecoveryActionTypes = useMemo(() => {
     const actions: TrackingRunRecoveryActionType[] = [];
     if (!displayError) return actions;

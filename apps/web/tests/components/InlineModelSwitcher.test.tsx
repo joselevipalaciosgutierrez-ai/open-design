@@ -4,10 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceCollabContext } from '@open-design/contracts';
 import { InlineModelSwitcher } from '../../src/components/InlineModelSwitcher';
-import {
-  AMR_LOGIN_POLL_INTERVAL_MS,
-  AMR_LOGIN_TIMEOUT_MS,
-} from '../../src/components/amrLoginPolling';
+const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
+const AMR_LOGIN_TIMEOUT_MS = 60000;
 import { fetchProviderModels } from '../../src/providers/provider-models';
 import { providerModelsCacheKey } from '../../src/components/providerModelsCache';
 import { resetWorkspaceContextCache } from '../../src/collab/useWorkspaceContext';

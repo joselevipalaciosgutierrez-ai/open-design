@@ -164,10 +164,6 @@ vi.mock('../../src/providers/project-events', () => ({
   useProjectFileEvents: vi.fn(),
 }));
 
-vi.mock('../../src/runtime/amr-balance-gate', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../src/runtime/amr-balance-gate')>()),
-  checkAmrBalanceGate: (...args: unknown[]) => checkAmrBalanceGate(...args),
-}));
 
 vi.mock('../../src/runtime/brands', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/runtime/brands')>()),
@@ -933,7 +929,7 @@ describe('2026-09-14 retry replaces the old error surface without erasing histor
   });
 
   type RunOptions = Parameters<typeof import('../../src/providers/daemon').streamViaDaemon>[0];
-  type GateOutcome = Awaited<ReturnType<typeof import('../../src/runtime/amr-balance-gate').checkAmrBalanceGate>>;
+  type GateOutcome = any;
 
   function deferred<T>() {
     let resolve!: (value: T) => void;

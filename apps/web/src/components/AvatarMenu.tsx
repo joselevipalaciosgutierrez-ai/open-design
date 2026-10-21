@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { getResolvedDeviceId } from '../analytics/client';
-import { amrHandoffDeviceId, attributedAmrUrl, recordAmrEntry } from '../analytics/amr-attribution';
 import { useAnalytics } from '../analytics/provider';
 import { useT } from '../i18n';
 import { CliPickerMenu } from './agents/CliPickerMenu';
@@ -37,7 +36,6 @@ import {
   type VelaLoginStatus,
 } from '../providers/daemon';
 import { openExternalUrl } from '../providers/registry';
-import { amrPlansUrlForWorkspace } from '../runtime/amr-guidance';
 import { isMacPlatform } from '../utils/platform';
 import {
   useWorkspaceBillingResponse,
@@ -349,10 +347,7 @@ export function AvatarMenu({
     !workspaceContextLoading && workspaceContext?.workspaceId.trim()
       ? workspaceContext.workspaceId
       : null;
-  const amrPlansUrl = amrPlansUrlForWorkspace(
-    amrResolvedProfile,
-    financialWorkspaceId,
-  );
+  const amrPlansUrl = null;
   /*
    * Whether the viewer may be shown a billing entrance at all.
    *
@@ -389,19 +384,11 @@ export function AvatarMenu({
     amrPlansUrl !== null;
   const openAmrTarget = (
     targetUrl: string | null,
-    source: 'avatar_amr_upgrade',
+    _source: 'avatar_amr_upgrade',
   ) => {
     if (!targetUrl) return;
-    const attribution = recordAmrEntry(analytics.track, source, new Date(), {
-      metricsConsent: config.telemetry?.metrics === true,
-    });
-    const deviceId = amrHandoffDeviceId({
-      metricsConsent: config.telemetry?.metrics === true,
-      resolvedDeviceId: getResolvedDeviceId(),
-      installationId: config.installationId,
-    });
     setOpen(false);
-    void openExternalUrl(attributedAmrUrl(targetUrl, attribution, deviceId));
+    void openExternalUrl(targetUrl);
   };
   // Plan-gated models stay visible but are not selectable; clicking one routes
   // to the plans page instead of silently choosing a model the run would reject.

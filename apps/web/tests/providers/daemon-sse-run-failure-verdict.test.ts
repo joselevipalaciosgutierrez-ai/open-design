@@ -4,7 +4,7 @@
  * 报错卡读的是那条持久化的 `status:error` 事件,而那条事件的字段全部来自
  * `onError` 收到的错误对象 —— 也就是 `markErrorRunFailure` 盖上去的那几个。
  * 今天它只盖 `failureCategory` / `failureDetail`,于是
- * `amr-guidance.ts` 里那条「后端说重试没用就降档」的分支恒不成立。
+ * `run-failure-ui.ts` 里那条「后端说重试没用就降档」的分支恒不成立。
  *
  * 三档:带且不可重试 / 带且可重试 / 老 daemon 完全不带(必须**一个字段都不长出来**,
  * 否则 `daemonFailureVerdictFrom` 会把「我们问了,答案是没有」误读成一个裁决)。

@@ -7,11 +7,6 @@ import {
   type DeepSeekV4FlashCampaignAudience,
 } from '../campaigns/deepseek-v4-flash';
 import { goPlanPricingUrl } from '../campaigns/go-plan';
-import {
-  amrHandoffDeviceId,
-  attributedAmrUrl,
-  recordAmrEntry,
-} from '../analytics/amr-attribution';
 import { getResolvedDeviceId } from '../analytics/client';
 import { useAnalytics } from '../analytics/provider';
 import {
@@ -245,23 +240,8 @@ export function DeepSeekV4FlashCampaign({
       window.setTimeout(highlightModelSwitcher, 0);
       return;
     }
-    const attribution = recordAmrEntry(
-      analytics.track,
-      'deepseek_unpaid_modal',
-      new Date(),
-      {
-        metricsConsent,
-        campaignId: 'deepseek_v4_pro',
-        conversionSource: 'deepseek_unpaid_modal',
-      },
-    );
-    const deviceId = amrHandoffDeviceId({
-      metricsConsent,
-      resolvedDeviceId: getResolvedDeviceId(),
-      installationId,
-    });
     window.open(
-      attributedAmrUrl(goPlanPricingUrl(locale), attribution, deviceId),
+      goPlanPricingUrl(locale),
       '_blank',
       'noopener,noreferrer',
     );

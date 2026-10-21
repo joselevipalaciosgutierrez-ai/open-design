@@ -27,7 +27,7 @@ import { forwardRef } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ChatPane } from '../../src/components/ChatPane';
-import { RECONNECT_OWNED_FAILURE_CODE } from '../../src/runtime/amr-guidance';
+import { RECONNECT_OWNED_FAILURE_CODE } from '../../src/runtime/run-failure-ui';
 import type { ChatReconnectView } from '../../src/runtime/chat/reconnect-state';
 import type { AppConfig, ChatMessage } from '../../src/types';
 
