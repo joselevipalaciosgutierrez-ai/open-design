@@ -1,4 +1,5 @@
 import type { WorkspaceContextState } from '../runtime/local-workspace';
+import type { AmrSessionState } from '../providers/daemon';
 
 export type EntryRailAccountFooterState = 'hidden' | 'syncing' | 'recovering' | 'sign-in';
 
@@ -16,7 +17,7 @@ export function shouldShowCreditsBalance(input: {
 }
 
 export function requiresAmrReauthentication(
-  amrSessionState: import('@open-design/contracts').AmrSessionState | undefined,
+  amrSessionState: AmrSessionState | undefined,
   workspaceFailure: WorkspaceContextState['failure'],
 ): boolean {
   return amrSessionState === 'reauth_required' || workspaceFailure === 'reauth-required';
@@ -35,7 +36,7 @@ export function requiresAmrReauthentication(
 export function resolveEntryRailAccountFooterState(
   workspaceState: WorkspaceContextState,
   amrLoggedIn: boolean | null | undefined,
-  amrSessionState?: import('@open-design/contracts').AmrSessionState,
+  amrSessionState?: AmrSessionState,
 ): EntryRailAccountFooterState {
   if (requiresAmrReauthentication(amrSessionState, workspaceState.failure)) return 'sign-in';
   if (workspaceState.context) return 'hidden';

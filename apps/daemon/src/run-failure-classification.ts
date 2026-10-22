@@ -17,7 +17,6 @@ import type {
   TrackingRunTerminalTrigger,
 } from '@open-design/contracts/analytics';
 import {
-  AMR_CONTINUATION_ERROR_CODE,
   isMembershipConcurrencyLimitFailure,
   isModelWindowLimitFailure,
 } from '@open-design/contracts';
@@ -1070,15 +1069,7 @@ function classifyRunFailureBase(
   // signal guard below (a watchdog kill IS a signal, and the reason it was
   // killed outranks the bare signal) and the timeout branch itself.
   const daemonTimeoutVerdict = hasDaemonTimeoutVerdict(events);
-  if (input.agentId === 'amr' && events.some((event) => {
-    if (event.event !== 'error') return false;
-    const data = asObject(event.data);
-    const details = asObject(asObject(data?.error)?.details);
-    return details?.code === AMR_CONTINUATION_ERROR_CODE;
-  })) {
-    return classification('process_exit', 'continuation_incomplete',
-      inferFailureStageFromEvents(events, 'post_tool_resume'), false, 'none');
-  }
+
   const byokOpenCodeProviderNotFound = isByokOpenCodeProviderNotFoundText(
     input.agentId,
     text,

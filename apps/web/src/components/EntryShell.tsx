@@ -218,6 +218,7 @@ import {
   cancelVelaLogin,
   fetchVelaLoginStatus,
   startVelaLogin,
+  type AmrSessionState,
   type VelaLoginStatus,
 } from '../providers/daemon';
 const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
@@ -500,7 +501,7 @@ interface Props {
   // During a transient Cloud outage it prevents the rail from presenting a
   // still-signed-in user as signed out.
   amrLoggedIn?: boolean | null;
-  amrSessionState?: import('@open-design/contracts').AmrSessionState;
+  amrSessionState?: AmrSessionState;
   /**
    * vela login-status account/user plan (ACCOUNT-scoped). Used for personal
    * workspaces so a confirmed free account is not stuck as campaign audience

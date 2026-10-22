@@ -76,8 +76,6 @@ import type {
   QuestionsFormClickProps,
   RunFailedToastClickProps,
   RunRecoveryActionClickProps,
-  AmrAuthResultProps,
-  AmrAuthStageProps,
   AmrEntryClickProps,
   PreviewRunStatusSurfaceViewProps,
   DeepSeekCampaignModalClickProps,
@@ -186,6 +184,9 @@ import type {
   WorkspaceResourceActionResultProps,
   ProjectCommentCreateResultProps,
 } from '@open-design/contracts/analytics';
+
+export type AmrAuthResultProps = any;
+export type AmrAuthStageProps = any;
 
 type TrackOptions = { requestId?: string; insertId?: string };
 export type Track = (

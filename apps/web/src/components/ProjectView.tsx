@@ -34,6 +34,7 @@ import {
   reattachDaemonRun,
   reportChatRunFeedback,
   streamViaDaemon,
+  type AmrWalletSnapshot,
 } from '../providers/daemon';
 import {
   type ChatReconnectSignal,
@@ -86,7 +87,6 @@ import {
   isWorkspaceLifecycleReadable,
   workspaceBillingAuthorityContext,
   workspacePrincipalKey,
-  type AmrWalletSnapshot,
   type ByokChatProviderConfig,
   type ByokMediaDefaults,
   type ByokChatProtocol,

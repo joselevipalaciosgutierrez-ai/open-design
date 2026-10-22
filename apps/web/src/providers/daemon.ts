@@ -11,13 +11,6 @@
  */
 import type { AgentEvent, ChatCommentAttachment, ChatMessage } from '../types';
 import type {
-  AmrAuthErrorKind,
-  AmrAuthNetworkPath,
-  AmrAuthStage,
-  AmrAuthStageResult,
-  AmrAuthStageSource,
-} from '@open-design/contracts/analytics';
-import type {
   ApiErrorResponse,
   ChatAnalyticsHints,
   ChatRunCreateResponse,
@@ -29,8 +22,6 @@ import type {
   ChatSseEvent,
   ChatSseStartPayload,
   DaemonAgentPayload,
-  AmrModelsResponse,
-  AmrWalletSnapshot,
   ByokChatProviderConfig,
   MediaExecutionPolicy,
   ResearchOptions,
@@ -1287,6 +1278,15 @@ export function canUpgradeVelaPlan(plan?: string | null): boolean {
  * env-backed sessions (where `user` is null) can show plan/balance without a
  * fabricated identity. Absent means unknown → hide the fields.
  */
+export type AmrAuthErrorKind = string;
+export type AmrAuthNetworkPath = string;
+export type AmrAuthStage = string;
+export type AmrAuthStageResult = string;
+export type AmrAuthStageSource = string;
+export type AmrWalletSnapshot = any;
+export type AmrModelsResponse = any;
+export type AmrSessionState = any;
+
 export interface VelaLiveAccount {
   plan?: string;
   balanceUsd?: string | null;
@@ -1294,7 +1294,7 @@ export interface VelaLiveAccount {
 
 export interface VelaLoginStatus {
   loggedIn: boolean;
-  sessionState?: import('@open-design/contracts').AmrSessionState;
+  sessionState?: AmrSessionState;
   credentialRevision?: string;
   loginInFlight?: boolean;
   profile: string;

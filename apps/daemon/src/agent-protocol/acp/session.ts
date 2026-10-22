@@ -8,14 +8,15 @@
  */
 import path from 'node:path';
 import {
-  AMR_CONTINUATION_ERROR_CODE,
-  isAmrContinuationIncomplete,
-  parseAmrContinuationRecovery,
-  supportsAmrNativeContinuation,
-  type AmrContinuationCursor,
-  type AmrContinuationRecovery,
   type ExecutionProfile,
 } from '@open-design/contracts';
+
+type AmrContinuationRecovery = { sessionId?: string };
+const AMR_CONTINUATION_ERROR_CODE = 'AMR_CONTINUATION_INCOMPLETE';
+const isAmrContinuationIncomplete = (_message: unknown, _details: unknown): boolean => false;
+const parseAmrContinuationRecovery = (_details: unknown): AmrContinuationRecovery | null => null;
+const supportsAmrNativeContinuation = (_result: unknown): boolean => false;
+type AmrContinuationCursor = unknown;
 import {
   createDsmlArtifactTextSuppressor,
   createToolCallTextSuppressor,

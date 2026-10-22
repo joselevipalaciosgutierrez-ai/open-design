@@ -9,8 +9,6 @@ export * from './api/strategy-rollout.js';
 export * from './api/agent-sessions.js';
 export * from './api/agent-setup.js';
 export * from './api/attribution.js';
-export * from './api/amrWallet.js';
-export * from './api/amr-auth.js';
 export * from './api/automations.js';
 export * from './api/artifacts.js';
 export * from './api/agent-profiles.js';
@@ -119,5 +117,3 @@ export * from './analytics/events.js';
 export * from './analytics/public-params.js';
 export * from './analytics/observability.js';
 export * from './observability/index.js';
-
-export * from './api/amr-continuation.js';
