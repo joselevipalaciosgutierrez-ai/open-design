@@ -36,10 +36,8 @@ export const uiP0Groups = {
       // 2170 / 3207) pin what only a running browser can see — the optimistic
       // frame's timing, the balance dialog's placement and the split width.
       // They were merged without enrollment, so no merge lane had executed them.
-      "ui/home-amr-pending.test.ts",
       "ui/home-send-single-loading.test.ts",
       "ui/home-send-split-width.test.ts",
-      "ui/amr-onboarding.test.ts",
       "ui/api-empty-response.test.ts",
       "ui/settings-api-protocol.test.ts",
       "ui/settings-connectors-auth-happy-path.test.ts",
@@ -87,8 +85,6 @@ export const uiP0Groups = {
     workers: 1,
     files: [
       "ui/real-daemon-run.test.ts",
-      "ui/amr-run-failure-recovery.test.ts",
-      "ui/amr-logout-requires-relogin.test.ts",
       "ui/settings-local-cli-codex-fallback.test.ts",
     ],
   },
@@ -111,9 +107,6 @@ export const visualCiMatrix = [
 ] as const satisfies readonly VisualCiMatrixEntry[];
 
 const uiP0CoverageFiles = [
-  "ui/amr-logout-requires-relogin.test.ts",
-  "ui/amr-onboarding.test.ts",
-  "ui/amr-run-failure-recovery.test.ts",
   "ui/api-empty-response.test.ts",
   "ui/app-design-files.test.ts",
   "ui/app-manual-edit.test.ts",
