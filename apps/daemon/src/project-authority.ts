@@ -756,6 +756,8 @@ export function createRememberedTeamResourceScopes(): any {
   return {
     get: () => null,
     remember: (scope: any) => scope,
+    activeWorkspaceLeases: () => [],
+    isLeaseCurrent: () => false,
   };
 }
 

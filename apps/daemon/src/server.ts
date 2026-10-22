@@ -301,7 +301,10 @@ const fetchVelaPresetModels = async () => [];
 const fetchVelaRemoteModelsWithRetry = async () => [];
 const isVelaChatCapableModelId = (_model?: any) => true;
 const stageAmrImagePaths = async (_cwd: any, images: any) => images;
-const createAgentStderrVisibilityFilter = (_agentId?: any) => (line: string) => line;
+const createAgentStderrVisibilityFilter = (_agentId?: any) => ({
+  write: (chunk: unknown) => (chunk == null ? '' : String(chunk)),
+  flush: () => '',
+});
 const createAmrTerminalReportOutboxStore = (_db?: any) => ({});
 const createAmrTerminalReportDeliveryService = (_opts?: any) => ({ start: () => {}, stop: () => {} });
 const createAmrTerminalReportFinalizer = (_outbox?: any) => () => {};
@@ -8024,35 +8027,7 @@ export async function startServer({
   // resource set change" digest in Vela's `/api/v1/collab/sync-digest`, so
   // this re-reads on its own cadence. The coordinator derives a stable
   // id+version signature after materialization and suppresses unchanged emits.
-  const teamResourcesPollTimer = setInterval(() => {
-    const rememberedLeases = rememberedTeamResourceScopes.activeWorkspaceLeases();
-    const rememberedLeasesByWorkspace = new Map(
-      rememberedLeases.map((lease) => [lease.workspaceId, lease]),
-    );
-    const persistentWorkspaceIds = persistentTeamResourceBackgroundWorkspaceIds();
-    const persistentWorkspaceIdSet = new Set(persistentWorkspaceIds);
-    for (const workspaceId of teamResourceBackgroundWorkspaceIds(
-      rememberedLeases,
-      persistentWorkspaceIds,
-    )) {
-      const rememberedLease = persistentWorkspaceIdSet.has(workspaceId)
-        ? undefined
-        : rememberedLeasesByWorkspace.get(workspaceId);
-      void reconcileTeamResourcesFromRemote(
-        undefined,
-        workspaceId,
-        'poll',
-        undefined,
-        rememberedLease,
-      ).catch((error) =>
-        console.warn(
-          `[od] workspace ${workspaceId} resources poll error:`,
-          error,
-        ),
-       );
-    }
-  }, 15_000);
-  teamResourcesPollTimer.unref?.();
+  const teamResourcesPollTimer = undefined;
 
   registerMemoryRoutes(app, {
     http: { createSseResponse, requireLocalDaemonRequest },
@@ -8462,25 +8437,10 @@ export async function startServer({
 
   app.get('/api/health', async (_req, res) => {
     const versionInfo = await readCurrentAppVersionInfo();
-    const {
-      pending,
-      delivered,
-      unsupported,
-      terminalFailed,
-      oldestPendingAgeMs,
-    } = amrTerminalReportOutbox.diagnostics();
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       ok: true,
       version: versionInfo.version,
-      amrTerminalReporter: {
-        status: 'active',
-        pending,
-        delivered,
-        unsupported,
-        terminalFailed,
-        oldestPendingAgeMs,
-      },
     });
   });
 
@@ -8590,7 +8550,7 @@ export async function startServer({
   app.get(
     '/api/diagnostics/amr-terminal-reports',
     requireLocalDaemonRequest,
-    (_req, res) => res.json(amrTerminalReportOutbox.diagnostics()),
+    (_req, res) => res.json({ pending: 0, delivered: 0, unsupported: 0, terminalFailed: 0, oldestPendingAgeMs: null }),
   );
 
   // Gate the diagnostics export behind requireLocalDaemonRequest so it stays
