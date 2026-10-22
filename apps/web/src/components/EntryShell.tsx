@@ -1818,7 +1818,6 @@ export function EntryShell({
             onApiModelChange={onApiModelChange}
             onConfigPersist={onConfigPersist}
             onRefreshAgents={onRefreshAgents}
-            onAmrLoginStatusChange={onAmrLoginStatusChange}
             onFinish={finishOnboarding}
           />
         </main>
@@ -2321,7 +2320,6 @@ function OnboardingView({
   onApiModelChange,
   onConfigPersist,
   onRefreshAgents,
-  onAmrLoginStatusChange,
   onFinish,
 }: {
   config: AppConfig;
@@ -2340,38 +2338,14 @@ function OnboardingView({
   onApiModelChange: (model: string) => void;
   onConfigPersist: (cfg: AppConfig) => Promise<void> | void;
   onRefreshAgents: () => Promise<AgentInfo[]> | AgentInfo[];
-  onAmrLoginStatusChange?: (status: VelaLoginStatus | null) => void;
   onFinish: () => void;
 }) {
   const t = useT();
   const analytics = useAnalytics();
   const [step, setStep] = useState(0);
-  const [runtime, setRuntime] = useState<'amr' | 'local' | 'byok' | null>(null);
+  const [runtime, setRuntime] = useState<'local' | 'byok' | null>(null);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [cliScanStatus, setCliScanStatus] = useState<'idle' | 'scanning' | 'done'>('idle');
-  const [amrStatus, setAmrStatus] = useState<VelaLoginStatus | null>(null);
-  // Initial login status fetch has settled, whether signed in or not. The
-  // cloud landing uses this to avoid flashing "Sign in" before flipping to
-  // "Continue" for already-authenticated users.
-  const [amrStatusResolved, setAmrStatusResolved] = useState(false);
-  const [amrLoginPending, setAmrLoginPending] = useState(false);
-  const [amrLoginCancelPending, setAmrLoginCancelPending] = useState(false);
-  const passiveReauthCompletedRef = useRef(false);
-  const [amrLoginError, setAmrLoginError] = useState<string | null>(null);
-  // The cloud landing's "sign-in page didn't open?" line is a fallback, so it
-  // waits a few seconds into a login attempt before appearing — the browser
-  // usually opens on its own. A failed browser open skips the wait (see the
-  // render). Resets whenever no attempt is in flight.
-  const [activationHintDue, setActivationHintDue] = useState(false);
-  const amrLoginAttemptActive = amrLoginPending || amrStatus?.loginInFlight === true;
-  useEffect(() => {
-    if (!amrLoginAttemptActive) {
-      setActivationHintDue(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setActivationHintDue(true), ACTIVATION_HINT_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [amrLoginAttemptActive]);
   const [visibleAgentIds, setVisibleAgentIds] = useState<string[]>([]);
   const [dshSetup, setDshSetup] = useState<{ busy: boolean; error: string | null } | null>(null);
   const [providerTestState, setProviderTestState] =
@@ -2407,12 +2381,7 @@ function OnboardingView({
     onboardingSessionId: string;
   } | null>(null);
   const cliRefreshPendingTokenRef = useRef<number | null>(null);
-  const amrLoginPollCancelledRef = useRef(false);
-  const amrHydratedLoginPollStartedRef = useRef(false);
   const onboardingMountedRef = useRef(true);
-  const amrLoginStartPendingRef = useRef(false);
-  const amrLoginCancelRequestedRef = useRef(false);
-  const amrAuthAttemptIdRef = useRef<string | null>(null);
   const providerModelsAutoFetchKeyRef = useRef<string | null>(null);
   const providerAutoTestKeyRef = useRef<string | null>(null);
   const agentAutoTestKeyRef = useRef<string | null>(null);
@@ -2476,8 +2445,6 @@ function OnboardingView({
     (agent) => agent.id !== 'amr' && (agent.available || deepSeekHarnessNeedsSetup(agent)),
   );
   const visibleAgents = candidateCliAgents.filter((agent) => visibleAgentIds.includes(agent.id));
-  const amrSignedIn = isAmrSessionAuthenticated(amrStatus);
-  const amrLoginBusy = amrLoginPending || amrStatus?.loginInFlight === true;
   const selectedAgent = visibleAgents.find((agent) => agent.id === config.agentId) ?? null;
   const selectedAgentChoice = selectedAgent ? (config.agentModels?.[selectedAgent.id] ?? {}) : {};
   const normalizedSelectedAgentChoice = effectiveAgentModelChoice(selectedAgent, selectedAgentChoice) ?? selectedAgentChoice;
@@ -2526,10 +2493,6 @@ function OnboardingView({
     agentTestInputKey,
     providerTestInputKey,
   };
-  const cloudLandingIntentStillCurrent = () => {
-    const intent = onboardingIntentRef.current;
-    return intent.step === 0 && intent.runtime === null;
-  };
   const connectGateReason: 'no_runtime' | 'local_agent_unavailable' | 'byok_unverified' | null =
     !runtimeSetupStep
       ? null
@@ -2549,20 +2512,10 @@ function OnboardingView({
           ? t('settings.onboardingGateTooltipNoRuntime')
           : null;
 
-  const hasRestorableModelSourceConfig =
-    config.mode === 'api'
-      ? Boolean(config.apiKey.trim() && config.baseUrl.trim() && config.model.trim())
-      : config.agentId === 'amr'
-        || Boolean(
-          config.agentId
-          && agents.some((agent) => agent.id === config.agentId && agent.available),
-        );
-
   useEffect(() => {
     onboardingMountedRef.current = true;
     return () => {
       onboardingMountedRef.current = false;
-      amrLoginPollCancelledRef.current = true;
       agentRevealTimersRef.current.forEach((timer) => clearTimeout(timer));
       agentRevealTimersRef.current = [];
     };
@@ -2573,7 +2526,7 @@ function OnboardingView({
     const scanToken = cliScanTokenRef.current;
     if (cliRefreshPendingTokenRef.current === scanToken) return;
     const currentAvailableAgents = agents.filter(
-      (agent) => agent.available && agent.id !== 'amr',
+      (agent) => agent.available,
     );
     if (currentAvailableAgents.length > 0) {
       const selectedCliAgent = selectDefaultCliAgent(currentAvailableAgents);
@@ -2597,78 +2550,6 @@ function OnboardingView({
       });
     }
   }, [agents, agentsLoading, cliScanStatus, config.agentId, runtime]);
-
-  useEffect(() => {
-    // Fetch login status on mount in parallel with agent discovery so the
-    // landing CTA settles quickly for already-authenticated users.
-    let cancelled = false;
-    void fetchVelaLoginStatus()
-      .then((next) => {
-        if (!cancelled && next) {
-          setAmrStatus(next);
-          if (next.authAttemptId) {
-            amrAuthAttemptIdRef.current = next.authAttemptId;
-          }
-          if (next.loginInFlight && cloudLandingIntentStillCurrent()) {
-            startHydratedAmrLoginPoll();
-          }
-          onAmrLoginStatusChange?.(next);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setAmrStatusResolved(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [onAmrLoginStatusChange]);
-
-  useEffect(() => {
-    if (
-      step !== 0
-      || runtime !== null
-      || amrLoginPending
-      || amrStatus?.loginInFlight !== true
-    ) {
-      return;
-    }
-    // The mount status request may settle while a direct Local/BYOK setup is
-    // active. Returning to the Cloud landing must resume observation of that
-    // hydrated attempt instead of leaving its stale cancel state indefinitely.
-    startHydratedAmrLoginPoll();
-  }, [amrLoginPending, amrStatus?.loginInFlight, runtime, step]);
-
-  useEffect(() => {
-    if (
-      !amrStatusResolved
-      || !amrSignedIn
-      || config.onboardingCompleted !== true
-      || !hasRestorableModelSourceConfig
-      || (config.mode === 'daemon' && config.agentId !== 'amr' && agentsLoading)
-      || passiveReauthCompletedRef.current
-    ) {
-      return;
-    }
-    passiveReauthCompletedRef.current = true;
-    clearOnboardingSessionId();
-    onFinish();
-  }, [
-    agentsLoading,
-    amrSignedIn,
-    amrStatusResolved,
-    config.agentId,
-    config.mode,
-    config.onboardingCompleted,
-    hasRestorableModelSourceConfig,
-    onFinish,
-  ]);
-
-  useEffect(() => {
-    if (runtime === 'amr' || runtime === null) return;
-    amrLoginPollCancelledRef.current = true;
-    setAmrLoginPending(false);
-    setAmrLoginCancelPending(false);
-  }, [runtime]);
 
   // Onboarding step exposure for identity, source choice, and optional setup.
   //
@@ -2700,7 +2581,6 @@ function OnboardingView({
   const onboardingStartedAtRef = useRef<number>(Date.now());
   const lifecycleReportedRef = useRef(false);
   function currentRuntimeType(): TrackingOnboardingRuntimeType {
-    if (runtime === 'amr') return 'amr_cloud';
     if (runtime === 'local') return 'local_cli';
     if (runtime === 'byok') return 'byok';
     return 'none';
@@ -2984,45 +2864,6 @@ function OnboardingView({
     onFinish();
   }
 
-  function continueAfterCloudSignIn(): void {
-    if (config.onboardingCompleted === true && hasRestorableModelSourceConfig) {
-      if (passiveReauthCompletedRef.current) return;
-      passiveReauthCompletedRef.current = true;
-      clearOnboardingSessionId();
-      onFinish();
-      return;
-    }
-    emitOnboardingClick('amr_cloud', 'select_runtime', {
-      runtime_type: 'amr_cloud',
-      is_recommended: true,
-    });
-    setRuntime('amr');
-    onModeChange('daemon');
-    onAgentChange('amr');
-    completeStreamlinedOnboarding('amr_cloud');
-  }
-
-  function startHydratedAmrLoginPoll(): void {
-    if (amrHydratedLoginPollStartedRef.current) return;
-    amrHydratedLoginPollStartedRef.current = true;
-    amrLoginPollCancelledRef.current = false;
-    setAmrLoginPending(true);
-    void pollAmrLoginCompletion()
-      .then((completed) => {
-        if (
-          completed
-          && onboardingMountedRef.current
-          && cloudLandingIntentStillCurrent()
-        ) {
-          continueAfterCloudSignIn();
-        }
-      })
-      .finally(() => {
-        if (onboardingMountedRef.current) {
-          setAmrLoginPending(false);
-        }
-      });
-  }
 
   /**
    * Whether the Continue attempt that started against `startedInputKey` still
@@ -3114,279 +2955,10 @@ function OnboardingView({
     }
   }
 
-  // Cloud login lands on Hosted directly (see `continueAfterCloudSignIn`),
-  // except when a completed setup has a restorable Local/BYOK configuration,
-  // which signing in never overwrites.
-  async function handleCloudSignIn() {
-    if (amrLoginBusy || amrLoginCancelPending) return;
-    const cardAttribution = recordAmrEntry(
-      analytics.track,
-      'onboarding_amr_card',
-      new Date(),
-      { metricsConsent: config.telemetry?.metrics === true },
-    );
-    const attribution = recordAmrEntry(
-      analytics.track,
-      'onboarding_amr_sign_in_continue',
-      new Date(),
-      {
-        metricsConsent: config.telemetry?.metrics === true,
-        reuseExistingFrom: ['onboarding_amr_card'],
-      },
-    ) ?? cardAttribution;
-    await handleAmrSignInToContinue(attribution);
-  }
-
-  async function handleAmrSignInToContinue(
-    attribution?: AmrEntryAttribution | null,
-  ) {
-    if (amrLoginBusy || amrLoginCancelPending) return;
-    amrLoginPollCancelledRef.current = false;
-    amrLoginCancelRequestedRef.current = false;
-    setAmrLoginError(null);
-    setAmrLoginPending(true);
-    try {
-      const currentStatus = await fetchVelaLoginStatus();
-      if (amrLoginPollCancelledRef.current) return;
-      if (currentStatus) {
-        setAmrStatus(currentStatus);
-        onAmrLoginStatusChange?.(currentStatus);
-      }
-      if (isAmrSessionAuthenticated(currentStatus)) {
-        continueAfterCloudSignIn();
-        return;
-      }
-      if (amrLoginPollCancelledRef.current) return;
-      const provisionalAuthAttemptId = beginAmrAuthTracking(
-        attribution,
-        Date.now(),
-      );
-      amrAuthAttemptIdRef.current = provisionalAuthAttemptId;
-      const odDeviceId = amrHandoffDeviceId({
-        metricsConsent: config.telemetry?.metrics === true,
-        resolvedDeviceId: getResolvedDeviceId(),
-        installationId: config.installationId,
-      });
-      amrLoginStartPendingRef.current = true;
-      const loginResult = await startVelaLogin(
-        attribution,
-        odDeviceId,
-        provisionalAuthAttemptId,
-      ).finally(() => {
-        amrLoginStartPendingRef.current = false;
-      });
-      const authAttemptId = reconcileAmrAuthAttemptId(
-        provisionalAuthAttemptId,
-        loginResult.authAttemptId,
-        { joinedExisting: loginResult.alreadyRunning === true },
-      );
-      amrAuthAttemptIdRef.current = authAttemptId;
-      if (loginResult.ok || loginResult.alreadyRunning) {
-        confirmAmrAuthTracking(analytics.track, authAttemptId, {
-          joinedExisting: loginResult.alreadyRunning === true,
-        });
-      }
-      observeAmrAuthTracking(analytics.track, loginResult, authAttemptId);
-      if (
-        amrLoginPollCancelledRef.current
-        || amrLoginCancelRequestedRef.current
-      ) {
-        if (loginResult.ok || loginResult.alreadyRunning) {
-          const cancelResult = await cancelVelaLogin(authAttemptId);
-          if (!cancelResult.ok) {
-            console.error('[amr-login] cancelVelaLogin failed', cancelResult);
-            amrLoginCancelRequestedRef.current = false;
-            setAmrLoginCancelPending(false);
-            setAmrLoginError(t('settings.amrLoginErrorCompact'));
-            return;
-          }
-          if (cancelResult.canceled !== true) {
-            const nextStatus = await fetchVelaLoginStatus();
-            if (nextStatus) {
-              setAmrStatus(nextStatus);
-              if (nextStatus.authAttemptId) {
-                amrAuthAttemptIdRef.current = nextStatus.authAttemptId;
-              }
-            }
-            amrLoginCancelRequestedRef.current = false;
-            amrLoginPollCancelledRef.current = false;
-            setAmrLoginCancelPending(false);
-            if (!nextStatus?.loginInFlight) return;
-          } else {
-            resolveAmrAuthTracking(analytics.track, 'cancelled', undefined, {
-              authAttemptId,
-            });
-            closeAmrActivationWindowBestEffort();
-            notifyAmrLoginStatusChanged('login-canceled');
-            amrLoginCancelRequestedRef.current = false;
-            amrLoginPollCancelledRef.current = true;
-            setAmrLoginCancelPending(false);
-            setAmrStatus((current) => (
-              current
-                ? { ...current, loggedIn: false, loginInFlight: false, user: null }
-                : current
-            ));
-            return;
-          }
-        } else {
-          resolveAmrAuthTracking(analytics.track, 'cancelled', undefined, {
-            authAttemptId,
-          });
-          if (amrLoginCancelRequestedRef.current) {
-            amrLoginCancelRequestedRef.current = false;
-            amrLoginPollCancelledRef.current = true;
-            setAmrLoginCancelPending(false);
-            setAmrStatus((current) => (
-              current
-                ? { ...current, loggedIn: false, loginInFlight: false, user: null }
-                : current
-            ));
-          }
-          return;
-        }
-      }
-      if (!loginResult.ok && !loginResult.alreadyRunning) {
-        resolveAmrAuthTracking(analytics.track, 'failed', 'spawn_failed', {
-          authAttemptId,
-        });
-        console.error('[amr-login] startVelaLogin failed', loginResult);
-        setAmrLoginError(loginResult.error || t('settings.amrLoginErrorCompact'));
-        return;
-      }
-      if (await pollAmrLoginCompletion()) {
-        continueAfterCloudSignIn();
-      }
-    } finally {
-      setAmrLoginPending(false);
-    }
-  }
-
-  async function handleCancelAmrLogin() {
-    if (!amrLoginBusy || amrLoginCancelPending) return;
-    const loginStartPending = amrLoginStartPendingRef.current;
-    const authAttemptId = amrAuthAttemptIdRef.current;
-    setAmrLoginError(null);
-    setAmrLoginCancelPending(true);
-    if (!authAttemptId) {
-      amrLoginPollCancelledRef.current = true;
-      amrLoginCancelRequestedRef.current = false;
-      setAmrLoginCancelPending(false);
-      setAmrLoginPending(false);
-      return;
-    }
-    const result = await cancelVelaLogin(authAttemptId);
-    if (!result.ok) {
-      setAmrLoginCancelPending(false);
-      setAmrLoginPending(false);
-      setAmrLoginError(t('settings.amrLoginErrorCompact'));
-      return;
-    }
-    if (result.canceled !== true) {
-      const nextStatus = await fetchVelaLoginStatus();
-      if (nextStatus) {
-        setAmrStatus(nextStatus);
-        if (nextStatus.authAttemptId) {
-          amrAuthAttemptIdRef.current = nextStatus.authAttemptId;
-        }
-      }
-      if (loginStartPending && nextStatus?.loginInFlight !== true) {
-        amrLoginCancelRequestedRef.current = true;
-        return;
-      }
-      setAmrLoginCancelPending(false);
-      if (!nextStatus?.loginInFlight) {
-        setAmrLoginPending(false);
-      }
-      return;
-    }
-    setAmrLoginCancelPending(false);
-    amrLoginPollCancelledRef.current = true;
-    if (authAttemptId) {
-      resolveAmrAuthTracking(analytics.track, 'cancelled', undefined, {
-        authAttemptId,
-      });
-    }
-    closeAmrActivationWindowBestEffort();
-    setAmrStatus((current) => (
-      current
-        ? { ...current, loggedIn: false, loginInFlight: false, user: null }
-        : current
-    ));
-    setAmrLoginPending(false);
-    notifyAmrLoginStatusChanged('login-canceled');
-  }
-
-  async function pollAmrLoginCompletion(): Promise<boolean> {
-    const startedAt = Date.now();
-    while (!amrLoginPollCancelledRef.current) {
-      await new Promise((resolve) =>
-        window.setTimeout(resolve, AMR_LOGIN_POLL_INTERVAL_MS),
-      );
-      if (amrLoginPollCancelledRef.current) return false;
-      const nextStatus = await fetchVelaLoginStatus();
-      if (nextStatus) {
-        setAmrStatus(nextStatus);
-        onAmrLoginStatusChange?.(nextStatus);
-      }
-      const authAttemptId = amrAuthAttemptIdRef.current;
-      if (nextStatus && authAttemptId) {
-        observeAmrAuthTracking(analytics.track, nextStatus, authAttemptId);
-      }
-      const outcome = amrLoginPollOutcome(nextStatus, startedAt);
-      if (outcome === 'signed-in') {
-        if (authAttemptId) {
-          resolveAmrAuthTracking(analytics.track, 'success', undefined, {
-            authAttemptId,
-            signedInUserId: nextStatus?.user?.id ?? null,
-          });
-        }
-        notifyAmrLoginStatusChanged();
-        // Onboarding may sit on this step for a while before finishOnboarding
-        // fires refreshWorkspaceSurfacesAfterOnboarding() — without firing
-        // these here too, Home's rail can render in its stale signed-out
-        // shape (still showing the "sign in to OpenDesign Cloud" callout)
-        // for however long that gap lasts. Mirrors CloudSignInTip's own
-        // finishSignedIn().
-        notifyWorkspaceContextRefresh();
-        notifyWorkspaceBillingRefresh();
-        notifyTeamProjectsChanged();
-        return true;
-      }
-      if (outcome === 'stopped' || outcome === 'timed-out') {
-        if (outcome === 'timed-out') {
-          if (authAttemptId) {
-            resolveAmrAuthTracking(analytics.track, 'timeout', 'login_timeout', {
-              authAttemptId,
-            });
-            const cancelResult = await cancelVelaLogin(authAttemptId);
-            if (cancelResult.canceled === true) {
-              setAmrStatus((current) => (
-                current
-                  ? { ...current, loggedIn: false, loginInFlight: false, user: null }
-                  : current
-              ));
-            }
-          }
-          console.error('[amr-login] poll timed out waiting for a signed-in status', { nextStatus });
-        } else {
-          if (authAttemptId) {
-            resolveAmrAuthTracking(analytics.track, 'failed', 'login_stopped', {
-              authAttemptId,
-            });
-          }
-          console.error('[amr-login] poll loop stopped without a terminal status', { nextStatus });
-        }
-        setAmrLoginError(t('settings.amrLoginErrorCompact'));
-        return false;
-      }
-    }
-    return false;
-  }
-
   async function scanCliAgents(options: { preferExisting?: boolean } = {}) {
     const scanToken = beginCliScan({ clearVisible: !options.preferExisting });
     const currentCandidateAgents = agents.filter(
-      (agent) => agent.id !== 'amr' && (agent.available || deepSeekHarnessNeedsSetup(agent)),
+      (agent) => agent.available || deepSeekHarnessNeedsSetup(agent),
     );
     const currentAvailableAgents = currentCandidateAgents.filter((agent) => agent.available);
     if (options.preferExisting && currentCandidateAgents.length > 0) {
@@ -3410,9 +2982,9 @@ function OnboardingView({
       const nextAgents = await onRefreshAgents();
       if (cliScanTokenRef.current !== scanToken) return;
       cliRefreshPendingTokenRef.current = null;
-      const availableAgents = nextAgents.filter((agent) => agent.available && agent.id !== 'amr');
+      const availableAgents = nextAgents.filter((agent) => agent.available);
       const candidateAgents = nextAgents.filter(
-        (agent) => agent.id !== 'amr' && (agent.available || deepSeekHarnessNeedsSetup(agent)),
+        (agent) => agent.available || deepSeekHarnessNeedsSetup(agent),
       );
       const selectedCliAgent = selectDefaultCliAgent(availableAgents);
       // Scan-result semantics: zero available CLIs is a `failed` outcome
@@ -3724,10 +3296,10 @@ function OnboardingView({
           <div className="onboarding-cloud__center">
             <h1 className="onboarding-cloud__title">{t('settings.onboardingCloudTitle')}</h1>
             <p className="onboarding-cloud__body">{t('settings.onboardingCloudBody')}</p>
-            <div className={onboardingWelcomeStyles.signInAction}>
-              <button
-                type="button"
-                className="onboarding-cloud__primary"
+            <div className={`onboarding-cloud__alts ${onboardingWelcomeStyles.options}`}>
+              <Button
+                variant="subtle"
+                className="onboarding-cloud__alt-btn"
                 onClick={() => {
                   emitOnboardingClick('local_coding_agent', 'select_runtime', {
                     runtime_type: 'local_cli',
@@ -3737,47 +3309,21 @@ function OnboardingView({
                   setStep(2);
                 }}
               >
-                <Icon name="robot" size={17} />
-                <span>{t('settings.onboardingContinue')}</span>
-              </button>
-            </div>
-            <div className={onboardingWelcomeStyles.belowAction}>
-              <div className={onboardingWelcomeStyles.belowLayer}>
-                <div className={onboardingWelcomeStyles.alternatives}>
-                  <div className={onboardingWelcomeStyles.divider}>
-                    {t('settings.onboardingOwnAi')}
-                  </div>
-                  <div className={`onboarding-cloud__alts ${onboardingWelcomeStyles.options}`}>
-                    <Button
-                      variant="subtle"
-                      className="onboarding-cloud__alt-btn"
-                      onClick={() => {
-                        emitOnboardingClick('local_coding_agent', 'select_runtime', {
-                          runtime_type: 'local_cli',
-                        });
-                        setRuntime('local');
-                        void scanCliAgents({ preferExisting: true });
-                        setStep(2);
-                      }}
-                    >
-                      <Icon name="robot" size={16} />
-                      {t('settings.onboardingLocalAi')}
-                    </Button>
-                    <Button
-                      variant="subtle"
-                      className="onboarding-cloud__alt-btn"
-                      onClick={() => {
-                        emitOnboardingClick('byok', 'select_runtime', { runtime_type: 'byok' });
-                        setRuntime('byok');
-                        setStep(2);
-                      }}
-                    >
-                      <Icon name="key" size={16} />
-                      {t('settings.onboardingApiKey')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                <Icon name="robot" size={16} />
+                <span>{t('settings.onboardingLocalAi')}</span>
+              </Button>
+              <Button
+                variant="subtle"
+                className="onboarding-cloud__alt-btn"
+                onClick={() => {
+                  emitOnboardingClick('byok', 'select_runtime', { runtime_type: 'byok' });
+                  setRuntime('byok');
+                  setStep(2);
+                }}
+              >
+                <Icon name="key" size={16} />
+                <span>{t('settings.onboardingApiKey')}</span>
+              </Button>
             </div>
           </div>
           <footer className="onboarding-cloud__footer">
@@ -3786,9 +3332,6 @@ function OnboardingView({
               © {new Date().getFullYear()} OpenDesign · {t('settings.onboardingCloudRights')}
             </span>
           </footer>
-        </div>
-        <div className="onboarding-cloud__art" aria-hidden="true">
-          <img src="/onboarding/onboarding-cloud-art.webp" alt="" />
         </div>
       </section>
     );
@@ -3899,16 +3442,11 @@ function OnboardingView({
             </div>
           </div>
           <div className="onboarding-view__actions">
-            {amrLoginError ? (
-              <span className="onboarding-view__action-status is-error" role="alert">
-                {amrLoginError}
-              </span>
-            ) : null}
             <button
               type="button"
               className={`onboarding-view__primary${connectGateTooltip ? ' od-tooltip' : ''}`}
               onClick={handlePrimaryAction}
-              disabled={amrLoginPending || amrLoginCancelPending || continuePending}
+              disabled={continuePending}
               aria-disabled={connectStepBlocked || undefined}
               aria-busy={continuePending || undefined}
               data-tooltip={connectGateTooltip ?? undefined}

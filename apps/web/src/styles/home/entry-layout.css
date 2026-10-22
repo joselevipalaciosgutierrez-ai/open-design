@@ -3280,19 +3280,13 @@
    content height instead of stretching it, leaving the art panel short with
    a blank gap. The extra specificity makes every override here unconditional. */
 .onboarding-view.onboarding-view--cloud {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: stretch;
-  align-content: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   position: relative;
   width: 100%;
   max-width: none;
-  /* `height` (not `min-height`) so the value is a definite length the grid
-     row — and in turn the `__art` column's `height: 100%` image — can
-     actually stretch to fill. A `min-height` floor only widens this box's
-     own rendered height; it does not make an "auto" row track definite, so
-     the row still sizes to content and the art panel stops short with a
-     blank gap below it. */
   height: 100%;
   margin: 0;
   padding: 0;
@@ -3304,73 +3298,12 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   min-width: 0;
   min-height: 0;
-  padding: 72px 64px 64px;
-}
-
-/* `min-height: 0` (alongside `min-width: 0`) opts this grid item out of its
-   automatic content-based minimum size. Without it, the `<img>`'s intrinsic
-   aspect ratio still counts as this column's minimum block size even though
-   the img itself is `height: 100%` — `align-content: stretch` can grow a
-   track but never shrink it below that minimum, so the column (and the
-   image) end up as tall as the image's natural aspect ratio at this column's
-   width, overflowing past the section's actual height instead of matching it. */
-.onboarding-cloud__art {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  padding: 8px 8px 8px 0;
-}
-
-.onboarding-cloud__art img {
-  display: block;
   width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md, 8px);
-  object-fit: cover;
-}
-
-/* Below this width, the two-column grid can no longer give the text pane its
-   full designed width (.onboarding-cloud__center's 440px) alongside the art
-   panel — half the viewport minus the pane's 64px side padding drops under
-   440px once the viewport is narrower than 2 * (440 + 64 + 64) = 1136px.
-   Stack to a single column and hide the art before the text pane gets
-   cramped, rather than waiting until it visibly wraps. */
-@media (max-width: 1136px) {
-  .onboarding-view.onboarding-view--cloud {
-    grid-template-columns: 1fr;
-  }
-
-  .onboarding-cloud__art {
-    display: none;
-  }
-
-  .onboarding-cloud__pane {
-    align-items: center;
-    padding: 72px 24px 64px;
-  }
-
-  .onboarding-cloud__center {
-    align-items: center;
-    text-align: center;
-  }
-
-  .onboarding-cloud__body,
-  .onboarding-cloud__alts,
-  .onboarding-cloud__error {
-    text-align: center;
-  }
-
-  .onboarding-cloud__alts {
-    justify-content: center;
-  }
-
-  .onboarding-cloud__footer {
-    left: 24px;
-    justify-content: center;
-    text-align: center;
-  }
+  max-width: 560px;
+  padding: 72px 24px 64px;
 }
 
 /* Compact, icon-only language switcher used next to the footer copyright
@@ -3415,133 +3348,37 @@
   line-height: 1.6;
 }
 
-.onboarding-cloud__primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 52px;
-  margin-top: 32px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--text-strong);
-  color: var(--bg);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    opacity 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.onboarding-cloud__primary:hover:not(:disabled) {
-  /* Keep the dark fill on hover — the global `button:hover` rule in
-     primitives.css would otherwise repaint the background to --bg-subtle and
-     wash the white label away. Opacity alone carries the hover feedback. */
-  background: var(--text-strong);
-  border-color: transparent;
-  opacity: 0.88;
-}
-
-.onboarding-cloud__primary:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.onboarding-cloud__primary:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.onboarding-cloud__primary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.onboarding-cloud__cancel {
-  margin-top: 22px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 160ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.onboarding-cloud__cancel:hover {
-  color: var(--text-strong);
-}
-
-/* Sign-in fallback on the cloud landing: one quiet line under the primary
- * button rather than a card, so the pending state keeps a single focal CTA
- * and a single cancel. Settings/AmrLoginPill and CloudSignInTip keep their
- * own `.amr-login-activation` card (artifacts.css). */
-.onboarding-cloud__activation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px 6px;
-  margin: 14px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.onboarding-cloud__activation-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-strong);
-  font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
-  text-underline-offset: 3px;
-  transition: text-decoration-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.onboarding-cloud__activation-link:hover {
-  text-decoration-color: currentColor;
-}
-
-.onboarding-cloud__activation-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
 /* Two runtime-choice buttons ("local CLI" or "your own key") on one row,
-   centered as a unit under the full-width primary CTA above. */
+   prominently displayed as the primary onboarding options. */
 .onboarding-cloud__alts {
   display: flex;
   align-items: center;
   justify-content: center;
   align-self: stretch;
-  gap: 10px;
-  margin-top: 22px;
+  gap: 16px;
+  margin-top: 32px;
 }
 
 /* Double-class selector to out-specificity the shared Button module's
    `.button`/`.subtle` rules (same 0-1-0 specificity) without `!important`. */
 .onboarding-cloud__alts .onboarding-cloud__alt-btn {
-  border-radius: var(--radius-pill);
-  color: var(--text-muted);
-  font-size: 14px;
+  border-radius: var(--radius-md, 10px);
+  color: var(--text-strong);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  background: var(--bg-surface-elevated, rgba(255, 255, 255, 0.05));
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.onboarding-cloud__alts-or {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.onboarding-cloud__error {
-  margin-top: 16px;
-  color: var(--danger-text, #991b1b);
-  font-size: 13px;
-  line-height: 1.5;
+.onboarding-cloud__alts .onboarding-cloud__alt-btn:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--brand, #3b82f6);
+  color: var(--text-strong);
 }
 
 .onboarding-cloud__footer {
