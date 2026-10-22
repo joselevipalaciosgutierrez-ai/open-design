@@ -12,7 +12,6 @@ import {
   agentIdToTracking,
   byokProtocolToTracking,
 } from '@open-design/contracts/analytics';
-import type { VelaLoginStatus } from './integrations/vela.js';
 
 const RUNTIME_TYPES: readonly TrackingRuntimeType[] = [
   'amr_cloud',
@@ -66,7 +65,7 @@ function readByokProviderProtocol(provider: unknown): string | null {
 // authorized but carries no profile, so it yields no stamp — only
 // file-backed sign-in knows the account id.
 export function amrUserIdForRunAnalytics(
-  status: VelaLoginStatus | null,
+  status: { loggedIn?: boolean; user?: { id?: string | null } | null } | null,
 ): Record<string, string> {
   if (status?.loggedIn !== true) return {};
   const id = status.user?.id?.trim() ?? '';

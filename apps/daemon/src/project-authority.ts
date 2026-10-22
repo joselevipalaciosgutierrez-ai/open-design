@@ -1,5 +1,6 @@
 import type { Response } from 'express';
 import type { ProjectWorkspaceScope } from '@open-design/contracts';
+import { getWorkspaceProjectByProjectId } from './db.js';
 
 export type AuthorizeProjectRequestOptions =
   | {
@@ -847,15 +848,23 @@ export function createWorkspaceContextProviderFromEnv(): any {
 }
 
 export function createWorkspaceDirectoryAuthorityBroker(): any {
-  return { getDirectory: async () => [] };
+  const empty = async () => ({ ok: true, items: [] });
+  return {
+    read: empty,
+    fresh: empty,
+    backgroundFresh: empty,
+    cached: empty,
+    resetIdentity: () => {},
+    getDirectory: async () => [],
+  };
 }
 
 export function createWorkspaceExactAuthorityCache(): any {
-  return { get: () => null, set: () => {}, invalidate: () => {} };
+  return { get: () => null, set: () => {}, invalidate: () => {}, resetIdentity: () => {}, observe: () => {} };
 }
 
 export function createWorkspaceExactContextCache(): any {
-  return { get: () => null, set: () => {}, invalidate: () => {} };
+  return { get: () => null, set: () => {}, invalidate: () => {}, resetIdentity: () => {} };
 }
 
 export function createWorkspaceHubSubscriptionManager(): any {
@@ -1049,3 +1058,125 @@ export type TeamResourceSharedReadOptions = any;
 export type WorkspaceHubSubscriptionManager = any;
 export type WorkspaceProjectsReconcilerDeps = any;
 export type WorkspaceTeamResourceRefreshReason = any;
+
+export type PinnedRunWorkspaceScope = Readonly<{
+  schemaVersion: 1;
+  projectId: string;
+  workspaceId: string;
+  workspaceMemberId?: string | null;
+  source: 'persisted_project_binding';
+}>;
+
+export type AccountScopedRunWorkspaceScope = Readonly<{
+  schemaVersion: 1;
+  projectId: string;
+  workspaceId: null;
+  source: 'unbound_account';
+}>;
+
+export type RunWorkspaceScope =
+  | PinnedRunWorkspaceScope
+  | AccountScopedRunWorkspaceScope;
+
+export function accountScopedRunWorkspaceScopeForProject(
+  projectId: string,
+): AccountScopedRunWorkspaceScope {
+  return Object.freeze({
+    schemaVersion: 1,
+    projectId,
+    workspaceId: null,
+    source: 'unbound_account',
+  });
+}
+
+export function pinRunWorkspaceScopeForProject(
+  db: any,
+  projectId: string,
+): PinnedRunWorkspaceScope | null {
+  const normalizedProjectId = projectId.trim();
+  if (!normalizedProjectId) return null;
+  const binding = getWorkspaceProjectByProjectId(db, normalizedProjectId);
+  const workspaceId =
+    typeof binding?.workspaceId === 'string' && binding.workspaceId.trim()
+      ? binding.workspaceId.trim()
+      : null;
+  if (!workspaceId) return null;
+  return Object.freeze({
+    schemaVersion: 1,
+    projectId: normalizedProjectId,
+    workspaceId,
+    workspaceMemberId: binding?.createdByWorkspaceMemberId?.trim() || null,
+    source: 'persisted_project_binding',
+  });
+}
+
+export type VelaTeamProjectSyncState =
+  | 'pending_upload'
+  | 'syncing'
+  | 'synced'
+  | 'failed';
+
+export interface VelaTeamProjectRecord {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  resourceId: string;
+  ownerMemberId: string;
+  displayName: string | null;
+  syncState: VelaTeamProjectSyncState;
+  lastSyncedVersionId: string | null;
+  publishedVersionId?: string | null;
+  createdAt: string;
+  originProjectUpdatedAt: number | null;
+  updatedAt: string;
+  access: {
+    canView: boolean;
+    canComment: boolean;
+    canEdit: boolean;
+    frozen: boolean;
+  };
+}
+
+export interface UpsertVelaTeamProjectInput {
+  projectId: string;
+  resourceId: string;
+  displayName?: string | null;
+  syncState?: VelaTeamProjectSyncState;
+  lastSyncedVersionId?: string | null;
+}
+
+export interface VelaTeamProjectCatalogClient {
+  list(principal: any): Promise<VelaTeamProjectRecord[]>;
+  upsert(
+    input: UpsertVelaTeamProjectInput,
+    principal: any,
+  ): Promise<VelaTeamProjectRecord | null>;
+}
+
+export function projectResourceIdFor(
+  projectId: string,
+  principal?: any,
+): string {
+  if (!principal) return `project-${projectId}`;
+  const scoped = Buffer.from(
+    JSON.stringify([principal.teamId, principal.memberId, projectId]),
+    'utf8',
+  ).toString('base64url');
+  return `project-${scoped}`;
+}
+
+export function projectSyncStateToVela(
+  state: any,
+): VelaTeamProjectSyncState {
+  if (state === 'synced') return 'synced';
+  if (state === 'sync_failed') return 'failed';
+  return 'pending_upload';
+}
+
+export function velaProjectSyncStateToProject(
+  state: VelaTeamProjectSyncState,
+): any {
+  if (state === 'synced') return 'synced';
+  if (state === 'failed') return 'sync_failed';
+  return 'pending_upload';
+}

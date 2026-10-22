@@ -128,8 +128,8 @@ import {
   velaProjectSyncStateToProject,
   type VelaTeamProjectCatalogClient,
   type VelaTeamProjectRecord,
-} from '../../integrations/vela-team-projects.js';
-import type { ResourceHubPrincipal } from '../../project-authority.js';
+  type ResourceHubPrincipal,
+} from '../../project-authority.js';
 import {
   refuseTeamShareScope,
   type TeamShareScopeRefusal,

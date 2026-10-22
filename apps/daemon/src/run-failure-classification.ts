@@ -22,10 +22,6 @@ import {
   isModelWindowLimitFailure,
 } from '@open-design/contracts';
 
-import {
-  classifyAmrAccountFailure,
-  reportsPlatformProviderCredentialFault,
-} from './integrations/vela-errors.js';
 import { runFailureEvidence } from './services/run-failure-evidence.js';
 import { summarizeRunToolProgress } from './run-diagnostics.js';
 import { isAcpHandshakeRpcErrorText } from './runtimes/acp-handshake-id.js';
@@ -1083,7 +1079,6 @@ function classifyRunFailureBase(
     return classification('process_exit', 'continuation_incomplete',
       inferFailureStageFromEvents(events, 'post_tool_resume'), false, 'none');
   }
-  const amrFailure = classifyAmrAccountFailure(text);
   const byokOpenCodeProviderNotFound = isByokOpenCodeProviderNotFoundText(
     input.agentId,
     text,
@@ -1118,10 +1113,7 @@ function classifyRunFailureBase(
     );
   }
 
-  if (
-    errorCode === 'AMR_INSUFFICIENT_BALANCE' ||
-    amrFailure?.code === 'AMR_INSUFFICIENT_BALANCE'
-  ) {
+  if (errorCode === 'AMR_INSUFFICIENT_BALANCE') {
     return classification(
       'insufficient_balance',
       'amr_insufficient_balance',
@@ -1134,10 +1126,7 @@ function classifyRunFailureBase(
     );
   }
 
-  if (
-    errorCode === 'AMR_TIER_UPGRADE_REQUIRED' ||
-    amrFailure?.code === 'AMR_TIER_UPGRADE_REQUIRED'
-  ) {
+  if (errorCode === 'AMR_TIER_UPGRADE_REQUIRED') {
     return classification(
       'entitlement_required',
       'amr_tier_upgrade_required',
@@ -1166,8 +1155,7 @@ function classifyRunFailureBase(
   if (
     errorCode === 'AMR_AUTH_REQUIRED' ||
     errorCode === 'AGENT_AUTH_REQUIRED' ||
-    errorCode === 'UNAUTHORIZED' ||
-    amrFailure?.code === 'AMR_AUTH_REQUIRED'
+    errorCode === 'UNAUTHORIZED'
   ) {
     return classification(
       'auth',
@@ -1187,22 +1175,7 @@ function classifyRunFailureBase(
 
   // R-053. Claimed here, immediately after the AMR account branches, because
   // this is the failure that spent the longest being mistaken for one of them.
-  // vela's link gateway turns an upstream 401/403 into an HTTP 500 under its
-  // own code (`services/link/internal/handlers/openai.go:2074`) and words it
-  // "Upstream provider credentials are missing or invalid." — a sentence
-  // `isAuthDetailText` reads as the caller's missing credentials. The
-  // credentials are the platform's, held in the gateway's configuration, so
-  // there is no sign-in for the user to perform and no retry that changes the
-  // answer: the run failed because the service is misconfigured.
-  if (reportsPlatformProviderCredentialFault(text)) {
-    return classification(
-      'upstream_unavailable',
-      'upstream_5xx',
-      inferFailureStageFromEvents(events, 'first_token_wait'),
-      false,
-      'none',
-    );
-  }
+
 
   /*
    * A forced signal is a STRUCTURAL fact — the child did not report it, the OS

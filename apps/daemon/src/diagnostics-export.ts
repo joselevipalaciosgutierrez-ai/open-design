@@ -43,7 +43,6 @@ import {
 } from './services/diagnostics-evidence.js';
 import { diagnosticId } from './services/diagnostics-environment.js';
 import { daemonHealthPaths } from './services/daemon-health.js';
-import { readVelaLoginStatus } from './integrations/vela.js';
 
 interface ResolvedDiagnosticsAgentEnvironment {
   amrHome: string | null;
@@ -438,26 +437,9 @@ export function createDiagnosticsExportHandler(options: DiagnosticsHandlerOption
           },
           'runtime-health.json': {
             daemon: { reachable: true },
-            amr: (() => {
-              try {
-                const status = readVelaLoginStatus(
-                  process.env,
-                  agentEnvironment.amrConfiguredEnv,
-                );
-                return {
-                  profile: status.profile,
-                  userId: diagnosticId(status.user?.id),
-                  loggedIn: status.loggedIn,
-                  sessionState: status.sessionState,
-                  credentialRevision: status.credentialRevision,
-                  loginInFlight: status.loginInFlight,
-                };
-              } catch (error) {
-                return {
-                  error: error instanceof Error ? error.message : String(error),
-                };
-              }
-            })(),
+            amr: {
+              loggedIn: false,
+            },
             coverage: {
               runEventsPresent: runEventSources.length > 0,
               note: runEventSources.length > 0

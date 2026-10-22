@@ -8,7 +8,6 @@ import { isTodoWriteToolName } from '@open-design/contracts';
 import { createHash } from 'node:crypto';
 import type { JsonObject } from './types.js';
 import { asObject, acpValueKind, objectKeys, extractAcpUpdateText } from './json.js';
-import { classifyAmrAccountFailure, amrAccountFailureDetails } from '../../integrations/vela-errors.js';
 
 /**
  * Produces a shallow diagnostic snapshot of an ACP update object for the
@@ -151,23 +150,8 @@ export function acpUpdateDiagnosticText(value: unknown, depth = 0): string[] {
  * @param update - A parsed ACP `session/update` params object.
  * @returns A structured error payload with `message` and `error`, or `null`.
  */
-export function promotedAmrRetryStatusPayload(update: JsonObject) {
-  if (!isAcpRetryStatus(update)) return null;
-  const diagnosticText = acpUpdateDiagnosticText(update).join('\n');
-  const failure = classifyAmrAccountFailure(diagnosticText);
-  if (!failure) return null;
-  return {
-    message: failure.message,
-    error: {
-      code: failure.code,
-      message: failure.message,
-      retryable: false,
-      details: {
-        ...amrAccountFailureDetails(failure),
-        promoted_by: 'open_design_acp_retry_status',
-      },
-    },
-  };
+export function promotedAmrRetryStatusPayload(_update: JsonObject) {
+  return null;
 }
 /**
  * Scans a rolling tail of AMR stderr output for known retry/session-failure
@@ -178,23 +162,8 @@ export function promotedAmrRetryStatusPayload(update: JsonObject) {
  * @param chunk - A tail slice of accumulated stderr bytes from the AMR subprocess.
  * @returns A structured error payload, or `null` when not applicable.
  */
-export function promotedAmrStderrPayload(chunk: string) {
-  if (!/opencode_event_stream_failure|session\.status/i.test(chunk)) return null;
-  if (!/\bretry\b/i.test(chunk)) return null;
-  const failure = classifyAmrAccountFailure(chunk);
-  if (!failure) return null;
-  return {
-    message: failure.message,
-    error: {
-      code: failure.code,
-      message: failure.message,
-      retryable: false,
-      details: {
-        ...amrAccountFailureDetails(failure),
-        promoted_by: 'open_design_acp_stderr_retry_status',
-      },
-    },
-  };
+export function promotedAmrStderrPayload(_chunk: string) {
+  return null;
 }
 /**
  * Extracts and trims the `toolCallId` string from an ACP update, or returns

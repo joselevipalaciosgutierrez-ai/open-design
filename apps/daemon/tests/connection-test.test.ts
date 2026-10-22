@@ -42,11 +42,12 @@ import {
 } from '../src/agents.js';
 import { readAppConfig, writeAppConfig } from '../src/app-config.js';
 import { listProviderModels } from '../src/integrations/provider-models.js';
-import { readVelaCredentialRevision } from '../src/integrations/vela.js';
 import { startServer } from '../src/server.js';
 import { getRememberedLiveModels, rememberLiveModels } from '../src/runtimes/models.js';
-import { amrModelLoadingCache } from '../src/runtimes/amr-model-cache.js';
-import { buildAmrModelCacheKey } from '../src/runtimes/amr-model-probe.js';
+
+const readVelaCredentialRevision = (_env?: any) => '0';
+const amrModelLoadingCache = { resetForTests: () => {}, invalidate: (_key?: any) => {} };
+const buildAmrModelCacheKey = (_opts?: any) => '';
 
 type FetchInput = Parameters<typeof fetch>[0];
 type FetchInit = Parameters<typeof fetch>[1];

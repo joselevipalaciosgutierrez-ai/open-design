@@ -6,7 +6,6 @@ import {
   reportsToolPrincipalAuthFailure,
 } from '../../src/runtimes/auth.js';
 import { SHIPPED_AGENT_DEFS } from '../../src/runtimes/registry.js';
-import { classifyAmrAccountFailure } from '../../src/integrations/vela-errors.js';
 import {
   GENERIC_ACP_FAILURE_CODE,
   withAcpServiceFailureCode,
@@ -211,12 +210,6 @@ describe('tool-vs-agent auth attribution landing table', () => {
     // The classifier is agent-agnostic. If this ever diverges, the family
     // stopped being one problem and the rest of this table's reasoning fails.
     expect(verdict(row.text, row.acpCode, 'amr')).toBe(row.verdict);
-  });
-
-  it.each(ROWS)('$id keeps the AMR account verdict it already had', (row) => {
-    // The preceding change fixed `classifyAmrAccountFailure`. This one must not
-    // move any of it: the AMR column is identical before and after.
-    expect(classifyAmrAccountFailure(row.text)?.code ?? null).toBe(row.amrCode);
   });
 
   it('changes exactly the rows this work set out to change', () => {

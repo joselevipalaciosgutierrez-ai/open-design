@@ -267,13 +267,9 @@ import {
   persistPlainStreamArtifactList,
   plainStdoutFromRunEvents,
 } from './runtimes/plain-stream.js';
-import {
-  readVelaLoginStatus,
-  resolveAmrProfile,
-} from './integrations/vela.js';
 import { isAbortedOperationError } from './integrations/aborted-error.js';
-import { projectResourceIdFor } from './integrations/vela-team-projects.js';
 import {
+  projectResourceIdFor,
   getTeamProjectMaterialization,
   latestTeamProjectMaterializationVersion,
   materializePulledTeamMirror,
@@ -281,16 +277,42 @@ import {
   teamProjectMaterializationSupersedes,
 } from './project-authority.js';
 import { recoverAuthorizedTeamProjectPromotions } from './project-authority.js';
-import {
-  amrAccountFailureDetails,
-  classifyAmrAccountFailureSignal,
-} from './integrations/vela-errors.js';
-import { AMR_DEFAULT_MODEL_CATALOG_WAIT_MS, amrModelLoadingCache, amrRunModels } from './runtimes/amr-model-cache.js';
-import {
-  fetchVelaPresetModels,
-  fetchVelaRemoteModelsWithRetry,
-  isVelaChatCapableModelId,
-} from './runtimes/defs/amr.js';
+
+const readVelaControlApiContext = (_env?: any, _configuredEnv?: any) => null;
+const readVelaLoginStatus = (_env?: any, _configuredEnv?: any) => ({
+  loggedIn: false,
+  profile: 'default',
+  user: null,
+  account: null,
+  loginInFlight: false,
+  sessionState: 'signed_out',
+  credentialRevision: '0',
+});
+const resolveAmrProfile = (env?: any) => env?.VELA_PROFILE?.trim() || 'default';
+const classifyAmrAccountFailureSignal = (_err?: any) => null;
+const amrAccountFailureDetails = (_failure?: any) => ({});
+const AMR_DEFAULT_MODEL_CATALOG_WAIT_MS = 1500;
+const amrModelLoadingCache = {
+  get: async () => ({ models: [] }),
+  getAuthoritative: async () => ({ models: [] }),
+};
+const amrRunModels = (_agentId?: any, _scope?: any, _catalog?: any) => [];
+const fetchVelaPresetModels = async () => [];
+const fetchVelaRemoteModelsWithRetry = async () => [];
+const isVelaChatCapableModelId = (_model?: any) => true;
+const stageAmrImagePaths = async (_cwd: any, images: any) => images;
+const createAgentStderrVisibilityFilter = (_agentId?: any) => (line: string) => line;
+const createAmrTerminalReportOutboxStore = (_db?: any) => ({});
+const createAmrTerminalReportDeliveryService = (_opts?: any) => ({ start: () => {}, stop: () => {} });
+const createAmrTerminalReportFinalizer = (_outbox?: any) => () => {};
+type AmrTerminalReportDeliveryService = any;
+const registerVelaRoutes = (_app?: any, _deps?: any) => ({ close: async () => {} });
+const fetchBillingCheckoutUrl = async () => null;
+const fetchVelaBillingCatalog = async () => ({ plans: [], topups: [] });
+const fetchVelaBillingSummary = async () => null;
+const fetchVelaWorkspaceBillingProjection = async () => null;
+const isVelaWorkspaceAuthorizationError = (_err?: any) => false;
+const resolveAmrModelProbe = async () => ({ launchPath: '', env: {}, cacheKey: '' });
 import { migrateLegacyDataDirSync } from './migration/index.js';
 import {
   consumedImportNonces,
@@ -455,7 +477,6 @@ import {
 import { runAutoExtractionCleanup } from './memory-cleanup.js';
 import { attachAcpSession } from './agent-protocol/index.js';
 
-import { stageAmrImagePaths } from './media/amr-image-staging.js';
 import { ingestRoutineConnectorEvolution } from './automation-routine-evolution.js';
 import { createClaudeStreamHandler } from './runtimes/claude-stream.js';
 import { createAgentTitleMarkerStripper } from './title-marker.js';
@@ -505,7 +526,6 @@ import {
 } from './runtimes/auth.js';
 import { readOpenCodeServiceFailure } from './runtimes/opencode-log.js';
 import { applyOpenCodeEventPlugin } from './runtimes/opencode-event-plugin.js';
-import { createAgentStderrVisibilityFilter } from './amr-stderr-filter.js';
 import { createQoderStreamHandler } from './runtimes/qoder-stream.js';
 import { subscribe as subscribeFileEvents } from './project-watchers.js';
 import { importFigmaFromBytes } from './figma/figma-import.js';
@@ -513,12 +533,7 @@ import { renderDesignSystemPreview } from './design-systems/preview.js';
 import { renderDesignSystemShowcase } from './design-systems/showcase.js';
 import { createChatRunService } from './runtimes/runs.js';
 import { reapLeftoverAgentProcesses, spawnAgentProcess } from './runtimes/agent-process.js';
-import {
-  createAmrTerminalReportDeliveryService,
-  createAmrTerminalReportFinalizer,
-  createAmrTerminalReportOutboxStore,
-  type AmrTerminalReportDeliveryService,
-} from './storage/amr-terminal-report-outbox.js';
+
 import { createInternalRunCreationService } from './services/internal-run-service.js';
 import {
   createRunAnalyticsLifecycle,
@@ -901,7 +916,6 @@ import { associateRunProducedFiles } from './runtimes/run-produced-files.js';
 import { chatArtifactCaptureResultProps } from './chat-artifacts/telemetry.js';
 import { freezeAndRenderChatArtifactCovers } from './chat-artifacts/cover.js';
 import { setMessageArtifactHtmlVersionIds } from './chat-artifacts/store.js';
-import { registerVelaRoutes } from './routes/vela.js';
 import { registerFinalizeRoutes, registerImportRoutes, registerProjectExportRoutes } from './import-export-routes.js';
 import { registerHandoffRoutes } from './routes/handoff.js';
 
@@ -982,11 +996,9 @@ import {
 } from './project-authority.js';
 
 import {
-  AmrWorkspaceScopeRequiredError,
-  openDesignAmrTraceEnvForRun,
   pinRunWorkspaceScopeForProject,
   type RunWorkspaceScope,
-} from './runtimes/project-amr-trace-env.js';
+} from './project-authority.js';
 import {
   createWorkspaceDirectoryAuthorityBroker,
   createWorkspaceContextProviderFromEnv,
@@ -1062,13 +1074,6 @@ import {
   type RememberedTeamResourceScopeLease,
 } from './project-authority.js';
 
-import {
-  fetchBillingCheckoutUrl,
-  fetchVelaBillingCatalog,
-  fetchVelaBillingSummary,
-  fetchVelaWorkspaceBillingProjection,
-  isVelaWorkspaceAuthorizationError,
-} from './integrations/vela-billing.js';
 import { createAccountBillingSummaryCache } from './project-authority.js';
 import { createEventRefreshCoordinator } from './project-authority.js';
 import { createWorkspaceExactAuthorityCache } from './project-authority.js';
@@ -1150,7 +1155,6 @@ import {
   bindProjectToPersistedAutomationWorkspace,
   normalizePersistedAutomationWorkspaceScope,
 } from './automations/workspace-scope.js';
-import { resolveAmrModelProbe } from './runtimes/amr-model-probe.js';
 import { createPluginInstallationHelpers, normalizeProjectPluginFolderPath, resolveProjectChildDirectory } from './services/plugin-installation.js';
 import { createPluginShareTaskStore } from './services/plugin-share-tasks.js';
 import { getRouteRegistrationInventory, installRouteRegistrationGuard } from './route-registration-guard.js';
@@ -1267,7 +1271,6 @@ import {
 } from './design/index.js';
 import { openBrowser } from './browser/index.js';
 import { EmptyTranscriptError, synthesizeHandoffPrompt } from './design/index.js';
-import { readVelaControlApiContext } from './integrations/vela.js';
 
 /**
  * `OD_PROJECT_CREATE_PREPARATION_TIMEOUT_MS` shortens the POST /api/projects
@@ -14912,61 +14915,6 @@ export async function startServer({
         ...(mmdRouteLaunchEnv || {}),
         ...odMediaEnv,
         ...(byokOpenCodeProvider ? byokOpenCodeProvider.env : {}),
-        ...await openDesignAmrTraceEnvForRun({
-          agentId: def.id,
-          runId: run.id,
-          conversationId: run.conversationId,
-          runAttempt: openDesignAmrRunAttempt({
-            cumulativeRetryAttemptCount: run.cumulativeRetryAttemptCount,
-            retryAttemptCount: run.retryAttemptCount,
-            manualResumeAttemptCount: run.manualResumeAttemptCount,
-          }),
-          // Vela's workspace-credit isolation reads this env together with the
-          // signed-in account identity. The run pins the project's exact
-          // Workspace before its first asynchronous setup step; Vela/AMR
-          // remains the authority for membership, balance, and billing
-          // eligibility. Team and Personal bindings are both sent explicitly.
-          // An unbound project is refused before process spawn. Later project
-          // rebinds and ambient/current selection never participate.
-          projectId,
-          workspaceScope: run.workspaceScope,
-          externalPluginAnalytics: run.externalPluginAnalytics ?? null,
-        }, {
-          // Report persisted-binding vs truly-unbound selection to the daemon
-          // log and telemetry. Ids and the branch name only —
-          // never member rows or credentials.
-          onWorkspaceScopeOutcome: (outcome) => {
-            console.log(
-              `[od] amr workspace scope ${outcome.kind}`
-                + ` project=${outcome.projectId}`
-                + ` workspace=${outcome.workspaceId ?? 'none'}`
-                + ` run=${run.id}`,
-            );
-            const context = run.analyticsContext ?? null;
-            if (!context || !design?.analytics?.capture) return;
-            design.analytics.capture({
-              eventName: 'amr_workspace_scope_resolved',
-              context,
-              // `design.getAppVersion` is the only app-version accessor this
-              // scope can see; the identically-named helper inside
-              // `createFinalizedMessageTelemetryReporter` is a different
-              // function's local and resolving it here threw a ReferenceError
-              // out of the spawn path, failing 100% of AMR runs. That helper's
-              // own last resort is this same accessor, so the value is
-              // unchanged.
-              appVersion: design.getAppVersion?.() ?? 'unknown',
-              properties: {
-                page_name: 'chat_panel',
-                area: 'chat_panel',
-                project_id: outcome.projectId,
-                conversation_id: run.conversationId ?? null,
-                run_id: run.id,
-                workspace_scope_outcome: outcome.kind,
-                workspace_id: outcome.workspaceId,
-              },
-            });
-          },
-        }),
         // OpenCode external-MCP injection (issue #2142). Layered AFTER
         // spawnEnvForAgent / odMediaEnv / configuredAgentEnv so the
         // daemon-built MCP config wins over a stale value the user
@@ -15244,12 +15192,8 @@ export async function startServer({
       revokeToolToken('child_exit');
       unregisterChatAgentEventSink();
       send('error', createSseErrorPayload(
-        err instanceof AmrWorkspaceScopeRequiredError
-          ? err.code
-          : 'AGENT_EXECUTION_FAILED',
-        err instanceof AmrWorkspaceScopeRequiredError
-          ? err.message
-          : `spawn failed: ${err.message}`,
+        'AGENT_EXECUTION_FAILED',
+        `spawn failed: ${err.message}`,
       ));
       finishStrategyAwarePhysicalRun('failed', 1, null);
       return;

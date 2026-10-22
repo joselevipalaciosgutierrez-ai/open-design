@@ -96,7 +96,6 @@ import {
   resolveHyperFramesNodeBin,
 } from './hyperframes-runtime.js';
 import { prepareHyperFramesAudio, hyperFramesAudioEncodingArgs, type HyperFramesAudioTrack } from './hyperframes-audio.js';
-import { renderVelaImage, renderVelaVideo } from './vela.js';
 import {
   ensureProject,
   kindFor,
@@ -615,19 +614,6 @@ export async function generateMedia(args: {
     ) {
       providerId = 'custom-image';
       const result = await renderCustomOpenAIImage(ctx, customImageCredentials!);
-      bytes = result.bytes;
-      providerNote = result.providerNote;
-      suggestedExt = result.suggestedExt;
-    } else if (def.provider === 'vela' && surface === 'image') {
-      const result = await renderVelaImage(ctx);
-      bytes = result.bytes;
-      providerNote = result.providerNote;
-      suggestedExt = result.suggestedExt;
-    } else if (def.provider === 'vela' && surface === 'video') {
-      const result = await renderVelaVideo({
-        ...ctx,
-        onProgress: args.onProgress,
-      });
       bytes = result.bytes;
       providerNote = result.providerNote;
       suggestedExt = result.suggestedExt;

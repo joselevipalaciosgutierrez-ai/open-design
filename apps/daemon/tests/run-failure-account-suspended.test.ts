@@ -13,13 +13,6 @@
 // 〔重试〕(违反设计原则四)。
 import { describe, expect, it, vi } from 'vitest';
 
-// 与 run-failure-classification.test.ts 同一套桩:这两个模块会把文本抢走,
-// 桩住它们才能证明「封号是被新分支认出来的」,而不是被别人顺手认领的。
-vi.mock('../src/integrations/vela-errors.js', () => ({
-  classifyAmrAccountFailure: () => null,
-  reportsPlatformProviderCredentialFault: () => false,
-}));
-
 vi.mock('../src/runtimes/auth.js', () => ({
   classifyAgentServiceFailure: () => null,
 }));

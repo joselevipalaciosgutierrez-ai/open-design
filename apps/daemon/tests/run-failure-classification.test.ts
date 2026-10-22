@@ -1,34 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../src/integrations/vela-errors.js', () => ({
-  classifyAmrAccountFailure(text: string) {
-    const value = String(text || '').toLowerCase();
-    // Mirror the real detector's signals exercised by these tests, including
-    // the Chinese vela pre-charge text (see integrations/vela-errors.test.ts).
-    if (
-      value.includes('insufficient balance') ||
-      value.includes('预扣费额度失败') ||
-      value.includes('余额不足') ||
-      value.includes('额度不足')
-    ) {
-      return { code: 'AMR_INSUFFICIENT_BALANCE' as const };
-    }
-    if (value.includes('authentication required') || value.includes('not authenticated') || value.includes('unauthorized')) {
-      return { code: 'AMR_AUTH_REQUIRED' as const };
-    }
-    if (value.includes('tier_model_not_entitled') || value.includes('tier_request_kind_not_entitled')) {
-      return { code: 'AMR_TIER_UPGRADE_REQUIRED' as const };
-    }
-    return null;
-  },
-  // vela's link gateway codes for "the PLATFORM's upstream credentials are
-  // broken" (catalogue R-053). Mirrored rather than stubbed to `false` so the
-  // branch this file's texts pass through is the same one production runs.
-  reportsPlatformProviderCredentialFault(text: string) {
-    return /upstream_provider_(?:unauthenticated|forbidden)/i.test(String(text || ''));
-  },
-}));
-
 // Only `classifyAgentServiceFailure` is stubbed — this suite wants a
 // deterministic service class per row. `reportsToolPrincipalAuthFailure` is
 // kept REAL via `importOriginal`: it answers a different question (whose

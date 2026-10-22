@@ -61,7 +61,6 @@ import {
   updateProject,
   upsertMessage,
 } from '../db.js';
-import { readVelaLoginStatus } from '../integrations/vela.js';
 import {
   ensureDetectedRuntimeCapabilities,
   ensureDetectedRuntimeVersions,
@@ -203,7 +202,7 @@ import {
   accountScopedRunWorkspaceScopeForProject,
   pinRunWorkspaceScopeForProject,
   type RunWorkspaceScope,
-} from '../runtimes/project-amr-trace-env.js';
+} from '../project-authority.js';
 import {
   runArtifactCountForRun,
   runDesignSystemCreatedForRun,

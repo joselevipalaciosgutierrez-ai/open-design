@@ -8,7 +8,19 @@ import {
   updateMediaTask,
 } from '../../src/media/tasks.js';
 import { mediaTaskErrorFromFailure } from '../../src/routes/media.js';
-import { VelaMediaError } from '../../src/media/vela.js';
+
+class VelaMediaError extends Error {
+  readonly code: string;
+  readonly subject?: any;
+  readonly retryable?: boolean | undefined;
+  constructor(message: string, detail: { code: string; subject?: any; retryable?: boolean | undefined }) {
+    super(message);
+    this.name = 'VelaMediaError';
+    this.code = detail.code;
+    this.subject = detail.subject;
+    this.retryable = detail.retryable;
+  }
+}
 
 /** Shape of `StubProviderDisabledError` (apps/daemon/src/media/index.ts), which is module-private. */
 function stubProviderDisabled(model: string): Error {

@@ -1238,115 +1238,9 @@ What the daemon does:
 // Subcommand: od amr …
 // ---------------------------------------------------------------------------
 
-async function runAmr(args) {
-  const sub = args[0];
-  if (!sub || sub === 'help' || args.includes('--help') || args.includes('-h')) {
-    console.log(`Usage:
-  od amr login [--json]
-  od amr logout [--json]
-  od amr status [--refresh] [--json]
-
-Options:
-  --daemon-url <url>   OpenDesign daemon HTTP base.
-  --refresh            Bypass the daemon's short wallet display cache.
-  --json               Emit raw JSON.`);
-    process.exit(sub === 'help' || args.includes('--help') || args.includes('-h') ? 0 : 2);
-  }
-  const rest = args.slice(1);
-  const flags = parseFlags(rest, { string: AMR_STRING_FLAGS, boolean: AMR_BOOLEAN_FLAGS });
-  const base = await cliDaemonBaseUrl(flags);
-  switch (sub) {
-    case 'logout': {
-      const logoutResp = await fetch(`${base}/api/integrations/vela/logout`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: '{}',
-      });
-      if (!logoutResp.ok) return structuredHttpFailure(logoutResp);
-      const result = await logoutResp.json();
-      if (flags.json) {
-        return process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-      }
-      console.log('AMR account\tsigned out');
-      return;
-    }
-    case 'login': {
-      const loginResp = await fetch(`${base}/api/integrations/vela/login`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: '{}',
-      });
-      if (!loginResp.ok) return structuredHttpFailure(loginResp);
-      const started = await loginResp.json();
-      const statusResp = await fetch(`${base}/api/integrations/vela/status`);
-      if (!statusResp.ok) return structuredHttpFailure(statusResp);
-      const status = await statusResp.json();
-      if (flags.json) {
-        return process.stdout.write(JSON.stringify({ started, status }, null, 2) + '\n');
-      }
-      console.log(`Vela login\tstarted`);
-      console.log(`Profile\t${status?.profile ?? started?.profile ?? '-'}`);
-      if (status?.loggedIn) {
-        console.log(`Status\tlogged in`);
-        return;
-      }
-      console.log(`Status\t${status?.loginInFlight ? 'waiting for browser authorization' : 'sign-in pending'}`);
-      if (status?.activationUrl) console.log(`Open\t${status.activationUrl}`);
-      if (status?.userCode) console.log(`Code\t${status.userCode}`);
-      if (status?.browserOpenFailed) {
-        console.log(`Note\tbrowser could not be opened automatically; use the link above`);
-      }
-      return;
-    }
-    case 'status': {
-      const query = flags.refresh ? '?refresh=1' : '';
-      const statusResp = await fetch(`${base}/api/integrations/vela/status`);
-      if (!statusResp.ok) return structuredHttpFailure(statusResp);
-      const status = await statusResp.json();
-      let wallet = null;
-      if (status?.loggedIn && (!status?.account?.balanceUsd || flags.refresh)) {
-        const walletResp = await fetch(`${base}/api/integrations/vela/wallet${query}`);
-        if (walletResp.ok) wallet = await walletResp.json();
-        else if (flags.refresh && !status?.account?.balanceUsd) return structuredHttpFailure(walletResp);
-      }
-      const merged = {
-        ...status,
-        user: status?.user ?? wallet?.user ?? null,
-        account:
-          status?.loggedIn && wallet?.status === 'available'
-            ? {
-                ...(status?.account ?? {}),
-                balanceUsd: status?.account?.balanceUsd ?? wallet.balanceUsd,
-              }
-            : status?.account,
-        wallet,
-      };
-      if (flags.json) return process.stdout.write(JSON.stringify(merged, null, 2) + '\n');
-      const account = merged?.user?.email ?? merged?.user?.id ?? '-';
-      console.log(`AMR account\t${account}`);
-      console.log(`Profile\t${merged?.profile ?? '-'}`);
-      // Only present when this build was given a vela web console origin
-      // (OD_VELA_WEB_URL); printing it makes "which backend is this app
-      // pointed at" answerable without reading the packaged config.
-      if (merged?.consoleOrigin) console.log(`Console\t${merged.consoleOrigin}`);
-      if (merged?.account?.plan) console.log(`Plan\t${merged.account.plan}`);
-      if (merged?.account?.balanceUsd) {
-        console.log(`Wallet balance\t$${merged.account.balanceUsd}`);
-        if (wallet?.updatedAt || wallet?.fetchedAt) {
-          console.log(`Updated\t${wallet.updatedAt ?? wallet.fetchedAt}`);
-        }
-        console.log(`Source\t${wallet?.source ?? 'status_account'}`);
-        return;
-      }
-      console.log(`Wallet balance\tunavailable`);
-      console.log(`Status\t${wallet?.status ?? (merged?.loggedIn ? 'logged_in' : 'signed_out')}`);
-      if (wallet?.error?.message) console.log(`Reason\t${wallet.error.message}`);
-      return;
-    }
-    default:
-      console.error(`unknown subcommand: od amr ${sub}`);
-      process.exit(2);
-  }
+async function runAmr(_args) {
+  console.error('AMR Cloud is not available in standalone mode.');
+  process.exit(1);
 }
 
 // ---------------------------------------------------------------------------
@@ -1682,37 +1576,9 @@ function readCollabPresenceSessionFlags(flags) {
 // Subcommand: od message-center …
 // ---------------------------------------------------------------------------
 
-async function runMessageCenter(args) {
-  const sub = args[0];
-  if (!sub || sub === 'help' || args.includes('--help') || args.includes('-h')) {
-    printMessageCenterHelp();
-    process.exit(sub === 'help' || args.includes('--help') || args.includes('-h') ? 0 : 2);
-  }
-  const rest = args.slice(1);
-  let flags;
-  try {
-    flags = parseFlags(rest, {
-      string: MESSAGE_CENTER_STRING_FLAGS,
-      boolean: MESSAGE_CENTER_BOOLEAN_FLAGS,
-    });
-  } catch (err) {
-    console.error(err.message);
-    printMessageCenterHelp();
-    process.exit(2);
-  }
-  const base = await cliDaemonBaseUrl(flags);
-  switch (sub) {
-    case 'list':
-      return runMessageCenterList(rest, flags, base);
-    case 'read':
-      return runMessageCenterRead(rest, flags, base);
-    case 'read-all':
-      return runMessageCenterReadAll(flags, base);
-    default:
-      console.error(`unknown subcommand: od message-center ${sub}`);
-      printMessageCenterHelp();
-      process.exit(2);
-  }
+async function runMessageCenter(_args) {
+  console.error('Message center is unavailable in standalone mode.');
+  process.exit(1);
 }
 
 async function runMessageCenterList(rawArgs, flags, base) {

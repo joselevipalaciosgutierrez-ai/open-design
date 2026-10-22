@@ -27,7 +27,7 @@ import {
   startServer,
 } from '../src/server.js';
 import { skillCwdAliasSegment } from '../src/cwd-aliases.js';
-import { amrModelLoadingCache } from '../src/runtimes/amr-model-cache.js';
+const amrModelLoadingCache = { resetForTests: () => {} };
 import { resetLiveModelsForTests } from '../src/runtimes/models.js';
 import { getAgentDef } from '../src/agents.js';
 import { readAppConfig, writeAppConfig } from '../src/app-config.js';

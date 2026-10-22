@@ -23,7 +23,6 @@ import {
   stripDoneMarkers,
   stripNextStepMarkers,
 } from '@open-design/contracts';
-import { migrateAmrTerminalReportOutbox } from './storage/amr-terminal-report-outbox.js';
 import { scrubDsmlToolProtocolTail } from './artifacts/text-suppression.js';
 
 export interface WorkspaceProjectHomeRow {
@@ -722,7 +721,6 @@ function migrate(db: SqliteDb): void {
   migrateProjectScenarioBindings(db);
   migrateStrategyTaskStore(db);
   migrateChatArtifacts(db);
-  migrateAmrTerminalReportOutbox(db);
 }
 
 /**
