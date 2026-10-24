@@ -21,7 +21,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
-import type { OdNextRolloutMode } from '@open-design/contracts';
+import { APP_CONFIG_TUNING, type OdNextRolloutMode } from '@open-design/contracts';
 
 import { expandHomePrefix } from './home-expansion.js';
 
@@ -614,7 +614,7 @@ function applyConfigValue(
     return;
   }
   if (key === 'antigravityWarmMax' || key === 'antigravityWarmIdleSeconds') {
-    const [min, max] = key === 'antigravityWarmMax' ? [0, 16] : [5, 3600];
+    const { min, max } = APP_CONFIG_TUNING[key];
     if (typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max) {
       target[key] = value;
     } else {

@@ -20,6 +20,8 @@
  */
 import { createHash } from 'node:crypto';
 import os from 'node:os';
+
+import { APP_CONFIG_TUNING } from '@open-design/contracts';
 import type { ChildProcess } from 'node:child_process';
 
 /** Environment values that belong to one run, not to the launch. */
@@ -38,7 +40,7 @@ export const WARM_AGENT_IDLE_MS = 3 * 60 * 1000;
 /** Never fewer parked processes than this, whatever the machine. */
 export const WARM_AGENT_MAX_PARKED_FLOOR = 2;
 /** The most the memory-based default will ever allow (the `od config` ceiling too). */
-export const WARM_AGENT_MAX_PARKED_CEILING = 16;
+export const WARM_AGENT_MAX_PARKED_CEILING = APP_CONFIG_TUNING.antigravityWarmMax.max;
 const BYTES_PER_PARKED_PROCESS = 4 * 1024 ** 3;
 
 /**

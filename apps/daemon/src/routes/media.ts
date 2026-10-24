@@ -39,6 +39,7 @@ import { scaffoldHyperFramesComposition } from '../media/hyperframes-scaffold.js
 import { assignMediaTaskBatches } from '../media/task-batches.js';
 import { mediaTaskErrorFromFailure } from '../media/task-error.js';
 import { normalizePersistedAutomationWorkspaceScope } from '../automations/workspace-scope.js';
+import { describeTuning } from '../app-config-tuning.js';
 
 const LONG_MEDIA_PROXY_TIMEOUT_MS = 10 * 60 * 1000;
 const MEDIA_FILE_MTIME_TOLERANCE_MS = 1;
@@ -802,6 +803,22 @@ export function registerMediaRoutes(app: Express, ctx: RegisterMediaRoutesDeps) 
     try {
       const config = await readAppConfig(RUNTIME_DATA_DIR);
       res.json({ config });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: String(err && err.message ? err.message : err) });
+    }
+  });
+
+  // What the tuning preferences are set to, what applies now and what would apply by
+  // default. The Settings panel and `od config describe` read this instead of
+  // recomputing defaults that depend on the machine.
+  app.get('/api/app-config/tuning', async (req, res) => {
+    if (!isLocalSameOrigin(req, getResolvedPort())) {
+      return res.status(403).json({ error: 'cross-origin request rejected' });
+    }
+    try {
+      res.json(describeTuning(await readAppConfig(RUNTIME_DATA_DIR)));
     } catch (err: any) {
       res
         .status(500)

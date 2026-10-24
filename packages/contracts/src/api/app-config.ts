@@ -131,3 +131,35 @@ export interface UnsetAppConfigResponse {
 export interface RecentLinkedDirsResponse {
   dirs: string[];
 }
+
+/**
+ * Preferences that tune how much the machine spends, as opposed to what the
+ * product does. One declaration feeds the daemon's validation, `od config describe`
+ * and the Settings panel, so a range or a unit changes in one place.
+ */
+export const APP_CONFIG_TUNING = {
+  antigravityWarmMax: { min: 0, max: 16, unit: 'processes' },
+  antigravityWarmIdleSeconds: { min: 5, max: 3600, unit: 'seconds' },
+} as const;
+
+export type AppConfigTuningKey = keyof typeof APP_CONFIG_TUNING;
+
+/** One tuning preference as `GET /api/app-config/tuning` reports it. */
+export interface AppConfigTuningSetting {
+  key: AppConfigTuningKey;
+  /** What is stored; `null` when nothing is, so the default applies. */
+  value: number | null;
+  /** What applies right now: the stored value, or the default. */
+  effective: number;
+  /** What applies when nothing is stored (for the process limit it depends on the machine's memory). */
+  default: number;
+  min: number;
+  max: number;
+  unit: 'processes' | 'seconds';
+}
+
+export interface AppConfigTuningResponse {
+  settings: AppConfigTuningSetting[];
+  /** Memory of the machine the daemon runs on, in whole GB: what the process-limit default is computed from. */
+  memoryGb: number;
+}

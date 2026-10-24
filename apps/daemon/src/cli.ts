@@ -10371,6 +10371,8 @@ async function runConfig(args) {
   od config set <key> --value-json '<json>'
                                        Set a key to a JSON value.
   od config unset <key>               Remove a top-level key.
+  od config describe                  Show each tuning setting: what applies now, where it
+                                      comes from, its default and its allowed range.
 
 Tuning keys (apply without a restart):
   antigravityWarmMax          Antigravity processes kept ready for a next turn, all
@@ -10456,6 +10458,24 @@ Common options:
       } else {
         console.log(`[config] set ${key}`);
       }
+      return;
+    }
+    case 'describe': {
+      const resp = await fetch(`${base}/api/app-config/tuning`);
+      if (!resp.ok) return structuredHttpFailure(resp);
+      const data = await resp.json();
+      if (flags.json) {
+        process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+        return;
+      }
+      const pad = Math.max(...data.settings.map((setting) => setting.key.length)) + 2;
+      for (const setting of data.settings) {
+        const origin = setting.value === null ? 'default' : `set; default ${setting.default}`;
+        console.log(
+          `${setting.key.padEnd(pad)}${String(setting.effective).padStart(5)} ${setting.unit}  (${origin})  allowed ${setting.min}-${setting.max}`,
+        );
+      }
+      console.log(`Defaults that depend on memory are calculated from ${data.memoryGb} GB.`);
       return;
     }
     case 'unset': {
