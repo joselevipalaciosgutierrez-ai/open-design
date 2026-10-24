@@ -41,7 +41,6 @@ import type { Dict } from '../i18n/types';
 import { AgentIcon } from './AgentIcon';
 import { AgentDiagnosticRow } from './AgentDiagnosticRow';
 import { DeepSeekHarnessSetupDialog } from './DeepSeekHarnessSetupDialog';
-import { PlanBadge } from './PlanBadge';
 import { orderAgentsWithOpenDesignFirst } from './agentOrdering';
 function AmrLoginPill(_props: any): null {
   return null;
@@ -177,8 +176,7 @@ import {
   workspaceBillingBalanceUsd,
   workspaceBillingSummaryForContext,
 } from '../runtime/local-workspace';
-import { canUpgradeFromPlanTier, resolvePlanTier } from '../runtime/local-workspace';
-import { planBadgeTierForWorkspace } from './PlanWordmark';
+import { canUpgradeFromPlanTier } from '../runtime/local-workspace';
 import { workspaceUpgradeUrl } from './EntryNavRail';
 import { canShowWorkspaceSettings } from '../runtime/local-workspace';
 import { ConnectorsBrowser } from './ConnectorsBrowser';
@@ -4736,19 +4734,11 @@ export function SettingsDialog({
                             && (amrPendingSelect ? a.id === 'amr' : cfg.agentId === a.id);
                           const running =
                             active && agentTestState.status === 'running';
-                          const isAmrAgent = a.id === 'amr';
                           const description = AGENT_SHORT_DESCRIPTIONS[a.id];
                           const agentName = displayAgentName(a);
                           const diagnosticHandlers = diagnosticHandlersForAgent(a);
                           const modelSummary = agentModelSummary(a);
-                          const amrBenefits = [
-                            t('settings.amrBenefitOfficial'),
-                            t('settings.amrBenefitManyModels'),
-                          ];
-                          const versionLabel =
-                            isAmrAgent
-                              ? ''
-                              : cleanAgentVersionLabel(a.name, a.version);
+                          const versionLabel = cleanAgentVersionLabel(a.name, a.version);
                           const metaLabel =
                             a.authStatus === 'missing'
                               ? t('settings.agentAuthRequired')
@@ -4756,129 +4746,20 @@ export function SettingsDialog({
                                 ? t('settings.agentAuthUnknown')
                                 : versionLabel
                                   ? versionLabel
-                                  : a.id === 'amr'
-                                    ? ''
-                                    : t('common.installed');
+                                  : t('common.installed');
                           const metaTitle =
                             a.authStatus === 'missing' ||
                             a.authStatus === 'unknown'
                               ? (a.authMessage ?? a.path ?? '')
                               : (a.path ?? '');
-                          const amrHighlighted = isAmrAgent && amrHighlightActive;
-                          const amrCardEmail =
-                            isAmrAgent && active && amrCardSignedIn
-                              ? amrCardStatus?.user?.email || t('settings.amrSignedIn')
-                              : '';
-                          const amrCardProfileBadge =
-                            isAmrAgent && active && amrCardSignedIn
-                              ? amrProfileBadgeLabel(amrCardStatus?.profile)
-                              : null;
-                          const amrWalletVisible =
-                            isAmrAgent && active && amrCardSignedIn;
-                          const amrStatusBalance =
-                            amrWalletVisible
-                              ? formatVelaBalanceUsd(amrCardStatus?.account?.balanceUsd)
-                              : null;
-                          const amrWalletBalance =
-                            amrWalletVisible && amrWalletSnapshot?.status === 'available'
-                              ? formatVelaBalanceUsd(amrWalletSnapshot.balanceUsd)
-                              : null;
-                          // recvqakgSc1Pwd: this must read `balanceUsd` — the
-                          // dollar figure vela already computed — not
-                          // `totalAvailableCredits`, a raw credits COUNT on a
-                          // completely different scale (vela reports
-                          // thousands of credits per dollar). Formatting the
-                          // credits count as a dollar amount is what put
-                          // "Balance $388307.00" on a workspace whose real
-                          // balance was under $39.
-                          const workspaceBalanceUsd = workspaceBillingBalanceUsd(
-                            workspaceBillingResponse,
-                            workspaceContext,
-                          );
-                          const amrWorkspaceBalance =
-                            amrWalletVisible && workspaceBalanceUsd
-                              ? formatVelaBalanceUsd(workspaceBalanceUsd)
-                              : null;
-                          const amrCardIsTeam =
-                            workspaceContext?.workspaceType === 'team';
-                          const amrCardBalanceLabel =
-                            isAmrAgent &&
-                            active &&
-                            amrCardSignedIn &&
-                            !workspaceContextLoading
-                              ? amrCardIsTeam
-                                ? amrWorkspaceBalance
-                                : amrWorkspaceBalance ?? amrStatusBalance ?? amrWalletBalance
-                              : null;
-                          const amrCardBalanceReady =
-                            !workspaceContextLoading &&
-                            (amrCardIsTeam
-                              ? Boolean(workspaceBillingResponse) || Boolean(amrWorkspaceBalance)
-                              : amrWalletReady || Boolean(amrCardBalanceLabel));
-                          // vela's `account.plan` is ACCOUNT-scoped, so a member
-                          // whose plan is held by the team workspace reads
-                          // `free` there — the workspace context wins.
-                          //
-                          // The badge names the plan FAMILY, so a TEAM workspace
-                          // reads `team` at every tier — free through max —
-                          // while the personal ladder keeps its tier word
-                          // (product ruling; 「设置中的这里应该一样的逻辑」, so
-                          // this goes through the SAME helper as the nav-rail
-                          // account row and cannot drift from it). An id outside
-                          // the badge set still renders verbatim.
-                          const amrCardResolvedPlan =
-                            isAmrAgent && active && amrCardSignedIn
-                              ? resolvePlanTier({
-                                  billing: workspaceBilling,
-                                  context: workspaceContext,
-                                  accountPlan: amrCardStatus?.account?.plan,
-                                })
-                              : null;
-                          const amrCardPlanLabel = amrCardResolvedPlan
-                            ? planBadgeTierForWorkspace({
-                                tier: amrCardResolvedPlan,
-                                workspaceType: workspaceContext?.workspaceType,
-                              }) ?? amrCardResolvedPlan
-                            : null;
-                          // recvqfYKutwWlQ: a team member without billing
-                          // permission (owner-only) can't act on an upgrade
-                          // even when the plan tier itself is upgradeable, so
-                          // the entry point must not render for them. Personal
-                          // workspaces always resolve `canManageBilling` true
-                          // (the user is their own owner), so this does not
-                          // affect the personal-workspace upgrade path.
-                          //
-                          // The TIER half asks `canUpgradeFromPlanTier` — the
-                          // one rule the account menu's billing card shares —
-                          // about `amrCardResolvedPlan`, the SAME resolved tier
-                          // the badge above renders. It used to ask a
-                          // personal-ladder question about
-                          // `account.plan` instead: that projection is
-                          // ACCOUNT-scoped and reports `free` for a user whose
-                          // entitlement is held by a team workspace, so a
-                          // 团队版 Max owner was measured as "free" and offered
-                          // an upgrade to the top tier they already hold, while
-                          // the badge beside it correctly read Max.
-                          const amrCardCanUpgrade =
-                            isAmrAgent && active && amrCardSignedIn
-                              ? canUpgradeFromPlanTier(amrCardResolvedPlan) &&
-                                Boolean(workspaceContext?.permissions?.canManageBilling)
-                              : false;
-                          // Cancel stays visible for the whole pending sign-in,
-                          // matching the Settings callout button above.
-                          const amrRevealPendingCancelAction =
-                            isAmrAgent && active && !amrCardSignedIn;
                           const cardEl = (
                             <div
                               key={a.id}
-                              ref={isAmrAgent ? amrCardRef : undefined}
                               data-testid={`settings-agent-card-${a.id}`}
                               className={
                                 'agent-card agent-card-installed' +
                                 (active ? ' active' : '') +
-                                (needsSetup ? ' agent-card-needs-setup' : '') +
-                                (amrHighlighted ? ' agent-card--amr-highlight' : '') +
-                                (isAmrAgent && !amrCardSignedIn ? ' agent-card--amr-signed-out' : '')
+                                (needsSetup ? ' agent-card-needs-setup' : '')
                               }
                             >
                               <div className="agent-card-main">
@@ -4898,23 +4779,6 @@ export function SettingsDialog({
                                       setDshSetup({ busy: false, error: null });
                                       return;
                                     }
-                                    if (isAmrAgent) {
-                                      recordAmrEntry(
-                                        analytics.track,
-                                        'settings_amr_agent_card',
-                                        new Date(),
-                                        {
-                                          metricsConsent:
-                                            cfg.telemetry?.metrics === true,
-                                        },
-                                      );
-                                    }
-                                    // Until a session is confirmed (including before the
-                                    // first status read lands), only select it here.
-                                    if (isAmrAgent && !amrCardSignedIn) {
-                                      setAmrPendingSelect(true);
-                                      return;
-                                    }
                                     setAmrPendingSelect(false);
                                     setCfg((c) => ({ ...c, agentId: a.id }));
                                   }}
@@ -4923,31 +4787,12 @@ export function SettingsDialog({
                                     <AgentIcon id={a.id} size={32} />
                                     <div className="agent-card-body">
                                       <div
-                                        className={
-                                          'agent-card-name' +
-                                          (isAmrAgent
-                                            ? ' agent-card-name--amr'
-                                            : '')
-                                        }
+                                        className="agent-card-name"
                                       >
                                         <span className="agent-card-title">
                                           {agentName}
                                         </span>
-                                        {isAmrAgent ? (
-                                          <span
-                                            className="agent-card-benefits"
-                                            aria-hidden="true"
-                                          >
-                                            {amrBenefits.map((benefit) => (
-                                              <span
-                                                key={benefit}
-                                                className="agent-card-benefit"
-                                              >
-                                                {benefit}
-                                              </span>
-                                            ))}
-                                          </span>
-                                        ) : description ? (
+                                        {description ? (
                                           <>
                                             <span
                                               className="agent-card-name-divider"
@@ -4959,11 +4804,6 @@ export function SettingsDialog({
                                               {description}
                                             </span>
                                           </>
-                                        ) : null}
-                                        {isAmrAgent && amrCardPlanLabel ? (
-                                          <VisuallyHidden>
-                                            {`, ${t('settings.amrPlan')} ${amrCardPlanLabel}`}
-                                          </VisuallyHidden>
                                         ) : null}
                                       </div>
                                       {needsSetup ? (
@@ -4977,51 +4817,6 @@ export function SettingsDialog({
                                           </span>
                                         </div>
                                       ) : null}
-                                      {amrCardEmail ? (
-                                        <div className="agent-card-amr-email">
-                                          <span className="agent-card-amr-email-text" title={amrCardEmail}>
-                                            {amrCardEmail}
-                                          </span>
-                                          {amrCardPlanLabel ? (
-                                            <span
-                                              className="agent-card-plan-badge-slot"
-                                              aria-hidden="true"
-                                            >
-                                              <PlanBadge
-                                                plan={amrCardPlanLabel}
-                                                size="sm"
-                                                className="agent-card-plan-badge"
-                                                title={
-                                                  amrCardPlanLabel
-                                                    ? `${t('settings.amrPlan')} ${amrCardPlanLabel}`
-                                                    : undefined
-                                                }
-                                              />
-                                            </span>
-                                          ) : null}
-                                          {amrCardProfileBadge ? (
-                                            <span className="agent-card-amr-profile-badge">
-                                              {amrCardProfileBadge}
-                                            </span>
-                                          ) : null}
-                                          {amrWalletVisible ? (
-                                            <span className="agent-card-amr-balance">
-                                              <span className="agent-card-amr-balance-label">
-                                                {t('settings.amrBalance')}
-                                              </span>
-                                              <span className="agent-card-amr-balance-value">
-                                                {amrWalletValueLabel({
-                                                  balance: amrCardBalanceLabel,
-                                                  loadingLabel: t('common.loading'),
-                                                  ready: amrCardBalanceReady,
-                                                  snapshot: amrCardIsTeam ? null : amrWalletSnapshot,
-                                                  unavailableLabel: t('settings.amrWalletUnavailable'),
-                                                })}
-                                              </span>
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                      ) : null}
                                       {!active && modelSummary ? (
                                         <div className="agent-card-model-summary">
                                           <span>{t('settings.modelPicker')}</span>
@@ -5030,99 +4825,7 @@ export function SettingsDialog({
                                       ) : null}
                                   </div>
                                 </button>
-                                {isAmrAgent ? (
-                                  active && amrCardStatusReady ? (
-                                    <span
-                                      className={
-                                        'amr-auth-anchor'
-                                        + (amrCardSignedIn ? '' : ' amr-auth-anchor--sign-in')
-                                      }
-                                      onMouseEnter={() => setAmrCoachmarkDismissed(true)}
-                                    >
-                                      {amrCoachmarkArmed &&
-                                      !amrCardSignedIn &&
-                                      !amrCoachmarkDismissed ? (
-                                        <span className="amr-coachmark" aria-hidden="true">
-                                          <span className="amr-coachmark__ring" />
-                                          <svg
-                                            className="amr-coachmark__cursor"
-                                            width="22"
-                                            height="22"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                          >
-                                            <path
-                                              d="M9.4 13V8a1.8 1.8 0 0 1 3.6 0v4.6c.35-.55 1-.95 1.75-.95.65 0 1.25.32 1.6.85.32-.5.9-.8 1.55-.8.8 0 1.5.5 1.78 1.2.35-.3.8-.5 1.3-.5 1.1 0 2 .9 2 2v3.05a5.6 5.6 0 0 1-5.6 5.6h-2.5a5 5 0 0 1-3.75-1.7l-4.2-4.75a1.85 1.85 0 0 1 2.65-2.6L9.4 16Z"
-                                              fill="#fff"
-                                              stroke="#1a1a1a"
-                                              strokeWidth="1.1"
-                                              strokeLinejoin="round"
-                                            />
-                                          </svg>
-                                        </span>
-                                      ) : null}
-                                      {amrCardCanUpgrade ? (
-                                        <button
-                                          type="button"
-                                          className="agent-card-amr-upgrade"
-                                          data-testid="settings-agent-card-amr-upgrade"
-                                          onClick={() => {
-                                            const upgradeUrl = amrUpgradeUrl(
-                                              amrCardStatus?.profile,
-                                            );
-                                            if (!upgradeUrl) return;
-                                            void openExternalUrl(
-                                              attributedAmrSettingsUrl(
-                                                upgradeUrl,
-                                                'settings_amr_upgrade',
-                                              ),
-                                            );
-                                          }}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            width={14}
-                                            height={14}
-                                            aria-hidden
-                                          >
-                                            <path d="M10.6144 17.7956 11.492 15.7854C12.2731 13.9966 13.6789 12.5726 15.4325 11.7942L17.8482 10.7219C18.6162 10.381 18.6162 9.26368 17.8482 8.92277L15.5079 7.88394C13.7092 7.08552 12.2782 5.60881 11.5105 3.75894L10.6215 1.61673C10.2916.821765 9.19319.821767 8.8633 1.61673L7.97427 3.75892C7.20657 5.60881 5.77553 7.08552 3.97685 7.88394L1.63658 8.92277C.868537 9.26368.868536 10.381 1.63658 10.7219L4.0523 11.7942C5.80589 12.5726 7.21171 13.9966 7.99275 15.7854L8.8704 17.7956C9.20776 18.5682 10.277 18.5682 10.6144 17.7956ZM19.4014 22.6899 19.6482 22.1242C20.0882 21.1156 20.8807 20.3125 21.8695 19.8732L22.6299 19.5353C23.0412 19.3526 23.0412 18.7549 22.6299 18.5722L21.9121 18.2532C20.8978 17.8026 20.0911 16.9698 19.6586 15.9269L19.4052 15.3156C19.2285 14.8896 18.6395 14.8896 18.4628 15.3156L18.2094 15.9269C17.777 16.9698 16.9703 17.8026 15.956 18.2532L15.2381 18.5722C14.8269 18.7549 14.8269 19.3526 15.2381 19.5353L15.9985 19.8732C16.9874 20.3125 17.7798 21.1156 18.2198 22.1242L18.4667 22.6899C18.6473 23.104 19.2207 23.104 19.4014 22.6899Z" />
-                                          </svg>
-                                          {t('settings.amrUpgrade')}
-                                        </button>
-                                      ) : null}
-                                      <AmrLoginPill
-                                        className={
-                                          'agent-card-amr-auth'
-                                          + (amrCardSignedIn
-                                            ? ''
-                                            : ' settings-cloud-signin-callout__button')
-                                        }
-                                        hideSignedOutStatus
-                                        hideSignedInStatus
-                                        initialStatus={amrCardStatus}
-                                        skipInitialRefresh
-                                        signInLabel={t('entry.cloudCreditsCta')}
-                                        signInIcon="log-in"
-                                        showConsoleAction={amrCardSignedIn}
-                                        iconOnlySignOut
-                                        amrEntrySourceDetail="settings_amr_authorize"
-                                        metricsConsent={cfg.telemetry?.metrics === true}
-                                        installationId={cfg.installationId}
-                                        revealPendingCancelAction={amrRevealPendingCancelAction}
-                                        onStatusChange={setAmrCardStatus}
-                                        onSignedOut={onAmrSignedOut}
-                                      />
-                                    </span>
-                                  ) : (
-                                    <div
-                                      className="agent-card-amr-auth agent-card-amr-auth--placeholder"
-                                      aria-hidden="true"
-                                    />
-                                  )
-                                ) : null}
-                                {active && !isAmrAgent ? (
+                                {active ? (
                                   <button
                                     type="button"
                                     className={

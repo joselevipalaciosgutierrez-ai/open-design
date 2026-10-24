@@ -2260,7 +2260,6 @@ export function EntryShell({
                     onDelete={onDeleteProject}
                     onDuplicate={onDuplicateProject}
                     onRename={onRenameProject}
-                    canAssignInviteRoles={workspaceContext?.permissions.canInviteMembers === true}
                     canManageProjectCollection={workspaceContext?.permissions.canShareProjects === true}
                   />
                 </div>

@@ -180,9 +180,8 @@ describe('EntryNavRail account menu interaction state', () => {
     fireEvent.mouseEnter(trigger);
     fireEvent.click(trigger);
 
-    // 设置 left the menu for the rail (it sits under 插件); 账单 is the menu's
-    // first row now, and it is a plain outbound link.
-    fireEvent.click(screen.getByRole('menuitem', { name: /账单/ }));
+    // 获取帮助 is an outbound help link in the account menu.
+    fireEvent.click(screen.getByRole('menuitem', { name: /获取帮助/ }));
 
     expect(onOpenSettings).not.toHaveBeenCalled();
     expect(trigger).toHaveAttribute('aria-expanded', 'false');

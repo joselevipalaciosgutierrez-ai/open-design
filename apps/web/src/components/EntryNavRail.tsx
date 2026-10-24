@@ -1,5 +1,3 @@
-import { CodingPlanUsage } from './CodingPlanUsage';
-import planCardStyles from './PersonalPlanCard.module.css';
 // Team-edition entry navigation rail (Lovart/Manus-style labeled column).
 //
 // Structure — faithfully ported from the design demo
@@ -58,7 +56,6 @@ import {
 } from '@open-design/contracts';
 import {
   fetchVelaLoginStatus,
-  formatVelaBalanceUsd,
   velaLogout,
 } from '../providers/daemon';
 import { resetCloudSignInTipDismissal } from './CloudSignInTip';
@@ -66,10 +63,8 @@ import { SignOutConfirmDialog } from './SignOutConfirmDialog';
 function notifyAmrLoginStatusChanged() {}
 import { Icon } from './Icon';
 import { GITHUB_STARS_FALLBACK_LABEL, formatStars, useGithubStars } from './useGithubStars';
-import { PlanWordmark, planBadgeTierForWorkspace } from './PlanWordmark';
 import { MarqueeLabel } from './MarqueeLabel';
 import { RemixIcon } from './RemixIcon';
-import { InviteDialog } from './InviteDialog';
 import {
   closeRailRecentRowMenu,
   openRailRecentRowMenu,
@@ -99,7 +94,7 @@ import {
   workspaceBillingSummaryForContext,
   workspaceIdentityCacheKey,
 } from '../runtime/local-workspace';
-import { canUpgradeFromPlanTier, isMaxPlanTier, resolvePlanLabelTier } from '../runtime/local-workspace';
+import { resolvePlanLabelTier } from '../runtime/local-workspace';
 import {
   AMR_CONSOLE_AUTO_RECHARGE_INTENT,
   AMR_CONSOLE_RECHARGE_INTENT,
@@ -651,30 +646,6 @@ function RailRecentSection({
 }
 
 /**
- * The spark mark the free plan's upgrade pill leads with (supplied artwork).
- *
- * Inlined rather than added to the shared icon set: it is the only place this
- * glyph appears, and it is a two-part mark (a large four-point star with a
- * small one trailing it) that the set's single-path convention would flatten.
- * `fill="currentColor"` is what lets the pill's `--upgrade-ink` reach it.
- */
-function UpgradeSparkMark() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width={14}
-      height={14}
-      fill="currentColor"
-      aria-hidden
-      focusable="false"
-    >
-      <path d="M10.6144 17.7956 11.492 15.7854C12.2731 13.9966 13.6789 12.5726 15.4325 11.7942L17.8482 10.7219C18.6162 10.381 18.6162 9.26368 17.8482 8.92277L15.5079 7.88394C13.7092 7.08552 12.2782 5.60881 11.5105 3.75894L10.6215 1.61673C10.2916.821765 9.19319.821767 8.8633 1.61673L7.97427 3.75892C7.20657 5.60881 5.77553 7.08552 3.97685 7.88394L1.63658 8.92277C.868537 9.26368.868536 10.381 1.63658 10.7219L4.0523 11.7942C5.80589 12.5726 7.21171 13.9966 7.99275 15.7854L8.8704 17.7956C9.20776 18.5682 10.277 18.5682 10.6144 17.7956ZM19.4014 22.6899 19.6482 22.1242C20.0882 21.1156 20.8807 20.3125 21.8695 19.8732L22.6299 19.5353C23.0412 19.3526 23.0412 18.7549 22.6299 18.5722L21.9121 18.2532C20.8978 17.8026 20.0911 16.9698 19.6586 15.9269L19.4052 15.3156C19.2285 14.8896 18.6395 14.8896 18.4628 15.3156L18.2094 15.9269C17.777 16.9698 16.9703 17.8026 15.956 18.2532L15.2381 18.5722C14.8269 18.7549 14.8269 19.3526 15.2381 19.5353L15.9985 19.8732C16.9874 20.3125 17.7798 21.1156 18.2198 22.1242L18.4667 22.6899C18.6473 23.104 19.2207 23.104 19.4014 22.6899Z" />
-    </svg>
-  );
-}
-
-/**
  * Whether the entry layout has auto-collapsed the rail for a narrow window
  * (`@media (max-width: 1080px)` in entry-layout.css zeroes the rail track while
  * keeping `entry--rail-open`). The account module lives in that rail, so
@@ -795,47 +766,6 @@ export function teamConsoleUrl(
 }
 
 /**
- * The billing card's wallet figure, always spelled 「US$10.00」 — in every
- * locale, per design PR #8364 and the product ruling on 2026-09-23
- * (「无论什么语言都显示美刀, 都用 US」).
- *
- * Deliberately not `formatVelaBalanceUsd`: that one writes a bare `$` and is
- * shared with surfaces that already name the currency some other way. This row
- * stands alone under an allowance measured in percent, so the currency is
- * named. Not `Intl.NumberFormat` either: it names the currency only where the
- * locale's own dollar is not the US one ("$10.00" in en), which is exactly the
- * per-locale drift the ruling removes.
- */
-function formatWalletBalance(raw: string | null | undefined): string | null {
-  if (raw == null || raw === '') return null;
-  const amount = Number(raw);
-  if (!Number.isFinite(amount)) return null;
-  // Sign before the currency, as `formatVelaBalanceUsd` does: "-US$1.25".
-  const sign = amount < 0 ? '-' : '';
-  return `${sign}US$${Math.abs(amount).toFixed(2)}`;
-}
-
-/**
- * The already-resolved console URL, asked to open its auto-recharge settings
- * on arrival.
- *
- * Deliberately NOT `teamConsoleUrl(base, 'auto-recharge')`: that builds a path
- * from the workspace-SETTINGS URL, while the caller here holds a URL that is
- * already the dashboard, so routing through it would append a second
- * `/dashboard` segment. Only the intent has to be added.
- */
-function consoleBillingIntentUrl(base: string | null, intent: string): string | null {
-  if (!base) return null;
-  try {
-    const url = new URL(base);
-    url.searchParams.set('billing', intent);
-    return url.toString();
-  } catch {
-    return base;
-  }
-}
-
-/**
  * Shared destination for every generic 「升级」/「升级套餐」 affordance. Pricing
  * owns comparison; selecting a concrete card there is what hands checkout to
  * Cloud.
@@ -893,135 +823,6 @@ export function workspaceAutoRechargeUrl(
   const settingsUrl = context?.workspaceSettingsUrl?.trim() || null;
   if (settingsUrl) return teamConsoleUrl(settingsUrl, 'auto-recharge');
   return amrAutoRechargeUrlForProfile(options.fallbackProfile);
-}
-
-export type WorkspaceInviteTarget =
-  | { kind: 'local' }
-  | { kind: 'vela'; url: string }
-  | { kind: 'unavailable' };
-
-/**
- * Whether this member should discover the invite flow.
- *
- * Direct invites and billing recovery are separate capabilities. A Personal
- * Free owner (or a full Team owner) can still enter Vela's upgrade/seat flow
- * without direct invite capability, but an admin never acquires billing power
- * from role alone. Unknown capacity remains usable for a member with explicit
- * invite permission; the invite API is still the authority if the plan is full.
- */
-export function canAccessWorkspaceInviteFlow(
-  context: WorkspaceCollabContext | null | undefined,
-): boolean {
-  if (
-    !context ||
-    context.memberStatus !== 'active' ||
-    context.lifecycleState !== 'active' ||
-    (context.role !== 'owner' && context.role !== 'admin')
-  ) {
-    return false;
-  }
-
-  const canInviteMembers = context.permissions?.canInviteMembers === true;
-  const canManageBilling = context.permissions?.canManageBilling === true;
-  const needsTeamUpgrade =
-    context.billingState === 'free' || context.billingState === 'inactive';
-  if (needsTeamUpgrade) {
-    return context.role === 'owner' && canManageBilling;
-  }
-  if (context.workspaceType === 'personal') return canInviteMembers;
-
-  const isSeatFull = workspaceSeatFull(context);
-  if (isSeatFull === undefined) return canInviteMembers;
-  if (!isSeatFull) return canInviteMembers;
-  return context.role === 'owner' && canManageBilling;
-}
-
-export function workspaceInviteAvailableSeats(
-  context: WorkspaceCollabContext | null | undefined,
-): number | undefined {
-  if (workspaceSeatCapacityState(context?.seatSummary) === 'unknown') return undefined;
-  return context?.seatSummary?.availableSeats;
-}
-
-function workspaceSeatFull(
-  context: WorkspaceCollabContext,
-): boolean | undefined {
-  const state = workspaceSeatCapacityState(context.seatSummary);
-  return state === 'unknown' ? undefined : state === 'full';
-}
-
-/**
- * Chooses the first safe invite surface. The local form requires direct invite
- * capability and no proof that the team is already full; unknown capacity is
- * resolved by the invite API when the form is submitted.
- * Personal, Free-plan, and proven full-seat owner states go to Vela, whose
- * dashboard owns the authoritative upgrade/seat/invite decision. Unknown seat
- * data stays on the local permission-gated flow and lets the invite API return
- * an authoritative capacity result.
- */
-export function resolveWorkspaceInviteTarget(
-  context: WorkspaceCollabContext | null | undefined,
-): WorkspaceInviteTarget {
-  if (!context || !canAccessWorkspaceInviteFlow(context)) {
-    return { kind: 'unavailable' };
-  }
-  const needsTeamUpgrade =
-    context.billingState === 'free' || context.billingState === 'inactive';
-  if (
-    context.workspaceType === 'team' &&
-    !needsTeamUpgrade &&
-    workspaceSeatFull(context) !== true &&
-    context.permissions.canInviteMembers === true
-  ) {
-    return { kind: 'local' };
-  }
-  const settingsUrl = context?.workspaceSettingsUrl?.trim() || null;
-  if (!settingsUrl) return { kind: 'unavailable' };
-  return { kind: 'vela', url: teamConsoleUrl(settingsUrl, 'invite') };
-}
-
-/**
- * Map a raw vela plan id to a display label for the credits card.
- *
- * B's ids are namespaced by workspace kind and tier (`team_plus`, `team_max`,
- * `pro`, …). The card pairs this label with a PlanWordmark badge that already
- * carries the tier: a TEAM subscription names the family (团队版) because its
- * badge is the one `team` wordmark at every tier, while the personal ladder
- * names the tier itself (Plus / Pro / Max) because its badge does too — the
- * two must agree (OPEND-3119). It never leaks a raw snake_case id —
- * `team_plus` used to render verbatim because only three exact ids were mapped.
- *
- * NOTE (parked 2026-07-20): membership is per workspace, so one account can
- * hold a personal 创作会员 tier AND a team tier at once. How the card should
- * present that (one family label, both badges, which one wins in a team) is
- * with the designer; see the ledger. Until then this keeps the pre-existing
- * single-label behavior.
- */
-function formatBillingTier(tier: string, t: ReturnType<typeof useI18n>['t']): string {
-  const normalized = tier.trim().toLowerCase();
-  if (!normalized) return t('entry.billingTierFree');
-  if (normalized === 'team' || normalized.startsWith('team_') || normalized.startsWith('team-')) {
-    return t('entry.billingTierTeam');
-  }
-  if (normalized === 'free') return t('entry.billingTierFree');
-  // The personal ladder names its OWN tier. Folding plus / max into the Pro
-  // label read 「Pro Max」 beside the max wordmark (OPEND-3119): the card pairs
-  // this label with the tier's wordmark, and the top-right pill draws that
-  // wordmark alone, so the label must never name a different tier than the
-  // badge next to it.
-  if (normalized === 'pro') return t('entry.billingTierPro');
-  if (normalized === 'plus') return t('entry.billingTierPlus');
-  if (normalized === 'max') return t('entry.billingTierMax');
-  // Go joined the personal ladder below Plus. Without this it fell through to
-  // the title-case fallback, which happened to read the same today but would
-  // print any future `go_yearly`-shaped id verbatim.
-  if (normalized === 'go') return t('entry.billingTierGo');
-  // Unknown id: title-case the segments rather than showing `some_new_tier`.
-  return normalized
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 }
 
 interface EntryTopRightClusterProps {
@@ -1116,43 +917,6 @@ export function EntryTopRightCluster({
   const accountName = displayName || t('app.brand');
   const accountInitial = accountName.charAt(0).toUpperCase() || '·';
 
-  // Billing chip: prefer the real summary metadata; fall back to the context
-  // plan-tier hint when metadata has not loaded. Money is a separate,
-  // explicitly scoped `balanceUsd` input.
-  // The plan id from either source goes through the same formatter — the
-  // context hint is a raw id too (`team_plus`), and it used to reach the card
-  // unformatted whenever billing reported an empty tier (which it does today).
-  const rawTier = billing?.membershipTier?.trim() || context?.planId?.trim() || '';
-  // The LABEL is a subscription question, never a workspace-kind one: B makes
-  // every user-created workspace team-typed, so `isTeam` labelled brand-new
-  // unpaid workspaces 团队版 (#146). `resolvePlanLabelTier` answers 'free' when
-  // B positively reports an unsubscribed entitlement, and null when it simply
-  // has not said — only the null case still falls back to the legacy hint, so
-  // a paying member (whom B tells us nothing about) keeps their team label.
-  const labelTier = resolvePlanLabelTier({ billing, context });
-  const tierLabel = labelTier
-    ? formatBillingTier(labelTier, t)
-    : isTeam
-      ? t('entry.billingTierTeam')
-      : t('entry.billingTierFree');
-  const balanceLabel = formatVelaBalanceUsd(balanceUsd);
-  // The billing card's own wallet figure. The design writes it with the
-  // currency NAMED (「US$10.00」, zh-CN), which is what `Intl` produces for the
-  // reader's locale — `formatVelaBalanceUsd`'s bare `$` is kept for every
-  // other surface that already sits next to something naming the currency.
-  const walletBalanceLabel = formatWalletBalance(balanceUsd);
-  // #5517: wordmark badge inside the menu's billing card. It names the plan
-  // FAMILY, so a TEAM workspace draws the one `team` wordmark at every tier —
-  // free through max — while the personal ladder keeps its per-tier glyph
-  // (product ruling, see `planBadgeTierForWorkspace`). The workspace kind is
-  // passed because it is the only thing that can name the FREE team tier: B
-  // reports it with a null `planId` and an empty `membershipTier`, an id no
-  // different from a personal free account.
-  const planTier = planBadgeTierForWorkspace({
-    tier: rawTier || tierLabel,
-    workspaceType: context?.workspaceType,
-  });
-
   const [accountMenuMode, setAccountMenuMode] = useState<'closed' | 'hover' | 'pinned'>(
     'closed',
   );
@@ -1183,37 +947,6 @@ export function EntryTopRightCluster({
       ...workspaceDimensions,
     });
   }, [accountOpen, analytics.track, page, workspaceDimensions.workspace_key]);
-  // The billing card hangs off the top-right 升级 / balance pill (per product:
-  // 黑色卡片在右上角的升级下边显示), no longer inside the account menu.
-  // Opens on hover or focus; clicking the pill still opens the upgrade flow
-  // for a free member.
-  const [creditsPanelOpen, setCreditsPanelOpen] = useState(false);
-  const creditsPanelId = useId();
-  const creditsAnchorRef = useRef<HTMLDivElement | null>(null);
-  const creditsCloseTimer = useRef<number | null>(null);
-  const openCreditsPanel = () => {
-    if (creditsCloseTimer.current !== null) {
-      window.clearTimeout(creditsCloseTimer.current);
-      creditsCloseTimer.current = null;
-    }
-    setCreditsPanelOpen(true);
-  };
-  const scheduleCreditsPanelClose = () => {
-    if (creditsCloseTimer.current !== null) window.clearTimeout(creditsCloseTimer.current);
-    creditsCloseTimer.current = window.setTimeout(() => {
-      creditsCloseTimer.current = null;
-      // Pointer exit must not unmount actions a keyboard user is navigating.
-      if (!creditsAnchorRef.current?.contains(document.activeElement)) {
-        setCreditsPanelOpen(false);
-      }
-    }, 180);
-  };
-  useEffect(
-    () => () => {
-      if (creditsCloseTimer.current !== null) window.clearTimeout(creditsCloseTimer.current);
-    },
-    [],
-  );
   // Message-center panel (opened from the bell beside the identity row) and
   // its unread count, which drives the red dot on that bell.
   const [messageCenterOpen, setMessageCenterOpen] = useState(false);
@@ -1318,101 +1051,11 @@ export function EntryTopRightCluster({
     closeAccountMenu();
   });
 
-  // One public comparison destination shared with the rail's invite dialog.
-  // Pricing owns plan choice; only a selected card hands off to checkout.
-  const upgradeUrl = workspaceUpgradeUrl(context, billing);
-  const billingUpgradeUrl =
-    context?.billingRecovery?.recoveryUrl?.trim() || upgradeUrl;
-  // #62: the 积分 row links straight OUT to B's console dashboard (usage detail
-  // lives there) — no intermediate credits popover in the client, matching
-  // #5517. It used to open a wallet page; balance, top-up and the auto-recharge
-  // policy were rehomed onto the dashboard (vela #1055).
-  const billingConsoleUrl = workspaceSettingsUrl
-    ? teamConsoleUrl(workspaceSettingsUrl, 'billing')
-    : null;
-  // Where the account menu's 账单 row goes. The workspace-settings URL is the
-  // better answer when the context carries one (it pins the console to THIS
-  // workspace through the deep-link param it already holds), but a context can
-  // arrive without it — a local runtime does — and this row must not silently
-  // vanish because of that. The fallback builds the same workspace-scoped
-  // dashboard from the workspace id alone, exactly as EntryShell and the
-  // campaign badge already build their plans links.
-  const accountBillingUrl =
-    billingConsoleUrl ?? amrConsoleUrlForWorkspace(undefined, context?.workspaceId);
-  // Where the card's 「管理」 goes for a tier with nothing left to buy: the same
-  // workspace-scoped console the wallet row opens, asked to open its
-  // auto-recharge settings on arrival. Topping up IS the action for a top-tier
-  // subscriber — see AMR_CONSOLE_AUTO_RECHARGE_INTENT.
-  // 管理 (Max) lands on the plain dashboard — product ruling 2026-09-23
-  // (「点击管理, 就跳转到 vela dashboard 就行」), not on the auto-recharge dialog.
-  const billingManageUrl = accountBillingUrl;
-  // The wallet row asks the console for its manual top-up dialog; see
-  // AMR_CONSOLE_RECHARGE_INTENT for the (pending) B-side handler.
-  const walletRechargeUrl = consoleBillingIntentUrl(accountBillingUrl, AMR_CONSOLE_RECHARGE_INTENT);
-  // Product decision: plan comparison lives on public Pricing and payment
-  // lives in Cloud. The client refreshes billing + context when focus returns
-  // so a completed web upgrade syncs plan, credits, seats and gates.
-  //
-  // The gate needs all three answers: a destination exists, the caller may act
-  // on billing, AND the tier actually has somewhere to go. Without the tier
-  // question a 团队版 Max owner — the top tier, nothing above it — was offered
-  // 升级 that could only reopen the plan they already hold. It reads the tier
-  // the card LABELS, so the button and the nameplate next to it can never
-  // disagree.
-  // Whether the top-right pill sells the upgrade instead of reporting a
-  // balance. It reads the same tier the wordmark draws, so the pill's green
-  // ground and its badge can never disagree. `labelTier` alone is not enough:
-  // B commonly reports no plan at all for a free account, which leaves the
-  // strict read null while the wordmark still resolves free off the display
-  // label — that is the state a local dev workspace sits in. It is kept in the
-  // test anyway for the case where B DOES say 'free' but the workspace is
-  // team-typed, where the wordmark draws `team` instead.
-  const isFreePlan = planTier === 'free' || (labelTier ?? '').trim().toLowerCase() === 'free';
-  // Design PR #8364: the Free card sells 升级 like every paid tier. A personal
-  // workspace needs no billing permission — its member IS the payer — and an
-  // account B reports without any plan is upgradeable as free once the card
-  // already labels it free, so the header button and the nameplate agree.
-  const mayActOnBilling =
-    context?.workspaceType === 'personal' || Boolean(permissions?.canManageBilling);
-  const upgradeTier = labelTier ?? (isFreePlan ? 'free' : null);
-  const canUpgrade =
-    Boolean(billingUpgradeUrl) && mayActOnBilling && canUpgradeFromPlanTier(upgradeTier);
-  // The design's Max panel puts 「管理」 where every other tier puts 「升级」
-  // (design PR #8364, product ruling 2026-09-23: 「按设计稿」 — personal Max
-  // included, superseding the earlier 「个人档位都是要显示可升级的」 ruling).
-  // It is asked of `isMaxPlanTier`, not of `!canUpgrade`: an UNKNOWN tier (a
-  // billing read that has not landed) also fails the upgrade gate, and a card
-  // that flashes 管理 before settling on 升级 is worse than one paint of
-  // nothing. 管理 wins over 升级 when both gates pass.
-  const canManageTopTierBilling =
-    isMaxPlanTier(labelTier) && Boolean(billingManageUrl) && mayActOnBilling;
-  // The pill exists whenever billing has answered (it is the only way to the
-  // billing card under it); what it SAYS follows the zero-balance ruling
-  // above — a subscriber at $0.00 keeps the plan wordmark and drops the
-  // number, so the card stays reachable without a permanent zero next to it.
-  const showCreditsPill = Boolean(billing || balanceLabel);
-
-  function openBillingUpgrade() {
-    if (!billingUpgradeUrl) return;
-    window.open(billingUpgradeUrl, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => {
-      notifyWorkspaceBillingRefresh();
-      notifyWorkspaceContextRefresh();
-    }, 3000);
-  }
-
   function trackAccountAction(element: AccountMenuClickProps['element']) {
     trackAccountMenuClick(analytics.track, {
       page_name: page,
       area: 'account_menu',
       element,
-      ...(element === 'upgrade'
-        ? {
-            is_free_active:
-              workspaceDimensions.plan_bucket === 'free'
-              && context?.lifecycleState === 'active',
-          }
-        : {}),
       ...workspaceDimensions,
     });
   }
@@ -1458,182 +1101,7 @@ export function EntryTopRightCluster({
               <span>{githubStars == null ? GITHUB_STARS_FALLBACK_LABEL : formatStars(githubStars)}</span>
             </a>
           ) : null}
-          {/* The capsule holds the credits segment alone — the avatar moved
-              to the rail, and with it the account menu's hover region. The
-              anchor around it owns the hover region for the billing panel
-              below: the panel is a DOM child, so crossing from the pill into
-              it never leaves the anchor and never arms the close. */}
-          {context && showCreditsPill ? (
-            <div
-              ref={creditsAnchorRef}
-              className="entry-top-right-credits-anchor"
-              onPointerEnter={openCreditsPanel}
-              onPointerLeave={scheduleCreditsPanelClose}
-              onFocus={openCreditsPanel}
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) scheduleCreditsPanelClose();
-              }}
-            >
-              <div
-                className={`entry-top-right-account-pill${isFreePlan ? ' entry-top-right-account-pill--upgrade' : ''}`}
-              >
-                <button
-                  type="button"
-                  className="entry-top-right-credits"
-                  data-testid="entry-top-right-credits"
-                  aria-haspopup="dialog"
-                  aria-expanded={creditsPanelOpen}
-                  aria-controls={creditsPanelOpen ? creditsPanelId : undefined}
-                  aria-label={isFreePlan ? t('entry.creditsUpgrade') : t('entry.credits')}
-                  onClick={() => {
-                    // The free pill IS the upgrade CTA, so it opens the upgrade
-                    // flow when this member is allowed to buy. Without that
-                    // permission (or without an upgrade URL) it falls back to
-                    // the console, which is where the paid pill always goes.
-                    if (isFreePlan && canUpgrade) {
-                      trackAccountAction('upgrade');
-                      openBillingUpgrade();
-                      return;
-                    }
-                    trackAccountAction('credits');
-                    if (accountBillingUrl) {
-                      window.open(accountBillingUrl, '_blank', 'noopener,noreferrer');
-                    }
-                  }}
-                >
-                  {isFreePlan ? (
-                    /* Free plan: the pill stops reporting a balance that is only
-                       ever 0.00 and sells the upgrade instead — spark mark plus
-                       the same 升级 / Upgrade label the billing card uses, on
-                       the green ground the wrapper paints. */
-                    <>
-                      <UpgradeSparkMark />
-                      {t('entry.creditsUpgrade')}
-                    </>
-                  ) : (
-                    <>
-                      {/* Leads with the workspace's plan wordmark (plus / pro /
-                          max / team) rather than a generic charge glyph, so the
-                          chip names the membership it belongs to. The battery
-                          icon stays as the fallback for the rare tier string no
-                          wordmark matches — without it the chip would be a
-                          bare, unlabelled number. */}
-                      {/* The mark alone, at the design's 16px. The balance
-                          moved off the capsule entirely (design + its
-                          electron-panel.png): the number lives in the card the
-                          capsule opens. The battery glyph stays as the
-                          fallback for a tier string no wordmark matches —
-                          without it the capsule would be empty. */}
-                      {planTier ? (
-                        <PlanWordmark tier={planTier} height={16} />
-                      ) : (
-                        <RemixIcon name="battery-charge-line" size={16} />
-                      )}
-                    </>
-                  )}
-                </button>
-              </div>
-              {/* #5517 billing card, relocated: plan (+badge) + 升级 CTA + USD
-                  balance, hanging under the pill it describes. The balance row
-                  links out to B's console. It receives only an explicitly
-                  scoped money value; raw credits are never formatted as
-                  dollars here. */}
-              {creditsPanelOpen ? (
-                <div
-                  id={creditsPanelId}
-                  role="dialog"
-                  aria-label={t('entry.credits')}
-                  className={`entry-top-right-credits-panel ${planTier !== 'team' ? planCardStyles.panel : ''}`}
-                  data-testid="entry-top-right-credits-panel"
-                >
-                  <div
-                    className={`entry-nav-rail__menu-credits ${planTier !== 'team' ? planCardStyles.card : ''}`}
-                  >
-                    <div className="entry-nav-rail__menu-credits-head">
-                      <span
-                        className="entry-nav-rail__menu-credits-plan"
-                        role={planTier !== 'team' ? 'img' : undefined}
-                        aria-label={planTier !== 'team' ? planTier ?? tierLabel : undefined}
-                      >
-                        {planTier === 'team' ? tierLabel : null}
-                        {planTier ? (
-                          <PlanWordmark tier={planTier} height={planTier === 'team' ? 11 : 20} />
-                        ) : null}
-                      </span>
-                      {canUpgrade && !canManageTopTierBilling ? (
-                        <button
-                          type="button"
-                          className="entry-nav-rail__menu-credits-upgrade"
-                          onClick={() => {
-                            trackAccountAction('upgrade');
-                            setCreditsPanelOpen(false);
-                            openBillingUpgrade();
-                          }}
-                        >
-                          {t('entry.creditsUpgrade')}
-                        </button>
-                      ) : canManageTopTierBilling ? (
-                        <button
-                          type="button"
-                          className="entry-nav-rail__menu-credits-upgrade"
-                          onClick={() => {
-                            trackAccountAction('credits');
-                            setCreditsPanelOpen(false);
-                            if (billingManageUrl) {
-                              window.open(billingManageUrl, '_blank', 'noopener,noreferrer');
-                            }
-                          }}
-                        >
-                          {t('entry.creditsManage')}
-                        </button>
-                      ) : null}
-                    </div>
-                    {planTier !== 'team' ? (
-                      <CodingPlanUsage
-                        context={context}
-                        planTier={planTier}
-                        billing={billingResponse}
-                        usageUrl={accountBillingUrl}
-                        onUsageClick={() => {
-                          trackAccountAction('credits');
-                          setCreditsPanelOpen(false);
-                        }}
-                        wallet={{
-                          balanceUsd,
-                          url: walletRechargeUrl,
-                          onClick: () => {
-                            trackAccountAction('credits');
-                            setCreditsPanelOpen(false);
-                          },
-                        }}
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className="entry-nav-rail__menu-credits-row"
-                        data-testid="entry-nav-credits-row"
-                        onClick={() => {
-                          trackAccountAction('credits');
-                          setCreditsPanelOpen(false);
-                          if (walletRechargeUrl) {
-                            window.open(walletRechargeUrl, '_blank', 'noopener,noreferrer');
-                          }
-                        }}
-                      >
-                        <span className="entry-nav-rail__menu-credits-label">
-                          <RemixIcon name="battery-charge-line" size={14} /> {t('billing.wallet')}
-                        </span>
-                        <span className="entry-nav-rail__menu-credits-value">
-                          <bdi>{walletBalanceLabel ?? '—'}</bdi>
-                          <Icon name="chevron-right" size={14} />
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+
           {/* Update-ready rocket, top-right home: signed-out shells, the
               project route, and a narrow window whose rail is auto-collapsed
               keep it here. Otherwise it rides the account row — see the dock
@@ -1760,28 +1228,6 @@ export function EntryTopRightCluster({
                           <span className="entry-nav-rail__account-head-email">{accountEmail}</span>
                         ) : null}
                       </div>
-                      {/* 账单 leads the menu: it is the only account-level
-                          destination left here, and it opens the membership
-                          surface in B's console — the same place the 额度 row
-                          and the 升级 pill land, so plan, seats and balance
-                          are never split across two destinations. Gated on
-                          the URL: without a console to reach, the row would
-                          be a dead click. */}
-                      {accountBillingUrl ? (
-                        <a
-                          className="entry-nav-rail__menu-item"
-                          role="menuitem"
-                          href={accountBillingUrl}
-                          {...externalLinkProps}
-                          data-testid="entry-account-billing"
-                          onClick={() => {
-                            trackAccountAction('billing');
-                            closeAccountMenu();
-                          }}
-                        >
-                          <RemixIcon name="wallet-line" size={15} /> {t('entry.accountBilling')}
-                        </a>
-                      ) : null}
                       {/* #5517's account menu went 设置 → GitHub 帮助 → 功能建议 →
                           社交行, with no theme row, no language submenu, and no
                           divider in between. Both of those controls still have
@@ -2134,8 +1580,6 @@ export function EntryNavRail({
 
   const isTeam = Boolean(context) && context!.workspaceType === 'team';
   const permissions = context?.permissions;
-  const canInviteMembers = Boolean(permissions?.canInviteMembers);
-  const canAccessInviteFlow = canAccessWorkspaceInviteFlow(context);
   const workspaceSettingsUrl = context?.workspaceSettingsUrl?.trim() || null;
 
   // Message-center panel for the SIGNED-OUT shell only (the bell on the local
@@ -2165,8 +1609,6 @@ export function EntryNavRail({
   const railIdentity = workspaceIdentityCacheKey(context);
   const [workspaceDirectoryLoading, setWorkspaceDirectoryLoading] = useState(false);
   const [workspaceSwitchingId, setWorkspaceSwitchingId] = useState<string | null>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const inviteTarget = resolveWorkspaceInviteTarget(context);
   // The invite dialog's seat-gate upgrade entry uses the same public Pricing
   // destination as the credits chip's twin decision in EntryTopRightCluster.
   const upgradeUrl = workspaceUpgradeUrl(context, billing);
@@ -2492,29 +1934,6 @@ export function EntryNavRail({
                     data-testid="workspace-switcher-actions"
                   >
                     <div className="entry-nav-rail__menu-divider" />
-                    {canAccessInviteFlow && inviteTarget.kind !== 'unavailable' ? (
-                      <button
-                        type="button"
-                        className="entry-nav-rail__menu-item"
-                        role="menuitem"
-                        onClick={() => {
-                          trackWorkspaceSwitcherClick(analytics.track, {
-                            page_name: analyticsPage,
-                            area: 'workspace_switcher',
-                            element: 'invite_teammates',
-                            ...workspaceDimensions,
-                          });
-                          setTeamOpen(false);
-                          if (inviteTarget.kind === 'vela') {
-                            window.open(inviteTarget.url, '_blank', 'noopener,noreferrer');
-                          } else if (inviteTarget.kind === 'local') {
-                            setInviteOpen(true);
-                          }
-                        }}
-                      >
-                        <Icon name="share" size={15} /> {t('workspaceSwitcher.invite')}
-                      </button>
-                    ) : null}
                     {/* Creating a workspace is a B console flow (its sidebar owns the
                         create dialog; there is no route or query param that opens it
                         directly), so this entry links OUT instead of doing local work.
@@ -2854,21 +2273,6 @@ export function EntryNavRail({
         />
       )}
 
-      <InviteDialog
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        workspaceContext={context}
-        canAssignRoles={canInviteMembers}
-        availableSeats={workspaceInviteAvailableSeats(context)}
-        entryFrom="workspace_switcher"
-        onUpgrade={
-          upgradeUrl
-            ? () => {
-                window.open(upgradeUrl, '_blank', 'noopener,noreferrer');
-              }
-            : undefined
-        }
-      />
       {/* Top-right chrome cluster: campaign badge (slot) + credits pill,
           mounted into the tabs chrome's no-drag actions host so Electron
           includes it in the first native hit map; the account module it owns

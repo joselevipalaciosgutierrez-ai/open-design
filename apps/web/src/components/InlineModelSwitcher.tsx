@@ -69,7 +69,6 @@ import { isVisibleLocalCliAgent } from '../utils/visibleAgents';
 import { AgentIcon } from './AgentIcon';
 import { Icon } from './Icon';
 import { modelProviderIconSrc } from './modelProviderIcon';
-import { PlanBadge } from './PlanBadge';
 const AMR_LOGIN_STATUS_EVENT = 'od:amr-login-status';
 const AMR_LOGIN_POLL_INTERVAL_MS = 2000;
 const AMR_LOGIN_STARTUP_SETTLE_MS = 1500;
@@ -909,39 +908,8 @@ export function InlineModelSwitcher({
     workspaceContext?.workspaceType,
   ]);
 
-  // Signed-in rows show the current plan instead of a redundant "Signed in" +
-  // check mark. When the plan can't be resolved (free user, stale local config,
-  // upstream not yet fetched), show no status at all. Signed-in-without-plan is
-  // distinguished from signed-out (which keeps the sign-in CTA) by `amrLoggedIn`,
-  // never by plan presence.
   const amrPlanLabel = amrLoggedIn
     ? amrStatus?.account?.plan?.trim() || null
-    : null;
-  const scopedWorkspaceBalance = formatVelaBalanceUsd(
-    workspaceBillingBalanceUsd(workspaceBillingResponse, workspaceContext),
-  );
-  const amrBalanceLabel = amrLoggedIn && !workspaceContextLoading
-    ? workspaceContext?.workspaceType === 'team'
-      ? scopedWorkspaceBalance
-      : scopedWorkspaceBalance ??
-        formatVelaBalanceUsd(amrStatus?.account?.balanceUsd) ??
-        (amrWalletSnapshot?.status === 'available'
-          ? formatVelaBalanceUsd(amrWalletSnapshot.balanceUsd)
-          : null)
-    : null;
-  const amrBalanceDisplayLabel = amrLoggedIn
-    ? amrBalanceLabel ??
-      (
-        workspaceContextLoading
-          ? t('common.loading')
-          : workspaceContext?.workspaceType === 'team'
-            ? workspaceBillingResponse
-              ? t('settings.amrWalletUnavailable')
-              : t('common.loading')
-            : amrWalletReady
-              ? t('settings.amrWalletUnavailable')
-              : t('common.loading')
-      )
     : null;
   // Personal workspaces always resolve `canManageBilling` true (the user is
   // their own owner), so this does not affect the personal-workspace upgrade
@@ -1646,22 +1614,7 @@ export function InlineModelSwitcher({
                         <span className="inline-switcher__account-name">
                           OpenDesign
                         </span>
-                        {amrLoggedIn ? (
-                          <PlanBadge plan={amrPlanLabel} size="md" />
-                        ) : null}
                       </span>
-                      {amrLoggedIn && amrBalanceDisplayLabel ? (
-                        <span className="inline-switcher__account-subtitle">
-                          <span className="inline-switcher__account-stat">
-                            <span className="inline-switcher__account-stat-label">
-                              {t('settings.amrBalance')}
-                            </span>
-                            <span className="inline-switcher__account-stat-value">
-                              {amrBalanceDisplayLabel}
-                            </span>
-                          </span>
-                        </span>
-                      ) : null}
                     </span>
                   </button>
                   {amrLoginError ? (
@@ -1669,42 +1622,8 @@ export function InlineModelSwitcher({
                       {amrLoginError}
                     </span>
                   ) : amrLoggedIn ? (
-                    amrCanUpgrade ? (
-                      <button
-                        type="button"
-                        className="inline-switcher__account-upgrade"
-                        data-testid="inline-model-switcher-account-upgrade"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const attribution = recordAmrEntry(
-                            analytics.track,
-                            'inline_amr_upgrade',
-                            new Date(),
-                            { metricsConsent: config.telemetry?.metrics === true },
-                          );
-                          const deviceId = amrHandoffDeviceId({
-                            metricsConsent: config.telemetry?.metrics === true,
-                            resolvedDeviceId: getResolvedDeviceId(),
-                            installationId: config.installationId,
-                          });
-                          window.open(
-                            attributedAmrUrl(
-                              amrPlansUrlForProfile(
-                                amrStatus?.profile ??
-                                  config.agentCliEnv?.amr?.OPEN_DESIGN_AMR_PROFILE,
-                              ),
-                              attribution,
-                              deviceId,
-                            ),
-                            '_blank',
-                            'noopener,noreferrer',
-                          );
-                        }}
-                      >
-                        {t('settings.amrUpgrade')}
-                      </button>
-                    ) : null
-                  ) : (
+                      null
+                    ) : (
                     <button
                       type="button"
                       className="inline-switcher__account-action"

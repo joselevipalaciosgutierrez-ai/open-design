@@ -200,25 +200,19 @@ describe('workspace switcher directory', () => {
 
     const list = screen.getByTestId('workspace-switcher-list');
     const actions = screen.getByTestId('workspace-switcher-actions');
-    const invite = menu().getByRole('menuitem', { name: /Invite/ });
     const createTeam = menu().getByRole('menuitem', { name: /New team/ });
 
-    expect(list.contains(invite)).toBe(false);
     expect(list.contains(createTeam)).toBe(false);
-    expect(actions.contains(invite)).toBe(true);
     expect(actions.contains(createTeam)).toBe(true);
 
     Object.defineProperty(list, 'scrollTop', { configurable: true, value: 68, writable: true });
     fireEvent.scroll(list);
     expect(actions.isConnected).toBe(true);
-    expect(invite.isConnected).toBe(true);
     expect(createTeam.isConnected).toBe(true);
 
     const lastWorkspace = menu().getByRole('menuitem', { name: 'Workspace 7' });
     lastWorkspace.focus();
     fireEvent.keyDown(lastWorkspace, { key: 'ArrowDown' });
-    expect(document.activeElement).toBe(invite);
-    fireEvent.keyDown(invite, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(createTeam);
   });
 

@@ -29,7 +29,6 @@ import type { DesignSystemSummary, Project, ProjectDisplayStatus } from '../type
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { RemixIcon } from './RemixIcon';
-import { InviteDialog } from './InviteDialog';
 import { ProjectDeleteConfirmDialog } from './project-actions/ProjectDeleteConfirmDialog';
 import { useProjectDeleteFlow } from './project-actions/useProjectDeleteFlow';
 import { useProjectDuplicateFlow } from './project-actions/useProjectDuplicateFlow';
@@ -40,15 +39,8 @@ import type { SharedProjectPredicate } from '../runtime/local-workspace';
 import { useTeamMembers } from '../runtime/local-workspace';
 import {
   notifyTeamProjectsChanged,
-  useWorkspaceBilling,
   useWorkspaceContext,
 } from '../runtime/local-workspace';
-import {
-  canAccessWorkspaceInviteFlow,
-  resolveWorkspaceInviteTarget,
-  workspaceInviteAvailableSeats,
-  workspaceUpgradeUrl,
-} from './EntryNavRail';
 import { moveWorkspaceProject } from '../state/projects';
 import {
   workspaceContextHasTeamIdentity,
@@ -158,7 +150,6 @@ interface Props {
    *  this the pull looked like a dead click for its whole duration. */
   openingProjectId?: string | null;
   collaborationEnabled?: boolean;
-  canAssignInviteRoles?: boolean;
   canManageProjectCollection?: boolean;
   /** Whether this mounted strip is visible. EntryShell keeps Home mounted while
    * other views are active, so hidden strips must not occupy browser connection
@@ -383,7 +374,6 @@ export function RecentProjectsStrip({
   projectOwnerMemberIds,
   openingProjectId = null,
   collaborationEnabled,
-  canAssignInviteRoles,
   canManageProjectCollection,
   isActive = true,
 }: Props) {
@@ -407,7 +397,6 @@ export function RecentProjectsStrip({
   const workspaceContextLoadingRef = useRef(workspaceContextLoading);
   workspaceContextLoadingRef.current = workspaceContextLoading;
   const workspaceIdentity = workspaceIdentityCacheKey(workspaceContext);
-  const workspaceBilling = useWorkspaceBilling();
   const workspaceDimensions = workspaceAnalyticsDimensions(workspaceContext);
   function trackCollection(
     element: ProjectCollectionClickProps['element'],
@@ -423,24 +412,10 @@ export function RecentProjectsStrip({
     }, requestId ? { requestId } : undefined);
   }
   const selfMemberId = workspaceContext?.workspaceMemberId ?? null;
-  // `canShareProjects` alone is a ROLE permission ("could this member share IF
-  // a team existed"), not a "does a team exist" signal — a purely personal
-  // workspace's owner still gets `canShareProjects: true`. Without also
-  // requiring `workspaceContextHasTeamIdentity`, this stayed true for a
-  // personal-only workspace and the move-to-team menu item rendered a button
-  // the daemon can only ever 403 (recvqfZsR901YQ "无法共享方案了" /
-  // recvqgif6Xa7Wb "隐藏非 Team workspace 分享到团队的入口") — the exact class
-  // of bug `workspaceContextHasTeamIdentity`'s own doc comment warns about:
-  // "Deriving it twice is how a UI grows a button that can only ever fail."
   const collaborationAvailable =
     collaborationEnabled ??
     (workspaceContextHasTeamIdentity(workspaceContext) &&
       workspaceContext?.permissions.canShareProjects === true);
-  const canAccessInviteFlow = canAccessWorkspaceInviteFlow(workspaceContext);
-  // The invite dialog's seat-gate upgrade CTA shares the public Pricing
-  // destination owned by `workspaceUpgradeUrl` in EntryNavRail.tsx.
-  const inviteUpgradeUrl = workspaceUpgradeUrl(workspaceContext, workspaceBilling);
-  const inviteTarget = resolveWorkspaceInviteTarget(workspaceContext);
   const canManageCollection =
     canManageProjectCollection ??
     (workspaceContext?.permissions.canManageSharedResources === true ||
@@ -497,7 +472,6 @@ export function RecentProjectsStrip({
     'owner' | 'kind' | 'display' | null
   >(null);
   const displayTriggerRef = useRef<HTMLButtonElement>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(() => new Set());
   // Confirmation gates for the bulk bar. Batch move reuses the single-card
@@ -1251,27 +1225,6 @@ export function RecentProjectsStrip({
             </div>
           ) : null}
           <div className="recent-projects__controls">
-            {/* The invite CTA belongs to the team collection: the team space
-                grid, and the 团队项目 tab of 全部项目 that replaced the rail's
-                team entry (OPEND-3108). */}
-            {(space === 'team' || (showCollectionTabs && collection === 'teamProjects')) &&
-            canAccessInviteFlow &&
-            inviteTarget.kind !== 'unavailable' ? (
-              <button
-                type="button"
-                className="recent-projects__invite"
-                onClick={() => {
-                  trackCollection('invite_teammates');
-                  if (inviteTarget.kind === 'vela') {
-                    window.open(inviteTarget.url, '_blank', 'noopener,noreferrer');
-                  } else if (inviteTarget.kind === 'local') {
-                    setInviteOpen(true);
-                  }
-                }}
-              >
-                <Icon name="share" size={15} /> {t('recentProjects.inviteTeammates')}
-              </button>
-            ) : null}
             {canManageCollection ? (
               <button
                 type="button"
@@ -2066,23 +2019,6 @@ export function RecentProjectsStrip({
           </DialogFooter>
         </Dialog>
       ) : null}
-      <InviteDialog
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        workspaceContext={workspaceContext}
-        canAssignRoles={
-          canAssignInviteRoles ?? workspaceContext?.permissions.canInviteMembers === true
-        }
-        availableSeats={workspaceInviteAvailableSeats(workspaceContext)}
-        entryFrom="all_projects"
-        onUpgrade={
-          inviteUpgradeUrl
-            ? () => {
-                window.open(inviteUpgradeUrl, '_blank', 'noopener,noreferrer');
-              }
-            : undefined
-        }
-      />
     </section>
   );
 }
