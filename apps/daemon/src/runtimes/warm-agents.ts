@@ -19,6 +19,7 @@
  * conversation starts, after an idle timeout, and when the daemon stops.
  */
 import { createHash } from 'node:crypto';
+import os from 'node:os';
 import type { ChildProcess } from 'node:child_process';
 
 /** Environment values that belong to one run, not to the launch. */
@@ -26,7 +27,33 @@ const PER_RUN_ENV = ['OD_RUN_ID', 'OD_TOOL_TOKEN', 'OD_RUN_CONTEXT_FILE'];
 /** Flags whose value belongs to one run (each takes one value). */
 const PER_RUN_FLAGS = ['--log-file'];
 
-export const WARM_AGENT_IDLE_MS = 10 * 60 * 1000;
+/**
+ * How long a parked process waits for its conversation's next message. A parked
+ * Antigravity holds ~125-225 MB the whole time, and the start-up it saves is
+ * ~5 s, so the wait is short: a person who keeps working in a conversation gets
+ * the saving, one who comes back later pays one cold start.
+ */
+export const WARM_AGENT_IDLE_MS = 3 * 60 * 1000;
+
+/** Never fewer parked processes than this, whatever the machine. */
+export const WARM_AGENT_MAX_PARKED_FLOOR = 2;
+/** The most the memory-based default will ever allow (the `od config` ceiling too). */
+export const WARM_AGENT_MAX_PARKED_CEILING = 16;
+const BYTES_PER_PARKED_PROCESS = 4 * 1024 ** 3;
+
+/**
+ * Most processes parked at once, across every conversation, when nothing was
+ * configured: one per 4 GB of memory, between 2 and 16. A parked Antigravity
+ * holds ~125-225 MB, so this keeps waiting well under 6% of the machine while
+ * a person working on many projects keeps more of them ready on a bigger Mac.
+ * It limits what waiting costs, never the runs: a run that finds no parked
+ * process starts cold, exactly as it would without the pool.
+ */
+export function defaultMaxParked(totalMemoryBytes: number = os.totalmem()): number {
+  if (!Number.isFinite(totalMemoryBytes) || totalMemoryBytes <= 0) return WARM_AGENT_MAX_PARKED_FLOOR;
+  const scaled = Math.floor(totalMemoryBytes / BYTES_PER_PARKED_PROCESS);
+  return Math.min(WARM_AGENT_MAX_PARKED_CEILING, Math.max(WARM_AGENT_MAX_PARKED_FLOOR, scaled));
+}
 
 export interface WarmLaunch {
   command: string;
@@ -66,6 +93,10 @@ export interface WarmAgent {
 
 export interface WarmAgentPoolOptions {
   idleMs?: number;
+  /** Most processes parked at once; 0 parks nothing. Defaults to `defaultMaxParked`. */
+  maxParked?: number;
+  /** Memory the default limit is computed from; the machine's own when omitted. */
+  totalMemoryBytes?: number;
   /** Ends a process and its group. */
   kill?: (agent: WarmAgent) => void;
   now?: () => number;
@@ -85,14 +116,29 @@ export class WarmAgentPool {
   private readonly parked = new Map<string, { agent: WarmAgent; timer: NodeJS.Timeout; onExit: () => void }>();
   /** Bumped every time a run of the conversation starts; a late park for an older turn is refused. */
   private readonly generations = new Map<string, number>();
-  private readonly idleMs: number;
+  private idleMs: number;
+  private maxParked: number;
   private readonly kill: (agent: WarmAgent) => void;
   private readonly log: (message: string) => void;
 
   constructor(options: WarmAgentPoolOptions = {}) {
     this.idleMs = options.idleMs ?? WARM_AGENT_IDLE_MS;
+    this.maxParked = options.maxParked ?? defaultMaxParked(options.totalMemoryBytes);
     this.kill = options.kill ?? defaultKill;
     this.log = options.log ?? (() => {});
+  }
+
+  /**
+   * Changes the limit or the wait while the daemon runs. A lower limit ends the
+   * oldest parked processes at once; a new wait applies to processes parked
+   * from now on.
+   */
+  configure(options: { idleMs?: number; maxParked?: number }): void {
+    if (options.idleMs !== undefined) this.idleMs = options.idleMs;
+    if (options.maxParked !== undefined) {
+      this.maxParked = options.maxParked;
+      this.evictOldest(this.maxParked);
+    }
   }
 
   /** The conversation's current generation, to hand to `park` later. */
@@ -130,6 +176,13 @@ export class WarmAgentPool {
       return false;
     }
     this.discard(conversationId);
+    if (this.maxParked <= 0) {
+      this.kill(agent);
+      return false;
+    }
+    // Make room: the process that has waited longest is the one least likely to
+    // be used, and the Map keeps parking order.
+    this.evictOldest(this.maxParked - 1);
     const timer = setTimeout(() => {
       if (this.parked.get(conversationId)?.agent === agent) {
         this.parked.delete(conversationId);
@@ -146,6 +199,14 @@ export class WarmAgentPool {
     agent.child.once('exit', onExit);
     this.parked.set(conversationId, { agent, timer, onExit });
     return true;
+  }
+
+  private evictOldest(keep: number): void {
+    while (this.parked.size > keep) {
+      const oldest = this.parked.keys().next().value;
+      if (oldest === undefined) return;
+      this.discard(oldest);
+    }
   }
 
   discard(conversationId: string): void {

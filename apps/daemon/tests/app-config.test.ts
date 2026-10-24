@@ -1421,3 +1421,36 @@ describe('app-config odNextStrategyMode', () => {
     });
   });
 });
+
+describe('app-config · Antigravity parked-process settings', () => {
+  let dataDir: string;
+  beforeEach(async () => {
+    dataDir = await mkdtemp(path.join(tmpdir(), 'od-appconfig-warm-'));
+  });
+  afterEach(async () => {
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  it('stores a valid limit and wait', async () => {
+    await writeAppConfig(dataDir, { antigravityWarmMax: 4, antigravityWarmIdleSeconds: 120 });
+    const cfg = await readAppConfig(dataDir);
+    expect(cfg.antigravityWarmMax).toBe(4);
+    expect(cfg.antigravityWarmIdleSeconds).toBe(120);
+  });
+
+  it('accepts 0 as the limit, meaning nothing is parked', async () => {
+    await writeAppConfig(dataDir, { antigravityWarmMax: 0 });
+    expect((await readAppConfig(dataDir)).antigravityWarmMax).toBe(0);
+  });
+
+  it('drops values it cannot use so the defaults apply', async () => {
+    await writeAppConfig(dataDir, { antigravityWarmMax: -1, antigravityWarmIdleSeconds: 'soon' });
+    const cfg = await readAppConfig(dataDir);
+    expect(cfg.antigravityWarmMax).toBeUndefined();
+    expect(cfg.antigravityWarmIdleSeconds).toBeUndefined();
+    await writeAppConfig(dataDir, { antigravityWarmMax: 2.5, antigravityWarmIdleSeconds: 99999 });
+    const again = await readAppConfig(dataDir);
+    expect(again.antigravityWarmMax).toBeUndefined();
+    expect(again.antigravityWarmIdleSeconds).toBeUndefined();
+  });
+});

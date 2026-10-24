@@ -10372,6 +10372,12 @@ async function runConfig(args) {
                                        Set a key to a JSON value.
   od config unset <key>               Remove a top-level key.
 
+Tuning keys (apply without a restart):
+  antigravityWarmMax          Antigravity processes kept ready for a next turn, all
+                              conversations together (default: one per 4 GB of
+                              memory, between 2 and 16; 0 keeps none).
+  antigravityWarmIdleSeconds  Seconds a ready process waits (default 180, 5-3600).
+
 Common options:
   --daemon-url <url>   OpenDesign daemon HTTP base.
   --json               Emit raw JSON.`);

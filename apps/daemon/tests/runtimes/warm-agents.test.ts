@@ -6,7 +6,15 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { applyRunContextFile, writeRunContextFile } from '../../src/agent-access/run-context.js';
-import { WarmAgentPool, warmLaunchKey, type WarmAgent } from '../../src/runtimes/warm-agents.js';
+import {
+  WARM_AGENT_IDLE_MS,
+  WARM_AGENT_MAX_PARKED_CEILING,
+  WARM_AGENT_MAX_PARKED_FLOOR,
+  defaultMaxParked,
+  WarmAgentPool,
+  warmLaunchKey,
+  type WarmAgent,
+} from '../../src/runtimes/warm-agents.js';
 
 function fakeAgent(key: string): WarmAgent & { killed: boolean } {
   const child = Object.assign(new EventEmitter(), { exitCode: null as number | null, signalCode: null, pid: 4242 });
@@ -113,5 +121,117 @@ describe('run context file', () => {
     const env: NodeJS.ProcessEnv = { OD_RUN_CONTEXT_FILE: path.join(os.tmpdir(), 'od-none', 'run-context.json'), OD_RUN_ID: 'run-1' };
     applyRunContextFile(env);
     expect(env.OD_RUN_ID).toBe('run-1');
+  });
+});
+
+describe('WarmAgentPool · parked limit', () => {
+  // A parked process only saves a start-up (~5 s); it holds ~125-225 MB while it
+  // waits. The cap bounds what waiting costs without touching running tasks.
+  function capped(maxParked: number) {
+    const killed: WarmAgent[] = [];
+    return { killed, pool: new WarmAgentPool({ idleMs: 1000, maxParked, kill: (agent) => killed.push(agent) }) };
+  }
+
+  it('waits three minutes by default', () => {
+    expect(WARM_AGENT_IDLE_MS).toBe(3 * 60 * 1000);
+  });
+
+  const GB = 1024 ** 3;
+
+  it('allows one parked process per 4 GB of memory, never fewer than two', () => {
+    expect(WARM_AGENT_MAX_PARKED_FLOOR).toBe(2);
+    expect(defaultMaxParked(4 * GB)).toBe(2);
+    expect(defaultMaxParked(8 * GB)).toBe(2);
+    expect(defaultMaxParked(16 * GB)).toBe(4);
+    expect(defaultMaxParked(18 * GB)).toBe(4);
+    expect(defaultMaxParked(32 * GB)).toBe(8);
+  });
+
+  it('stops growing at a ceiling, and survives a nonsense memory reading', () => {
+    expect(defaultMaxParked(512 * GB)).toBe(WARM_AGENT_MAX_PARKED_CEILING);
+    expect(WARM_AGENT_MAX_PARKED_CEILING).toBe(16);
+    expect(defaultMaxParked(0)).toBe(2);
+    expect(defaultMaxParked(Number.NaN)).toBe(2);
+  });
+
+  it('a pool with no explicit limit uses the memory-based one', () => {
+    const killed: WarmAgent[] = [];
+    const small = new WarmAgentPool({ totalMemoryBytes: 8 * GB, kill: (a) => killed.push(a) });
+    const big = new WarmAgentPool({ totalMemoryBytes: 32 * GB, kill: (a) => killed.push(a) });
+    for (let i = 0; i < 10; i += 1) {
+      small.park(`c${i}`, small.generation(`c${i}`), fakeAgent('k'));
+      big.park(`c${i}`, big.generation(`c${i}`), fakeAgent('k'));
+    }
+    expect(small.size).toBe(2);
+    expect(big.size).toBe(8);
+  });
+
+  it('ends the oldest parked process when a new one would exceed the limit', () => {
+    const { pool, killed } = capped(2);
+    const a = fakeAgent('k');
+    const b = fakeAgent('k');
+    const c = fakeAgent('k');
+    expect(pool.park('c1', pool.generation('c1'), a)).toBe(true);
+    expect(pool.park('c2', pool.generation('c2'), b)).toBe(true);
+    expect(pool.park('c3', pool.generation('c3'), c)).toBe(true);
+    expect(pool.size).toBe(2);
+    expect(killed).toEqual([a]);
+    expect(pool.take('c1', 'k')).toBeNull();
+    expect(pool.take('c2', 'k')).toBe(b);
+    expect(pool.take('c3', 'k')).toBe(c);
+  });
+
+  it('parking again for the same conversation never evicts another conversation', () => {
+    const { pool, killed } = capped(2);
+    const a = fakeAgent('k');
+    const b = fakeAgent('k');
+    const a2 = fakeAgent('k');
+    pool.park('c1', pool.generation('c1'), a);
+    pool.park('c2', pool.generation('c2'), b);
+    pool.park('c1', pool.generation('c1'), a2);
+    expect(pool.size).toBe(2);
+    expect(killed).toEqual([a]);
+    expect(pool.take('c2', 'k')).toBe(b);
+  });
+
+  it('a limit of zero parks nothing and ends the process', () => {
+    const { pool, killed } = capped(0);
+    const a = fakeAgent('k');
+    expect(pool.park('c1', pool.generation('c1'), a)).toBe(false);
+    expect(killed).toEqual([a]);
+    expect(pool.size).toBe(0);
+  });
+
+  it('lowering the limit at run time ends the oldest ones at once', () => {
+    const { pool, killed } = capped(3);
+    const [a, b, c] = [fakeAgent('k'), fakeAgent('k'), fakeAgent('k')];
+    pool.park('c1', pool.generation('c1'), a);
+    pool.park('c2', pool.generation('c2'), b);
+    pool.park('c3', pool.generation('c3'), c);
+    pool.configure({ maxParked: 1 });
+    expect(pool.size).toBe(1);
+    expect(killed).toEqual([a, b]);
+  });
+
+  it('a new wait applies to processes parked after the change', () => {
+    vi.useFakeTimers();
+    const { pool, killed } = capped(2);
+    const a = fakeAgent('k');
+    pool.park('c1', pool.generation('c1'), a);
+    pool.configure({ idleMs: 50 });
+    const b = fakeAgent('k');
+    pool.park('c2', pool.generation('c2'), b);
+    vi.advanceTimersByTime(60);
+    expect(killed).toEqual([b]);
+    vi.advanceTimersByTime(1000);
+    expect(killed).toEqual([b, a]);
+  });
+
+  it('never limits the runs that take a parked process or start cold', () => {
+    const { pool } = capped(1);
+    const a = fakeAgent('k');
+    pool.park('c1', pool.generation('c1'), a);
+    for (let i = 0; i < 10; i += 1) expect(pool.take(`other-${i}`, 'k')).toBeNull();
+    expect(pool.take('c1', 'k')).toBe(a);
   });
 });

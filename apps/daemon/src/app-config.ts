@@ -122,6 +122,11 @@ export interface AppConfigPrefs {
   privacyDecisionAt?: number | null;
   allowSilentUpdates?: boolean;
   levIsland?: boolean;
+  // Antigravity processes the daemon keeps ready for a conversation's next turn.
+  // Most parked at once (0 parks none) and how long each waits, in seconds. Both
+  // are tuning knobs: unset means the daemon's defaults (see warm-agents.ts).
+  antigravityWarmMax?: number;
+  antigravityWarmIdleSeconds?: number;
   orbit?: OrbitConfigPrefs;
   customInstructions?: string | null;
   projectLocations?: ProjectLocationPrefs[];
@@ -158,6 +163,8 @@ const ALLOWED_KEYS: ReadonlySet<keyof AppConfigPrefs> = new Set([
   'privacyDecisionAt',
   'allowSilentUpdates',
   'levIsland',
+  'antigravityWarmMax',
+  'antigravityWarmIdleSeconds',
   'orbit',
   'customInstructions',
   'projectLocations',
@@ -600,6 +607,15 @@ function applyConfigValue(
       value === null ||
       (typeof value === 'number' && Number.isFinite(value) && value >= 0)
     ) {
+      target[key] = value;
+    } else {
+      delete target[key];
+    }
+    return;
+  }
+  if (key === 'antigravityWarmMax' || key === 'antigravityWarmIdleSeconds') {
+    const [min, max] = key === 'antigravityWarmMax' ? [0, 16] : [5, 3600];
+    if (typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max) {
       target[key] = value;
     } else {
       delete target[key];

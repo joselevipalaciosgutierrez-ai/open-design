@@ -955,7 +955,12 @@ import { buildAgentSandboxProfile, instructionDirsAbove, isInsideDir, sandboxInv
 import { createSkillScopesStore } from './agent-access/skill-scopes.js';
 import { prepareRunSkills, type RunSkills } from './agent-access/run-skills.js';
 import { compactTranscriptForRun } from './conversation-history.js';
-import { WarmAgentPool, warmLaunchKey } from './runtimes/warm-agents.js';
+import {
+  WARM_AGENT_IDLE_MS,
+  defaultMaxParked,
+  WarmAgentPool,
+  warmLaunchKey,
+} from './runtimes/warm-agents.js';
 import { RUN_CONTEXT_ENV, RUN_CONTEXT_FILE, writeRunContextFileSync } from './agent-access/run-context.js';
 import { buildRunBudget, recordRunBudgetTimings, writeRunBudget } from './run-budget.js';
 import { registerSkillLibraryRoutes } from './routes/skill-library.js';
@@ -3716,6 +3721,23 @@ export async function startServer({
   const agentDaemonUrl = () => agentGateway?.url ?? daemonUrl;
   // Antigravity processes started ahead of a conversation's next turn.
   const warmAgents = new WarmAgentPool({ log: (message) => console.log(message) });
+  // The limit and wait come from the app config (`od config set antigravityWarmMax 2`),
+  // read now and again whenever the config changes, so no restart is needed.
+  const applyWarmPoolConfig = async () => {
+    try {
+      const prefs = await readAppConfig(RUNTIME_DATA_DIR);
+      warmAgents.configure({
+        maxParked: prefs.antigravityWarmMax ?? defaultMaxParked(),
+        idleMs: prefs.antigravityWarmIdleSeconds !== undefined
+          ? prefs.antigravityWarmIdleSeconds * 1000
+          : WARM_AGENT_IDLE_MS,
+      });
+    } catch (err) {
+      console.warn('[warm-agents] could not read the parked-process settings', err);
+    }
+  };
+  void applyWarmPoolConfig();
+  observeAppConfig(RUNTIME_DATA_DIR, () => { void applyWarmPoolConfig(); });
   const agentAccess = createAgentAccessStore({ dataDir: RUNTIME_DATA_DIR, home: os.homedir() });
   const agentScreensDir = path.join(RUNTIME_DATA_DIR, 'mac-screens');
   const skillScopes = createSkillScopesStore({ dataDir: RUNTIME_DATA_DIR });
