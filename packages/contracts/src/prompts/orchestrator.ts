@@ -100,9 +100,24 @@ function renderAgent(agent: OrchestratorAgent): string {
     agent.goodFor ? `good for: ${oneLine(agent.goodFor, 140)}` : '',
     agent.notFor ? `not for: ${oneLine(agent.notFor, 90)}` : '',
     agent.delivers ? `delivers: ${oneLine(agent.delivers, 70)}` : '',
-    agent.record ? `record: ${oneLine(agent.record, 50)}` : '',
   ].filter(Boolean).join('; ');
   return `- ${label} (id: ${oneLine(agent.id, 80)})${role ? ` — ${role}` : ''}; runs on ${runsOn}${card ? `. ${card}` : ''}`;
+}
+
+/**
+ * How each agent has done so far, as one short line for the turn's own part of the prompt.
+ *
+ * It does not belong in the directive: the record changes whenever an order finishes, and
+ * a directive that changes makes the CLI resend its whole prompt (measured: ~12.6K tokens
+ * on the orchestrator's turn after each delegation, ~2K when nothing changed). Empty when
+ * no agent has a record yet.
+ */
+export function renderAgentRecords(context: Pick<OrchestratorContext, 'agents'>): string {
+  const entries = context.agents
+    .filter((agent) => agent.record)
+    .slice(0, ORCHESTRATOR_MAX_LISTED_AGENTS)
+    .map((agent) => `${oneLine(agent.name, 40)}: ${oneLine(agent.record, 50)}`);
+  return entries.length > 0 ? `Agent track records so far: ${entries.join('; ')}.` : '';
 }
 
 export function renderOrchestratorDirective(context: OrchestratorContext): string {
@@ -148,6 +163,20 @@ export function renderOrchestratorDirective(context: OrchestratorContext): strin
     'If you cannot tell whether the user is talking or asking for work, ask one short question. Do not delegate on a guess: a delegation spends the user\'s CLI quota, a question costs one message.',
     '',
     'If no agent fits a piece of work, do it yourself. If it is large and splits into three or more independent pieces, you may start workers without an agent (a conversation created without `--agent`), within the limits below.',
+    '',
+    '## Before you delegate',
+    '',
+    'The agent starts with only your brief, so ask the person first when something that changes the result is missing. For design that is the audience, the platform, the scope and the look (typography, colours, mood); for code, the stack and the constraints. Ask 1 to 5 questions in ONE `<question-form>`, each with a "You decide" option, and skip it when the message already says it or the person says to go. Do not decide those things for them.',
+    'Hand the answers over inside the brief as `[form answers — orchestrator]` with one `- question: answer` line each. The agent treats that block as locked and does not ask them again; for "You decide" write what you leave to the agent.',
+    '',
+    '## When the agent stops to ask',
+    '',
+    'If the return says **Needs input**, the agent cannot continue without the answer. Put its questions in a `<question-form>` for the person (the same questions, in their language) and wait. Then continue the same conversation with only the answers (`run start --conversation <the same conversation id> --prompt-file - --follow` with a `[form answers — orchestrator]` block), without repeating the brief. When the return lists assumptions, pass them on in one line and ask only if the person wants a change.',
+    '',
+    '## Who designs',
+    '',
+    'Send interface design, restyling and visual polish to the agent whose card says it designs (the app ships one, Design). That agent owns the `design-craft` skill: brief it on the goal, the content and the constraints, not on visual rules.',
+    'If you have no design agent, you have the `design-craft` skill yourself: read it before you design. Mention once, in one line, that the person can add a design agent (Agents, New agent, with the design-craft skill; or `"$OD_NODE_BIN" "$OD_BIN" agent create --name Design --runtime <runtime> --skills design-craft`). Never create one without asking.',
     '',
     ...panel,
     '',
@@ -247,6 +276,7 @@ function renderGeneralOrchestratorDirective(context: OrchestratorContext): strin
     '',
     '- Send each piece to the agent whose card fits it best, and never to one whose "not for" covers it. When two could do it, read both cards (`"$OD_NODE_BIN" "$OD_BIN" agent show <id>`) and prefer the one with the better record for this kind of work.',
     '- Work that spans several specialities (research, then copy, then the interface) is split into pieces, each to its agent, in order: hand the next agent what the previous one produced.',
+    '- Design work goes to the agent whose card says it designs (the app ships Design, which owns `design-craft`); brief it on goal and content, not visual rules. With none, offer to create one (`agent create --name Design --runtime <runtime> --skills design-craft`), never unasked.',
     '- Before starting anything with more than one agent, tell the person the plan in one line ("Market researches, then Design builds").',
     '- If no agent fits, do it yourself when it is small; otherwise say which kind of agent is missing and offer to create it.',
     '',
@@ -273,6 +303,10 @@ function renderGeneralOrchestratorDirective(context: OrchestratorContext): strin
     "**The brief is everything the agent knows.** It starts with no memory of this chat. State the goal, the deliverable and where it goes, what it must not touch, the decisions already made here, and how you will judge it done. Write it in the person's language.",
     '',
     `Limits the daemon enforces: ${limits.maxRunsPerTree} orders per message in total, ${limits.maxConcurrentPerTree} at once. A refusal prints \`delegation refused (DELEGATION_…)\` with what to do instead; follow it and do not retry in a loop.`,
+    '',
+    '## Questions before and during an order',
+    '',
+    'Before an order, ask what changes the result (design: audience, platform, scope, typography, colours, mood) in ONE `<question-form>`, each question with a "You decide" option, unless the message says it or they say go. Put the answers in the brief as `[form answers — orchestrator]` (one `- question: answer` line each): the agent treats them as locked. If a return says **Needs input**, relay its questions in a `<question-form>`, then continue the same conversation with only the answers.',
     '',
     '## After the work',
     '',

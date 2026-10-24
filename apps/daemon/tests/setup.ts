@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 process.env.OD_AGENT_SANDBOX ??= 'off';
 // Tests start each agent cold; warm-agents tests opt in on their own.
 process.env.OD_ANTIGRAVITY_WARM ??= 'off';
+// A seeded default agent would turn every default-assistant run into an orchestrator run in
+// suites that count on an empty agent list; the seeding suites call the seeder directly.
+process.env.OD_SEED_DEFAULT_AGENTS ??= 'off';
 
 const daemonRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const daemonCliDist = path.join(daemonRoot, 'dist', 'cli.js');

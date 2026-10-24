@@ -35,12 +35,31 @@ function tailAtBoundary(text: string, max: number): string {
   return `…${cut.slice(from).trimStart()}`;
 }
 
+/** What a delegated run stopped to ask: the last `<needs-input>` block, or a `<question-form>`. */
+function findAskedQuestions(text: string): string | null {
+  const blocks = [...text.matchAll(/<(needs-input|question-form)\b[^>]*>([\s\S]*?)<\/\1>/g)];
+  const last = blocks.at(-1);
+  if (!last) return null;
+  const body = last[2]!.trim();
+  try {
+    return JSON.stringify(JSON.parse(body));
+  } catch {
+    return body.slice(0, 800);
+  }
+}
+
+export interface RunFollowContext {
+  projectId?: string | undefined;
+  /** The conversation the run belongs to, so the result can say how to continue it. */
+  conversationId?: string | undefined;
+}
+
 export interface RunFollowSummary {
   add(event: FollowEvent): void;
   render(): string;
 }
 
-export function createRunFollowSummary(runId: string): RunFollowSummary {
+export function createRunFollowSummary(runId: string, context: RunFollowContext = {}): RunFollowSummary {
   let message = '';
   let error = '';
   let usage: { input?: number; output?: number; cached?: number } | null = null;
@@ -82,6 +101,21 @@ export function createRunFollowSummary(runId: string): RunFollowSummary {
 
     render() {
       const lines: string[] = [];
+      const asked = end ? findAskedQuestions(message) : null;
+      if (asked) {
+        // The agent cannot go on without an answer: the questions are the result.
+        lines.push(`[run] ${lastRunId} finished: needs input`);
+        lines.push('Needs input (relay it to the person, then continue the same conversation with only the answers):', asked);
+        if (context.conversationId) {
+          const project = context.projectId ? `"${context.projectId}"` : '<project id>';
+          lines.push(
+            `Resume: od run start --project ${project} --conversation ${context.conversationId} --prompt-file - --follow`
+              + ' with "[form answers — orchestrator]" and one "- question: answer" line each; do not repeat the brief.',
+          );
+        }
+        lines.push(`Full event stream: od run watch ${lastRunId}`);
+        return lines.join('\n');
+      }
       if (!end) {
         lines.push(`[run] ${lastRunId} ended without an end event; it may still be running or may have been cut off.`);
       } else {

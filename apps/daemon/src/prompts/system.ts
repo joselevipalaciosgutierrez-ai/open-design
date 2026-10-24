@@ -920,7 +920,10 @@ export interface ComposeInput {
   // How the slim charter delivers the Design Craft rulebook. `pull` keeps a
   // digest in the prompt and leaves the full text to the `design-craft` skill
   // (filesystem runs only); `inline` (default) keeps it all in the prompt.
-  designCraftDelivery?: 'inline' | 'pull' | undefined;
+  designCraftDelivery?: 'inline' | 'pull' | 'digest' | undefined;
+  // A run an orchestrator started (`run.delegation`): the slim charter drops its own
+  // requirements round, because the orchestrator already asked and passed the answers.
+  delegated?: boolean | undefined;
   // Whether the visible conversation mentions generating media (see
   // `detectMediaIntentSignal`). Only consulted for non-media projects:
   // `false` skips the MEDIA_DISPATCH_HINT, `true`/`undefined` keep it.
@@ -974,6 +977,7 @@ export function composeSystemPrompt({
   deckFrameworkMode,
   promptCoreVariant,
   designCraftDelivery,
+  delegated,
   mediaHintSignal,
   platformHintSignal,
 }: ComposeInput): string {
@@ -1062,7 +1066,7 @@ export function composeSystemPrompt({
         ...(streamFormat === 'plain' ? [API_MODE_OVERRIDE, '\n\n---\n\n'] : []),
         renderSlimCoreCharter(
           executionProfile ?? executionProfileFromStreamFormat(streamFormat),
-          { designCraft: designCraftDelivery },
+          { designCraft: designCraftDelivery, delegated },
         ),
         '\n\n---\n\n',
       ]

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ORCHESTRATOR_MAX_LISTED_AGENTS,
+  renderAgentRecords,
   renderOrchestratorDirective,
   type OrchestratorAgent,
   type OrchestratorContext,
@@ -37,6 +38,44 @@ describe('renderOrchestratorDirective', () => {
     expect(text).toContain('context` prints them');
     // The old instruction made the agent read a whole event stream.
     expect(text).not.toContain('read its last events');
+  });
+
+  it('sends design to the agent that designs, and says what to do without one', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('## Who designs');
+    expect(text).toContain('`design-craft`');
+    // The design agent owns the rules: the brief is about the goal, not about visual rules.
+    expect(text).toMatch(/not on visual rules/);
+    // With no design agent it designs itself and may offer to create one, never on its own.
+    expect(text).toMatch(/no design agent/i);
+    expect(text).toContain('agent create --name Design');
+    expect(text).toMatch(/never create one without asking/i);
+  });
+
+  it("points Lev's general chat at the design agent too", () => {
+    const text = renderOrchestratorDirective(context({ scope: 'everywhere', projects: [] }));
+    expect(text).toMatch(/design/i);
+    expect(text).toContain('design-craft');
+  });
+
+  it('asks the person what matters before ordering, and hands the answers over as locked', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('## Before you delegate');
+    // Typography, colours, direction and so on are asked, not decided by the orchestrator.
+    expect(text).toMatch(/typography/i);
+    expect(text).toMatch(/colou?r/i);
+    expect(text).toMatch(/you decide/i);
+    expect(text).toContain('[form answers — orchestrator]');
+    expect(text).toMatch(/does not ask them again|do not ask them again|not ask again/i);
+  });
+
+  it('relays an agent that stops to ask, and resumes the same conversation with only the answers', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('Needs input');
+    expect(text).toMatch(/<question-form>/);
+    expect(text).toMatch(/same conversation/i);
+    expect(text).toMatch(/not (the )?brief again|without repeating the brief|only the answers/i);
+    expect(text).toMatch(/assumption/i);
   });
 
   it('states the limits it was given, so it never promises more than the daemon allows', () => {
@@ -194,9 +233,40 @@ describe('Lev knows its agents', () => {
       scope: 'everywhere',
       projects: [],
     });
-    expect(text).toContain('Mercado (id: m); runs on claude. good for: investigación de mercado y competencia; not for: diseño visual; delivers: informe en Markdown; record: 4 orders, 4 done');
+    // The track record changes every time an order finishes, so it is not part of the
+    // directive (see renderAgentRecords): a changed directive makes the CLI resend its whole prompt.
+    expect(text).toContain('Mercado (id: m); runs on claude. good for: investigación de mercado y competencia; not for: diseño visual; delivers: informe en Markdown');
+    expect(text).not.toContain('record:');
+    expect(text).not.toContain('4 orders');
     expect(text).toContain('agent show <id>');
     expect(text).toContain('never to one whose "not for" covers it');
     expect(text).toContain('split into pieces');
   });
 });
+
+describe('renderAgentRecords', () => {
+  it('says how each agent has done so far, in a line that can change every turn', () => {
+    const text = renderAgentRecords({
+      agents: [
+        { id: 'm', name: 'Mercado', runtimeId: 'claude', record: '4 orders, 4 done' },
+        { id: 'd', name: 'Design', runtimeId: 'claude', record: '2 orders, 1 done' },
+        { id: 'n', name: 'New', runtimeId: 'claude' },
+      ],
+    });
+    expect(text).toContain('Mercado: 4 orders, 4 done');
+    expect(text).toContain('Design: 2 orders, 1 done');
+    // An agent with no record yet adds nothing.
+    expect(text).not.toContain('New');
+  });
+
+  it('is empty when no agent has a record, so a turn pays nothing for it', () => {
+    expect(renderAgentRecords({ agents: [{ id: 'a', name: 'A', runtimeId: 'claude' }] })).toBe('');
+    expect(renderAgentRecords({ agents: [] })).toBe('');
+  });
+
+  it('stays short however many agents there are', () => {
+    const agents = Array.from({ length: 40 }, (_, i) => ({ id: `a${i}`, name: `Agent ${i}`, runtimeId: 'claude', record: '12 orders, 11 done' }));
+    expect(renderAgentRecords({ agents }).length).toBeLessThan(900);
+  });
+});
+

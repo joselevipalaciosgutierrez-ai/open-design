@@ -4,8 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { listSkills } from '../src/skills.js';
-import { prepareRunSkills } from '../src/agent-access/run-skills.js';
-import { DESIGN_CRAFT_SKILL_ID, effectiveDesignCraftDelivery } from '../src/design-craft-delivery.js';
+import {
+  DESIGN_CRAFT_SKILL_ID,
+  designCraftAvailableToRun,
+  effectiveDesignCraftDelivery,
+} from '../src/design-craft-delivery.js';
 
 const SKILLS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../skills');
 
@@ -16,40 +19,46 @@ describe('design-craft skill', () => {
     expect(found, 'skills/design-craft must be discoverable').toBeDefined();
     expect(found!.description).toMatch(/design/i);
   });
+});
 
-  it('is listed first in the run index even when the user has many global skills', async () => {
-    const skills = await listSkills(SKILLS_DIR);
-    const library = skills
-      .filter((skill) => typeof skill.dir === 'string' && skill.dir)
-      .map((skill) => ({
-        id: skill.id,
-        name: skill.name,
-        description: skill.description,
-        triggers: skill.triggers,
-        dir: skill.dir as string,
-      }));
-    const others = library.filter((skill) => skill.id !== DESIGN_CRAFT_SKILL_ID).slice(0, 12).map((s) => s.id);
-    const copied: string[] = [];
-    const result = await prepareRunSkills({
-      globalIds: [DESIGN_CRAFT_SKILL_ID, ...others],
-      agentIds: [],
-      activeIds: [],
-      library,
-      message: 'make a landing page',
-      runDir: '/tmp/od-design-craft-test-run',
-      copy: async (from) => {
-        copied.push(from);
-      },
-    });
-    expect(result.listedIds[0]).toBe(DESIGN_CRAFT_SKILL_ID);
-    expect(result.indexPrompt).toContain('design-craft');
+describe('designCraftAvailableToRun', () => {
+  const owner = { skillIds: [DESIGN_CRAFT_SKILL_ID] };
+  const other = { skillIds: ['animate'] };
+
+  it('an agent has it only when it owns it (or the person made it global)', () => {
+    expect(designCraftAvailableToRun({ agentSkillIds: [DESIGN_CRAFT_SKILL_ID], globalIds: [], profiles: [owner] })).toBe(true);
+    expect(designCraftAvailableToRun({ agentSkillIds: [], globalIds: [], profiles: [owner] })).toBe(false);
+    expect(designCraftAvailableToRun({ agentSkillIds: [], globalIds: [DESIGN_CRAFT_SKILL_ID], profiles: [owner] })).toBe(true);
+  });
+
+  it('a development agent does not get it even when there is no design agent at all', () => {
+    expect(designCraftAvailableToRun({ agentSkillIds: [], globalIds: [], profiles: [] })).toBe(false);
+    expect(designCraftAvailableToRun({ agentSkillIds: ['x'], globalIds: [], profiles: [other] })).toBe(false);
+  });
+
+  it('the default assistant delegates design to the design agent, so it does not carry the skill', () => {
+    expect(designCraftAvailableToRun({ agentSkillIds: null, globalIds: [], profiles: [owner, other] })).toBe(false);
+  });
+
+  it('without a design agent the default assistant designs itself, with the skill', () => {
+    expect(designCraftAvailableToRun({ agentSkillIds: null, globalIds: [], profiles: [] })).toBe(true);
+    expect(designCraftAvailableToRun({ agentSkillIds: null, globalIds: [], profiles: [other] })).toBe(true);
   });
 });
 
 describe('effectiveDesignCraftDelivery', () => {
-  it('falls back to inline when the skill was deleted', () => {
-    expect(effectiveDesignCraftDelivery([{ id: 'animate' }], 'pull')).toBe('inline');
-    expect(effectiveDesignCraftDelivery([{ id: DESIGN_CRAFT_SKILL_ID }], 'pull')).toBe('pull');
-    expect(effectiveDesignCraftDelivery([{ id: DESIGN_CRAFT_SKILL_ID }], 'inline')).toBe('inline');
+  const present = [{ id: DESIGN_CRAFT_SKILL_ID }];
+
+  it('points at the skill when the run has it', () => {
+    expect(effectiveDesignCraftDelivery(present, true, 'pull')).toBe('pull');
+  });
+
+  it('keeps only the hard rules when the run does not have the skill', () => {
+    expect(effectiveDesignCraftDelivery(present, false, 'pull')).toBe('digest');
+  });
+
+  it('puts the whole rulebook back when the skill does not exist or inline is forced', () => {
+    expect(effectiveDesignCraftDelivery([{ id: 'animate' }], true, 'pull')).toBe('inline');
+    expect(effectiveDesignCraftDelivery(present, true, 'inline')).toBe('inline');
   });
 });

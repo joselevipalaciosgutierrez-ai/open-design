@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import { usesProductionMarker, composeResumedRequest } from './strategies/od-next/request-resume.js';
-import { todoSnapshotHasUnfinishedWork } from '@open-design/contracts';
+import { renderAgentRecords, todoSnapshotHasUnfinishedWork } from '@open-design/contracts';
 import { createUserDesignSystem } from './design-systems/index.js';
 import { resolveWorkspaceScope } from './project-authority.js';
 import { startEvidenceDelivery } from './services/evidence-delivery.js';
@@ -479,7 +479,12 @@ import {
 } from './memory.js';
 import { runAutoExtractionCleanup } from './memory-cleanup.js';
 import { memorySnapshots } from './memory-snapshot.js';
-import { DESIGN_CRAFT_SKILL_ID, effectiveDesignCraftDelivery } from './design-craft-delivery.js';
+import {
+  DESIGN_CRAFT_SKILL_ID,
+  designCraftAvailableToRun,
+  effectiveDesignCraftDelivery,
+} from './design-craft-delivery.js';
+import { seedDefaultAgents } from './default-agents.js';
 import { attachAcpSession } from './agent-protocol/index.js';
 
 import { ingestRoutineConnectorEvolution } from './automation-routine-evolution.js';
@@ -851,6 +856,7 @@ import {
   upsertMessage,
   upsertPreviewComment,
   userRequestBeforeAssistantMessage,
+  listAgentProfiles,
 } from './db.js';
 import { resolveOrchestratorForRun } from './orchestrator-context.js';
 import { defaultReasoningForRun } from './runtimes/ask-reasoning.js';
@@ -3738,6 +3744,25 @@ export async function startServer({
   };
   void applyWarmPoolConfig();
   observeAppConfig(RUNTIME_DATA_DIR, () => { void applyWarmPoolConfig(); });
+  // The agent the app ships (Design, with the design-craft skill) is created once, as soon
+  // as the person has chosen a CLI to run it on; deleting it is permanent. See default-agents.ts.
+  const seedAgents = async () => {
+    if (process.env.OD_SEED_DEFAULT_AGENTS === 'off') return;
+    try {
+      const prefs = await readAppConfig(RUNTIME_DATA_DIR);
+      const { seeded } = seedDefaultAgents(db, {
+        runtimeId: typeof prefs.agentId === 'string' ? prefs.agentId : null,
+        isKnownRuntime: (id) => Boolean(getAgentDef(id)),
+        randomId,
+        now: Date.now,
+      });
+      if (seeded.length > 0) console.log(`[default-agents] created: ${seeded.join(', ')}`);
+    } catch (err) {
+      console.warn('[default-agents] could not create the default agents', err);
+    }
+  };
+  void seedAgents();
+  observeAppConfig(RUNTIME_DATA_DIR, () => { void seedAgents(); });
   const agentAccess = createAgentAccessStore({ dataDir: RUNTIME_DATA_DIR, home: os.homedir() });
   const agentScreensDir = path.join(RUNTIME_DATA_DIR, 'mac-screens');
   const skillScopes = createSkillScopesStore({ dataDir: RUNTIME_DATA_DIR });
@@ -10163,6 +10188,8 @@ export async function startServer({
     runtimeCapabilitySnapshot,
     orchestrator = null,
     conversationId = null,
+    designCraftAvailable = false,
+    delegated = false,
   }) => {
     const project =
       typeof projectId === 'string' && projectId
@@ -10855,8 +10882,8 @@ export async function startServer({
     // object both composes the prompt and feeds section-level drift
     // attribution — a second, hand-maintained copy of these inputs would drift
     // from the real ones and mislabel the telemetry it exists to explain.
-    // The digest only points at a skill that exists in this person's library.
-    const designCraftDelivery = effectiveDesignCraftDelivery(await listAllSkills());
+    // The digest only points at a skill the run has, and that exists in the library.
+    const designCraftDelivery = effectiveDesignCraftDelivery(await listAllSkills(), designCraftAvailable);
     const defaultSystemPromptInputs = {
       agentId,
       skillBody,
@@ -10912,6 +10939,7 @@ export async function startServer({
       // do NOT carry this flip into a PR against main.
       promptCoreVariant: process.env.OD_PROMPT_CORE === 'classic' ? undefined : 'slim',
       designCraftDelivery,
+      delegated,
     };
     // The example card the project was seeded from contributes reference
     // material, never authority: its SKILL.md rides in
@@ -11801,6 +11829,31 @@ export async function startServer({
         ? latchConversationIntentSignals(db, run.conversationId, freshIntentSignals)
         : freshIntentSignals;
 
+    // Whether this run has `design-craft` among its skills: the Design agent owns it, so
+    // other agents never carry it; the default assistant carries it only while there is
+    // no design agent to hand design to (see design-craft-delivery.ts).
+    const runAgentSkillIds: string[] | null = Array.isArray(chatBody?.agentSkillIds)
+      ? chatBody.agentSkillIds.filter((id: unknown): id is string => typeof id === 'string')
+      : null;
+    const designCraftAvailable = designCraftAvailableToRun({
+      agentSkillIds: runAgentSkillIds,
+      globalIds: (await skillScopes.read()).global,
+      profiles: listAgentProfiles(db),
+    });
+
+    // Resolved once: the directive (stable) and the agents' track records (per turn) both read it.
+    const orchestratorContext = strategyTaskAtStart
+      ? null
+      : resolveOrchestratorForRun(db, {
+          run: { ...run, projectId, analyticsHints: chatBody?.analyticsHints },
+          dataDir: RUNTIME_DATA_DIR,
+          sessionMode: runSessionMode,
+          streamFormat: def?.streamFormat ?? 'plain',
+        });
+    // The records change whenever an order finishes. In the stable directive they made the CLI
+    // resend its whole prompt on the turn after every delegation, so they ride in this turn's part.
+    const agentRecordsPrompt = orchestratorContext ? renderAgentRecords(orchestratorContext) : '';
+
     const promptContext = strategyTaskAtStart
       ? {
           prompt: '',
@@ -11824,6 +11877,8 @@ export async function startServer({
         agentId,
         projectId,
         conversationId: run?.conversationId ?? null,
+        designCraftAvailable,
+        delegated: Boolean(run?.delegation),
         skillId,
         skillIds,
         designSystemId,
@@ -11832,12 +11887,7 @@ export async function startServer({
         sessionMode: runSessionMode,
         // The default assistant coordinates the user's agents when they have
         // some and chose none (see orchestrator-context.ts).
-        orchestrator: resolveOrchestratorForRun(db, {
-          run: { ...run, projectId, analyticsHints: chatBody?.analyticsHints },
-          dataDir: RUNTIME_DATA_DIR,
-          sessionMode: runSessionMode,
-          streamFormat: def?.streamFormat ?? 'plain',
-        }),
+        orchestrator: orchestratorContext,
         mediaExecution: run?.mediaExecution,
         byokMediaDefaults,
         // Plan §3.M2 / §3.V1 — forward the run's snapshot id so the
@@ -12019,12 +12069,12 @@ export async function startServer({
           }));
         const activeDirs = new Set(activeSkillDirs.map((dir) => path.resolve(dir)));
         runSkills = await prepareRunSkills({
-          globalIds: effectiveDesignCraftDelivery(library) === 'pull'
+          // Not forced on every run any more: an agent lists it because it owns it. Only the
+          // default assistant with no design agent gets it as its own skill.
+          globalIds: designCraftAvailable && runAgentSkillIds === null
             ? [DESIGN_CRAFT_SKILL_ID, ...(await skillScopes.read()).global]
             : (await skillScopes.read()).global,
-          agentIds: Array.isArray(chatBody?.agentSkillIds)
-            ? chatBody.agentSkillIds.filter((id: unknown): id is string => typeof id === 'string')
-            : [],
+          agentIds: runAgentSkillIds ?? [],
           activeIds: library.filter((skill) => activeDirs.has(path.resolve(skill.dir))).map((skill) => skill.id),
           library,
           message: typeof currentPrompt === 'string' && currentPrompt.trim()
@@ -12871,6 +12921,8 @@ export async function startServer({
         runSkills?.indexPrompt ?? '',
         // Same for the project's notebook: it grows with every run.
         projectNotebookPrompt,
+        // And for the agents' records: they change whenever an order finishes.
+        agentRecordsPrompt,
         // And for lessons: they depend on the message.
         lessonsPrompt,
         includeStableForPayload ? systemPrompt : '',

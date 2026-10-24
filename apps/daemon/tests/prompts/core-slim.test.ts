@@ -875,4 +875,47 @@ describe('renderSlimCoreCharter — design craft delivery', () => {
     expect(skill).toContain(unescaped);
     expect(skill).toMatch(/^name: design-craft$/m);
   });
+
+  it('digest mode keeps the hard rules but no pointer to a skill the run does not have', () => {
+    const digest = renderSlimCoreCharter('filesystem', { designCraft: 'digest' });
+    const pulled = renderSlimCoreCharter('filesystem', { designCraft: 'pull' });
+    expect(digest).toContain('## Design Craft');
+    expect(digest).toContain('44px');
+    expect(digest).toContain('4.5:1');
+    expect(digest).not.toContain('`design-craft`');
+    expect(digest).not.toContain('### Visual Finish');
+    expect(pulled).toContain('`design-craft`');
+    expect(Buffer.byteLength(digest)).toBeLessThan(Buffer.byteLength(pulled));
+  });
+
+  it('text-artifact runs keep the whole rulebook in every mode, since they cannot read a skill', () => {
+    for (const designCraft of ['pull', 'digest'] as const) {
+      expect(renderSlimCoreCharter('text_artifact', { designCraft })).toContain('### Visual Finish');
+    }
+  });
+
+  it('a delegated run does not carry its own question round, only how to ask when it is blocked', () => {
+    const own = renderSlimCoreCharter('filesystem');
+    const delegated = renderSlimCoreCharter('filesystem', { delegated: true });
+    // The orchestrator already asked what mattered: no form format, no question bank.
+    expect(own).toContain('## Requirements Clarification Phase');
+    expect(delegated).not.toContain('## Requirements Clarification Phase');
+    expect(delegated).not.toContain('Default Question Bank');
+    expect(delegated).not.toContain('<question-form id="..." title="...">');
+    // What it keeps: answers already given are locked, and the one way to stop and ask.
+    expect(delegated).toContain('[form answers');
+    expect(delegated).toContain('<needs-input>');
+    expect(delegated).toMatch(/list each assumption/i);
+    expect(Buffer.byteLength(delegated)).toBeLessThan(Buffer.byteLength(own) - 4_500);
+    // Everything around the section is untouched.
+    expect(delegated).toContain('## Artifact Design Phase');
+    expect(delegated).toContain('## Technical Contract');
+  });
+
+  it('the needs-input block is never a question form, so a CLI can continue its own session', () => {
+    const delegated = renderSlimCoreCharter('filesystem', { delegated: true });
+    const block = delegated.slice(delegated.indexOf('<needs-input>'));
+    expect(block.slice(0, 400)).not.toContain('<question-form');
+  });
 });
+

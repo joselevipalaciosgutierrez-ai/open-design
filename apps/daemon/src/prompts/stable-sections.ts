@@ -92,6 +92,7 @@ const SECTION_INPUTS = {
     'planToolNote',
     'promptCoreVariant',
     'designCraftDelivery',
+    'delegated',
     'runtimeToolPrompt',
   ],
   'client-system': ['clientSystemPrompt'],

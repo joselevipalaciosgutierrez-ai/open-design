@@ -93,4 +93,48 @@ describe('run follow summary', () => {
     summary.add({ event: 'end', data: { status: 'succeeded' } });
     expect(summary.render()).toContain('cached 41000');
   });
+
+  describe('when the agent stopped to ask', () => {
+    const block = '<needs-input>{"questions":[{"id":"palette","label":"Which palette?","type":"radio","options":["Warm","Cool","You decide"]}]}</needs-input>';
+
+    it('puts the question, not the whole message, in the result and says how to continue', () => {
+      const summary = createRunFollowSummary('run-7', { projectId: 'p1', conversationId: 'c1' });
+      summary.add(text(`I need one thing before I go on. ${'Notes. '.repeat(200)}\n${block}`));
+      summary.add({ event: 'end', data: { status: 'succeeded', code: 0 } });
+      const out = summary.render();
+      expect(out).toContain('needs input');
+      expect(out).toContain('"id":"palette"');
+      expect(out).toContain('Which palette?');
+      expect(out).not.toContain('Notes. Notes. Notes.');
+      expect(out).toContain('--conversation c1');
+      expect(out).toContain('[form answers');
+      expect(out.length).toBeLessThan(900);
+    });
+
+    it('does the same for a question form, which older or direct runs still emit', () => {
+      const summary = createRunFollowSummary('run-8', { projectId: 'p1', conversationId: 'c1' });
+      summary.add(text('One question first. <question-form id="x" title="t">{"questions":[{"id":"q","label":"Who is it for?","type":"text"}]}</question-form>'));
+      summary.add({ event: 'end', data: { status: 'succeeded', code: 0 } });
+      const out = summary.render();
+      expect(out).toContain('needs input');
+      expect(out).toContain('Who is it for?');
+    });
+
+    it('a finished task that merely mentions the word is not a question', () => {
+      const summary = createRunFollowSummary('run-9', { conversationId: 'c1' });
+      summary.add(text('Built it. No needs-input was necessary.'));
+      summary.add({ event: 'end', data: { status: 'succeeded', code: 0 } });
+      expect(summary.render()).not.toContain('needs input');
+    });
+
+    it('still reports a block with no conversation id, without a resume hint', () => {
+      const summary = createRunFollowSummary('run-10');
+      summary.add(text(block));
+      summary.add({ event: 'end', data: { status: 'succeeded' } });
+      const out = summary.render();
+      expect(out).toContain('Which palette?');
+      expect(out).not.toContain('--conversation');
+    });
+  });
 });
+

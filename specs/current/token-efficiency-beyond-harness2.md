@@ -43,10 +43,66 @@ rulebook is `skills/design-craft/SKILL.md`, forced first into the run's global
 skill index (`design-craft-delivery.ts`, `server.ts`). Text-artifact/BYOK runs
 keep it inline (no file tools). Rollback: `OD_DESIGN_CRAFT=inline`.
 A test keeps the inline text and the skill word for word.
-NOT validated on live runs: whether agents reliably read the skill before
-designing. That is the first thing the decision-point probe must check.
+Validation so far (2026-10-24, Claude haiku, small samples, not proof of quality):
+- Read probe (own composed prompt, 6 design briefs + 1 control): the skill was read
+  as the first action in 6/6 design runs and in 0/1 control.
+- Through the real daemon (3 briefs x 2 reps per variant): skill read in 4/6 runs
+  (1 run delegated to an agent profile, 1 designed without reading and linted clean).
+  Linter findings on the 6 artifacts: pull P0=0 P1=1 P2=1; inline P0=2
+  (`invented-metric` in both pricing pages) P1=0 P2=1. Too few runs to call either
+  variant better; it shows no sign that pull is worse on what the linter checks.
+- Prompt actually sent (od run budget): inline ~13,456 tokens, pull ~11,712
+  (-1,744, -13%).
+The linter checks a subset of design quality; nothing here judges layout, taste or
+usability.
 Also fixed: the memory snapshot ignored `extract` events; now only a person's
 edit invalidates it (test updated in `intent-signal-stable-prompt-cache.test.ts`).
+
+## 1c-bis. Design-craft now belongs to the Design agent
+
+The app seeds one agent, Design (`default-agents.ts`), once the person has chosen a CLI.
+It owns the `design-craft` skill, is an ordinary profile (editable, deletable) and a
+deletion is permanent (`seeded_defaults` row). `design-craft` is no longer forced into
+every run's skill index. Each run's charter now carries one of three things
+(`design-craft-delivery.ts`): the digest plus a pointer when the run owns the skill, the
+hard rules only when it does not, or the whole rulebook (BYOK, skill missing,
+`OD_DESIGN_CRAFT=inline`). The default assistant carries the skill only while no agent
+owns it. The orchestrator directive routes design to the design agent and, with none,
+offers to create one (never without asking). `OD_SEED_DEFAULT_AGENTS=off` disables seeding
+(the test setup uses it).
+
+Measured (`od run budget`, Claude haiku): Design agent run ~9,793 tokens; default
+assistant run ~11,630 (it is an orchestrator run as soon as any agent exists, which adds
+the directive, ~2.0K). The saving of this change on its own is small (~90-190 tokens per
+run); the point is ownership: only the agent that designs reads the rules.
+
+## 1c-ter. Questions between the person, the orchestrator and an agent
+
+Protocol (2026-10-24): the orchestrator asks what changes the result before it orders
+(one `<question-form>`, a "You decide" option per question) and hands the answers over as
+`[form answers — orchestrator]`; a delegated run drops its own requirements round
+(`DELEGATE_QUESTIONS` replaces ~1.6K tokens of form format with ~230) and, when truly
+blocked, ends with one `<needs-input>` block instead of a `<question-form>`; the compact
+return of `od run start --follow` shows `finished: needs input`, the questions and how to
+resume the same conversation (`run-follow-summary.ts`).
+
+Why not a form: Antigravity and Cursor (`resumeSkipsAfterQuestionForm`) do not continue
+their own session after a `<question-form>` because the model re-emits it, so the answer
+rides a cold turn that resends the whole prompt. Measured answer turn (`od run budget`,
+one sample each): Claude after a form 2,028 tokens (resumes); Antigravity after a form
+10,208 (rules resent); Antigravity after a `<needs-input>` block 1,965 (resumed, did not
+ask again, built the page).
+
+Found along the way: the orchestrator directive embedded each agent's track record, which
+changes whenever an order finishes, so the turn after every delegation resent the whole
+prompt (12.7K tokens, cache miss `stable-prompt-changed`/`unattributed`) instead of ~2K.
+The record now rides in the per-turn part (`renderAgentRecords`). Re-measured on an
+isolated daemon: orchestrator turn after the delegation 1,609 tokens (cache hit), the
+next one 1,658. Delegate prompt: `daemonSystemPrompt` 5,963 vs 6,747 (-784) for the
+delegated charter.
+
+Not covered: the OD Next path composes its orchestrator prompt separately and still
+lacks the per-turn records; the sample sizes are one run each.
 
 ## 1d. Verdict on the earlier proposals (evidence so far)
 

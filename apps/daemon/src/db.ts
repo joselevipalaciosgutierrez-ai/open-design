@@ -283,6 +283,13 @@ function migrate(db: SqliteDb): void {
       updated_at INTEGER NOT NULL
     );
 
+    -- Defaults the app has already created once (see default-agents.ts). A row stays
+    -- after the person deletes what it created, so a deletion is permanent.
+    CREATE TABLE IF NOT EXISTS seeded_defaults (
+      key TEXT PRIMARY KEY,
+      seeded_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,
@@ -2342,6 +2349,14 @@ export function getAgentProfile(db: SqliteDb, id: string) {
     .prepare(`${AGENT_PROFILE_SELECT} WHERE p.id = ?`)
     .get(id) as DbRow | undefined;
   return row ? normalizeAgentProfile(row) : null;
+}
+
+export function isDefaultSeeded(db: SqliteDb, key: string): boolean {
+  return db.prepare(`SELECT 1 FROM seeded_defaults WHERE key = ?`).get(key) !== undefined;
+}
+
+export function markDefaultSeeded(db: SqliteDb, key: string, at: number): void {
+  db.prepare(`INSERT OR IGNORE INTO seeded_defaults (key, seeded_at) VALUES (?, ?)`).run(key, at);
 }
 
 export function insertAgentProfile(db: SqliteDb, p: DbRow) {

@@ -8015,6 +8015,10 @@ Common options:
       if (flags.follow) {
         await streamRunEvents(base, data.runId, workspaceHeaders, {
           compact: Boolean(process.env.OD_RUN_ID) && flags.stream !== true,
+          context: {
+            projectId: typeof flags.project === 'string' ? flags.project : undefined,
+            conversationId: typeof flags.conversation === 'string' ? flags.conversation : data.conversationId,
+          },
         });
       }
       return;
@@ -8030,7 +8034,7 @@ Common options:
 // without needing an SSE library.
 async function streamRunEvents(base, initialRunId, workspaceHeaders = {}, options = {}) {
   let runId = initialRunId;
-  const summary = options.compact ? createRunFollowSummary(initialRunId) : null;
+  const summary = options.compact ? createRunFollowSummary(initialRunId, options.context ?? {}) : null;
   const visited = new Set();
   while (true) {
     if (visited.has(runId)) {
