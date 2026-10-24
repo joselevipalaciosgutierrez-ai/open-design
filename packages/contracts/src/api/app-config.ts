@@ -62,6 +62,15 @@ export interface AppConfigPrefs {
   allowSilentUpdates?: boolean;
   /** Lev Island: the companion on the Mac's notch (macOS only). Off unless turned on. */
   levIsland?: boolean;
+  /**
+   * Antigravity processes the daemon keeps ready for a conversation's next turn,
+   * all conversations together; 0 keeps none. Integer 0-16. Absent means the
+   * daemon's default: one per 4 GB of memory, between 2 and 16. Changing it needs
+   * no restart. It limits waiting processes, never running tasks.
+   */
+  antigravityWarmMax?: number;
+  /** Seconds a ready Antigravity process waits for its next turn. Integer 5-3600; absent means 180. */
+  antigravityWarmIdleSeconds?: number;
   orbit?: OrbitConfigPrefs;
   customInstructions?: string | null;
   /** External project library roots. The daemon adds its built-in .od/projects location at read time. */
@@ -102,6 +111,20 @@ export interface AppConfigResponse {
 }
 
 export type UpdateAppConfigRequest = Partial<AppConfigPrefs>;
+
+/**
+ * Response body for `DELETE /api/app-config/:key`, the way to remove a preference
+ * so its default applies again (`PUT /api/app-config` only merges the keys it is
+ * sent). `removed` is false when the key was not set. The daemon refuses keys that
+ * are not preferences, and the ones whose removal would change consent, identity
+ * or credentials (`telemetry`, `privacyDecisionAt`, `installationId`,
+ * `agentCliEnv`, `agentCliEnvIntent`), with a 400 and code
+ * `INVALID_APP_CONFIG_VALUE`.
+ */
+export interface UnsetAppConfigResponse {
+  config: AppConfigPrefs;
+  removed: boolean;
+}
 
 /** Response body for `GET /api/recent-dirs` — recent working directories
  *  pruned to those that still exist on disk, most-recent-first. */
