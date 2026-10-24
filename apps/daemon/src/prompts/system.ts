@@ -917,6 +917,10 @@ export interface ComposeInput {
   // active-DS direction, mid-conversation clarifying questions) are then
   // skipped. Daemon callers select it via OD_PROMPT_CORE=slim.
   promptCoreVariant?: 'classic' | 'slim' | undefined;
+  // How the slim charter delivers the Design Craft rulebook. `pull` keeps a
+  // digest in the prompt and leaves the full text to the `design-craft` skill
+  // (filesystem runs only); `inline` (default) keeps it all in the prompt.
+  designCraftDelivery?: 'inline' | 'pull' | undefined;
   // Whether the visible conversation mentions generating media (see
   // `detectMediaIntentSignal`). Only consulted for non-media projects:
   // `false` skips the MEDIA_DISPATCH_HINT, `true`/`undefined` keep it.
@@ -969,6 +973,7 @@ export function composeSystemPrompt({
   freeformDeckSignal,
   deckFrameworkMode,
   promptCoreVariant,
+  designCraftDelivery,
   mediaHintSignal,
   platformHintSignal,
 }: ComposeInput): string {
@@ -1057,6 +1062,7 @@ export function composeSystemPrompt({
         ...(streamFormat === 'plain' ? [API_MODE_OVERRIDE, '\n\n---\n\n'] : []),
         renderSlimCoreCharter(
           executionProfile ?? executionProfileFromStreamFormat(streamFormat),
+          { designCraft: designCraftDelivery },
         ),
         '\n\n---\n\n',
       ]

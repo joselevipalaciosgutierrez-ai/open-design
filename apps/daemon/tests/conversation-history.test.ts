@@ -83,3 +83,36 @@ describe('compactTranscriptForRun', () => {
     expect(await compactTranscriptForRun(text, runDir)).toEqual({ prompt: text, filePath: null });
   });
 });
+
+describe('compactTranscript prefix stability', () => {
+  // Each turn's compacted prompt should extend the previous one, so the
+  // upstream prompt cache keeps hitting; the boundary may only move in steps.
+  function growing(n: number): string {
+    const parts: string[] = [];
+    for (let i = 1; i <= n; i += 1) {
+      parts.push(`## user\nrequest ${i} ${'u'.repeat(900)}`);
+      if (i < n) parts.push(`## assistant\nreply ${i} ${'a'.repeat(900)}`);
+    }
+    return parts.join('\n\n');
+  }
+
+  it('keeps the earlier bytes identical between consecutive turns most of the time', () => {
+    let extended = 0;
+    let previous: string | null = null;
+    const runs = 16;
+    for (let n = 30; n < 30 + runs; n += 1) {
+      const prompt = compactTranscript(growing(n), '/f')!.prompt;
+      // Compare without the final user turn, which is new text every time.
+      const stable = prompt.slice(0, prompt.lastIndexOf('## user\n'));
+      if (previous !== null && stable.startsWith(previous)) extended += 1;
+      previous = stable;
+    }
+    expect(extended).toBeGreaterThanOrEqual(runs - 1 - Math.ceil(runs / 4) - 1);
+  });
+
+  it('still fits a tail budget when single turns are huge', () => {
+    const text = `${growing(20)}\n\n## assistant\n${'b'.repeat(40_000)}\n\n## user\nnow`;
+    const prompt = compactTranscript(text, '/f')!.prompt;
+    expect(prompt.length).toBeLessThan(text.length);
+  });
+});

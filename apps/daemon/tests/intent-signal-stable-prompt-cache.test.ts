@@ -233,7 +233,7 @@ describe('intent signals × stable prompt cache', () => {
   // input moved, which is what makes a drift actionable without hand-diffing
   // Langfuse prompts. Memory is the case that matters most: it is the dominant
   // cause of first-resume drift in production.
-  it('attributes a mid-conversation memory change to the memory section alone', async () => {
+  it('holds the memory block for the conversation when the extractor adds a fact mid-session', async () => {
     const { url } = await bootServer({ memoryEnabled: true });
     const { projectId, conversationId } = await createFreeformProject(url);
 
@@ -243,8 +243,8 @@ describe('intent signals × stable prompt cache', () => {
     });
     expect(turn1.status).toBe('succeeded');
 
-    // A fact lands in the store after the session was seeded, exactly as the
-    // extractor does mid-conversation in production.
+    // A silent write is how the extractor lands facts; it must not move the
+    // cached prefix of a conversation that already started (memory-snapshot.ts).
     await addMemoryEntry({
       name: 'Tone preference',
       description: 'prefers terse copy',
@@ -252,10 +252,47 @@ describe('intent signals × stable prompt cache', () => {
       body: 'Writes in short declarative sentences.',
     });
 
-    // A follow-up with no deck/media/platform vocabulary of its own, so no
-    // intent signal may flip: `memory` has to be the ONLY named section. A
-    // wider list here would mean the map cannot isolate a cause, and
-    // `unattributed` would mean it missed the memory input entirely.
+    const followUp = 'make the header a bit bolder';
+    const turn2 = await sendRunAndWait(url, projectId, conversationId, {
+      message: `## user\n${followUp}`,
+      currentPrompt: followUp,
+    });
+    expect(turn2.status).toBe('succeeded');
+    expect(await runPromptCache(url, conversationId, turn2.id)).toMatchObject({
+      hit: true,
+      changedSections: null,
+    });
+  });
+
+  // Drift attribution (prompts/stable-sections.ts). `stable-prompt-changed`
+  // says only THAT the cached prefix moved; this asserts it also says WHICH
+  // input moved. A memory edit made by the person is the one memory change
+  // that still reaches a running conversation.
+  it('attributes a person-made memory edit to the memory section alone', async () => {
+    const { url } = await bootServer({ memoryEnabled: true });
+    const { projectId, conversationId } = await createFreeformProject(url);
+
+    const turn1 = await sendRunAndWait(url, projectId, conversationId, {
+      message: `## user\n${TURN1_BRIEF}`,
+      currentPrompt: TURN1_BRIEF,
+    });
+    expect(turn1.status).toBe('succeeded');
+
+    const dataDir = process.env.OD_DATA_DIR;
+    if (!dataDir) throw new Error('OD_DATA_DIR must be set for this suite');
+    // Not silent: this is the settings panel, which announces the change.
+    const entry = await upsertMemoryEntry(
+      dataDir,
+      {
+        name: 'Tone preference',
+        description: 'prefers terse copy',
+        type: 'user',
+        body: 'Writes in short declarative sentences.',
+      },
+      { source: 'manual' },
+    );
+    createdMemoryIds.push(entry.id);
+
     const followUp = 'make the header a bit bolder';
     const turn2 = await sendRunAndWait(url, projectId, conversationId, {
       message: `## user\n${followUp}`,

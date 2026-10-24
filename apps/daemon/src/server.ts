@@ -478,6 +478,8 @@ import {
   readMemoryConfig,
 } from './memory.js';
 import { runAutoExtractionCleanup } from './memory-cleanup.js';
+import { memorySnapshots } from './memory-snapshot.js';
+import { DESIGN_CRAFT_SKILL_ID, effectiveDesignCraftDelivery } from './design-craft-delivery.js';
 import { attachAcpSession } from './agent-protocol/index.js';
 
 import { ingestRoutineConnectorEvolution } from './automation-routine-evolution.js';
@@ -10137,6 +10139,7 @@ export async function startServer({
     odNextAutomaticAdmission = false,
     runtimeCapabilitySnapshot,
     orchestrator = null,
+    conversationId = null,
   }) => {
     const project =
       typeof projectId === 'string' && projectId
@@ -10479,13 +10482,16 @@ export async function startServer({
     let craftBody;
     let craftSections;
 
-    // Personal-memory body is always recomputed at compose time so a
-    // memory the user just edited in settings shows up on the very next
-    // run. composeMemoryBody returns '' when memory is disabled or
-    // empty; the composer drops the block on a falsy value.
+    // Personal-memory body is frozen per conversation (memory-snapshot.ts) so
+    // facts the auto-extractor adds mid-session do not move the cached prompt
+    // prefix; a memory the user edits in settings drops the snapshot and shows
+    // up on the very next run. composeMemoryBody returns '' when memory is
+    // disabled or empty; the composer drops the block on a falsy value.
     let memoryBody = '';
     try {
-      memoryBody = await composeMemoryBody(RUNTIME_DATA_DIR);
+      memoryBody = await memorySnapshots.get(conversationId, () =>
+        composeMemoryBody(RUNTIME_DATA_DIR),
+      );
     } catch (err) {
       console.warn('[memory] composeMemoryBody failed', err);
     }
@@ -10826,6 +10832,8 @@ export async function startServer({
     // object both composes the prompt and feeds section-level drift
     // attribution — a second, hand-maintained copy of these inputs would drift
     // from the real ones and mislabel the telemetry it exists to explain.
+    // The digest only points at a skill that exists in this person's library.
+    const designCraftDelivery = effectiveDesignCraftDelivery(await listAllSkills());
     const defaultSystemPromptInputs = {
       agentId,
       skillBody,
@@ -10880,6 +10888,7 @@ export async function startServer({
       // restores the classic stack. main keeps classic as the default —
       // do NOT carry this flip into a PR against main.
       promptCoreVariant: process.env.OD_PROMPT_CORE === 'classic' ? undefined : 'slim',
+      designCraftDelivery,
     };
     // The example card the project was seeded from contributes reference
     // material, never authority: its SKILL.md rides in
@@ -11791,6 +11800,7 @@ export async function startServer({
       : await composeDaemonSystemPrompt({
         agentId,
         projectId,
+        conversationId: run?.conversationId ?? null,
         skillId,
         skillIds,
         designSystemId,
@@ -11986,7 +11996,9 @@ export async function startServer({
           }));
         const activeDirs = new Set(activeSkillDirs.map((dir) => path.resolve(dir)));
         runSkills = await prepareRunSkills({
-          globalIds: (await skillScopes.read()).global,
+          globalIds: effectiveDesignCraftDelivery(library) === 'pull'
+            ? [DESIGN_CRAFT_SKILL_ID, ...(await skillScopes.read()).global]
+            : (await skillScopes.read()).global,
           agentIds: Array.isArray(chatBody?.agentSkillIds)
             ? chatBody.agentSkillIds.filter((id: unknown): id is string => typeof id === 'string')
             : [],

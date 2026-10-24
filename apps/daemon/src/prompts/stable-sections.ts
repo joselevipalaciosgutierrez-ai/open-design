@@ -91,6 +91,7 @@ const SECTION_INPUTS = {
     // agent from landing in `unattributed`.
     'planToolNote',
     'promptCoreVariant',
+    'designCraftDelivery',
     'runtimeToolPrompt',
   ],
   'client-system': ['clientSystemPrompt'],

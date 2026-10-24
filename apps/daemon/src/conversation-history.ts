@@ -33,6 +33,17 @@ const VERBATIM_TAIL_CHARS = 12_000;
 /** Earlier exchanges listed in the state note before older ones are only counted. */
 const MAX_NOTED_EXCHANGES = 40;
 const NOTE_LINE_CHARS = 180;
+/**
+ * The boundary between the note and the verbatim tail moves only in steps of
+ * this many exchanges, and older notes are dropped in blocks of
+ * `NOTE_OMIT_STEP`. Between steps every earlier byte of the prompt is the same
+ * as the previous turn's, so the upstream prompt cache keeps hitting; a sliding
+ * boundary would rewrite the note on every turn.
+ */
+const BOUNDARY_STEP_EXCHANGES = 4;
+const NOTE_OMIT_STEP = 10;
+/** Quantizing may grow the tail, but never past this multiple of its budget. */
+const MAX_TAIL_GROWTH = 2;
 const FIRST_REQUEST_CHARS = 600;
 
 const ROLE_LINE = /^## (user|assistant)[ \t]*\r?$/;
@@ -89,6 +100,26 @@ function verbatimTailStart(turns: TranscriptTurn[]): number {
   return start;
 }
 
+/**
+ * `verbatimTailStart` rounded back to a step boundary (a user turn that begins
+ * an exchange whose index is a multiple of `BOUNDARY_STEP_EXCHANGES`). Falls
+ * back to the exact start when rounding would swell the tail past its cap.
+ */
+function steppedTailStart(turns: TranscriptTurn[], exact: number): number {
+  let exchangeIndex = 0;
+  let stepped = 0;
+  for (let i = 0; i < exact; i += 1) {
+    if (turns[i]!.role !== 'user') continue;
+    if (exchangeIndex % BOUNDARY_STEP_EXCHANGES === 0) stepped = i;
+    exchangeIndex += 1;
+  }
+  // Nothing earlier than the first step: keep the exact boundary, or a long
+  // conversation of a few huge exchanges would go uncompacted.
+  if (stepped === 0) return exact;
+  const tailChars = turns.slice(stepped).reduce((sum, t) => sum + t.content.length + 16, 0);
+  return tailChars > VERBATIM_TAIL_CHARS * MAX_TAIL_GROWTH ? exact : stepped;
+}
+
 export interface CompactedTranscript {
   /** What the agent receives in place of the transcript. */
   prompt: string;
@@ -110,7 +141,7 @@ export function compactTranscript(
   const parsed = parseTranscript(text);
   if (!parsed) return null;
   const { turns, preamble } = parsed;
-  const tailStart = verbatimTailStart(turns);
+  const tailStart = steppedTailStart(turns, verbatimTailStart(turns));
   const earlier = turns.slice(0, tailStart);
   if (earlier.length === 0) return null;
 
@@ -124,7 +155,8 @@ export function compactTranscript(
       `user: ${oneLine(turn.content, NOTE_LINE_CHARS)}${reply ? ` → assistant: ${oneLine(reply, NOTE_LINE_CHARS)}` : ''}`,
     );
   }
-  const omitted = Math.max(0, exchanges.length - MAX_NOTED_EXCHANGES);
+  const overflow = Math.max(0, exchanges.length - MAX_NOTED_EXCHANGES);
+  const omitted = overflow - (overflow % NOTE_OMIT_STEP);
   const noted = exchanges.slice(omitted);
 
   const note = [

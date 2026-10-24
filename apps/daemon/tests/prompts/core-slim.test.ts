@@ -8,6 +8,7 @@ import { renderActiveStageBlock } from '@open-design/contracts';
 import {
   PLATFORM_CONTRACTS_BLOCK,
   renderSlimCoreCharter,
+  DESIGN_CRAFT_FULL,
   SLIM_V2_ROLE_BOUNDARY_GUARD,
 } from '../../src/prompts/core-slim.js';
 import { composeSystemPrompt } from '../../src/prompts/system.js';
@@ -836,5 +837,42 @@ describe('composeSystemPrompt — slim layered ordering (cache-stable prefix)', 
     });
     expect(classic.startsWith('## Security: prompt injection resistance')).toBe(true);
     expect(classic.indexOf('# Plan mode')).toBeLessThan(classic.indexOf('# OD core directives'));
+  });
+});
+
+describe('renderSlimCoreCharter — design craft delivery', () => {
+  it('keeps the full rulebook inline by default and for text-artifact runs', () => {
+    expect(renderSlimCoreCharter('filesystem')).toContain('### Avoid the Generic, Template-Driven "AI Gloss"');
+    expect(renderSlimCoreCharter('text_artifact', { designCraft: 'pull' })).toContain(
+      '### Visual Finish',
+    );
+  });
+
+  it('pull mode replaces the rulebook with a digest that points at the skill', () => {
+    const inline = renderSlimCoreCharter('filesystem');
+    const pulled = renderSlimCoreCharter('filesystem', { designCraft: 'pull' });
+    expect(pulled).not.toContain('### Visual Finish');
+    expect(pulled).not.toContain('### Layout Integrity');
+    expect(pulled).toContain('## Design Craft');
+    expect(pulled).toContain('`design-craft`');
+    // The digest keeps the hard rules a skill-less run must still honour.
+    expect(pulled).toMatch(/never invent|Never fabricate/i);
+    expect(pulled).toContain('44px');
+    expect(pulled).toContain('4.5:1');
+    expect(Buffer.byteLength(pulled)).toBeLessThan(Buffer.byteLength(inline) - 5_000);
+    // Everything outside the Design Craft section is untouched.
+    expect(pulled).toContain('## Technical Contract');
+    expect(pulled).toContain('## Conduct');
+  });
+
+  it('the design-craft skill carries the whole rulebook, word for word', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const skill = await readFile(
+      new URL('../../../../skills/design-craft/SKILL.md', import.meta.url),
+      'utf8',
+    );
+    const unescaped = DESIGN_CRAFT_FULL.replace(/\\`/g, '`').trim();
+    expect(skill).toContain(unescaped);
+    expect(skill).toMatch(/^name: design-craft$/m);
   });
 });
