@@ -1,0 +1,51 @@
+.rows {
+  display: grid;
+  gap: 18px;
+}
+
+.row {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-muted, inherit);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.input {
+  width: 96px;
+}
+
+.unit {
+  font-size: 12.5px;
+  color: var(--text-muted, inherit);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-muted, inherit);
+}
+
+.error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--danger, #b42318);
+}

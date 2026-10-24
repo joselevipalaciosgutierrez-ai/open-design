@@ -5356,3 +5356,25 @@ describe('SettingsDialog about interactions', () => {
     expect(silentToggleBlock).toMatch(/const allowSilentUpdates = event\.currentTarget\.checked/);
   });
 });
+
+describe('SettingsDialog performance settings', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows a folded performance panel in Local CLI mode', () => {
+    renderSettingsDialog({ mode: 'daemon' });
+
+    const panel = screen.getByTestId('settings-performance') as HTMLDetailsElement;
+    expect(panel.open).toBe(false);
+    expect(within(panel).getByText(en['settings.performanceTitle'])).toBeTruthy();
+  });
+
+  it('does not show it in API provider mode, where no CLI is started', () => {
+    renderSettingsDialog({ mode: 'api' });
+
+    expect(screen.queryByTestId('settings-performance')).toBeNull();
+  });
+});
+

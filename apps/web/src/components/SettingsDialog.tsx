@@ -68,6 +68,7 @@ import {
 } from '../utils/visibleAgents';
 import { ExportDiagnosticsRow } from './ExportDiagnosticsButton';
 import { Icon } from './Icon';
+import { PerformanceSettings } from './PerformanceSettings';
 import { LabsSection } from './LabsSection';
 import { defaultAgentModelId, effectiveAgentModelChoice } from './agentModelSelection';
 import {
@@ -5219,6 +5220,7 @@ export function SettingsDialog({
                   </details>
                 );
               })()}
+              <PerformanceSettings />
             </section>
           ) : (
             /*
