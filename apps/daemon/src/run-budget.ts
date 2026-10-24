@@ -134,3 +134,36 @@ export async function recordRunBudgetTimings(
   if (!budget) return;
   await writeRunBudget(runDir, { ...budget, timings: budgetTimings(marks) });
 }
+
+const PART_BOUNDARY_RE = /<od-next-context\b[^>]*\bname="([^"]+)"[^>]*>[\s\S]*?<\/od-next-context>|^#{1,2} +(.+)$/gm;
+
+/**
+ * Names the parts of a prompt that reaches the agent as one block (OD Next),
+ * so the meter can say what weighs what. A part starts at a level 1 or 2
+ * heading or at an `<od-next-context>` block; deeper headings and loose text
+ * belong to the part before them.
+ */
+export function namedPromptParts(text: string | null | undefined): Array<{ kind: string; rawBytes: number }> {
+  if (typeof text !== 'string' || text.length === 0) return [];
+  const bytes = (value: string) => Buffer.byteLength(value, 'utf8');
+  const starts: Array<{ at: number; kind: string }> = [];
+  for (const match of text.matchAll(PART_BOUNDARY_RE)) {
+    const kind = match[1] !== undefined ? `context: ${match[1]}` : (match[2] ?? '').trim().slice(0, 80);
+    starts.push({ at: match.index ?? 0, kind: kind || 'untitled' });
+    if (match[1] !== undefined) starts.push({ at: (match.index ?? 0) + match[0].length, kind: '' });
+  }
+  const parts: Array<{ kind: string; rawBytes: number }> = [];
+  const first = starts[0]?.at ?? text.length;
+  if (first > 0 && text.slice(0, first).trim()) parts.push({ kind: 'preamble', rawBytes: bytes(text.slice(0, first)) });
+  for (let i = 0; i < starts.length; i += 1) {
+    const here = starts[i]!;
+    const body = text.slice(here.at, starts[i + 1]?.at ?? text.length);
+    if (here.kind === '') {
+      // Loose text after a context block continues the part before it.
+      if (body.trim() && parts.length > 0) parts[parts.length - 1]!.rawBytes += bytes(body);
+      continue;
+    }
+    parts.push({ kind: here.kind, rawBytes: bytes(body) });
+  }
+  return parts;
+}

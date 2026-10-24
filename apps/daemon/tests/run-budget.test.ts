@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   budgetTimings,
   buildRunBudget,
+  namedPromptParts,
   readRunBudget,
   recordRunBudgetTimings,
   writeRunBudget,
@@ -80,5 +81,51 @@ describe('budget file', () => {
 
   it('reads as null when the run left none', async () => {
     expect(await readRunBudget(path.join(os.tmpdir(), 'od-budget-none'))).toBeNull();
+  });
+});
+
+describe('namedPromptParts', () => {
+  const doc = [
+    '# Open Design execution and security boundary\n\nrules',
+    '## OD Next core strategy\n\n' + 'x'.repeat(400),
+    [
+      '<od-next-context kind="fact" name="runtime-selection">\n{"a":1}\n</od-next-context>',
+      '<od-next-context kind="instruction" name="deck-framework">\n' + 'y'.repeat(800) + '\n</od-next-context>',
+    ].join('\n\n'),
+  ].join('\n\n---\n\n');
+
+  it('names each top-level section by its heading', () => {
+    const parts = namedPromptParts(doc);
+    expect(parts.map((p) => p.kind)).toContain('OD Next core strategy');
+    expect(parts.find((p) => p.kind === 'OD Next core strategy')!.rawBytes).toBeGreaterThan(400);
+  });
+
+  it('opens a context section into one part per named block', () => {
+    const kinds = namedPromptParts(doc).map((p) => p.kind);
+    expect(kinds).toContain('context: runtime-selection');
+    expect(kinds).toContain('context: deck-framework');
+  });
+
+  it('accounts for every byte, so the parts add up to the whole', () => {
+    const sum = namedPromptParts(doc).reduce((n, p) => n + p.rawBytes, 0);
+    const separators = (doc.split('\n\n---\n\n').length - 1) * '\n\n---\n\n'.length;
+    expect(sum + separators).toBeGreaterThanOrEqual(doc.length - 40);
+    expect(sum).toBeLessThanOrEqual(doc.length);
+  });
+
+  it('splits by headings even when the sections are not separated by rules', () => {
+    const flat = '# Alpha\n\naaa\n\n## Beta\n\n' + 'b'.repeat(200) + '\n\n### Sub of beta\n\n' + 'c'.repeat(200) + '\n\n## Gamma\n\nggg';
+    const parts = namedPromptParts(flat);
+    expect(parts.map((p) => p.kind)).toEqual(['Alpha', 'Beta', 'Gamma']);
+    expect(parts[1]!.rawBytes).toBeGreaterThan(400);
+  });
+
+  it('keeps text between context blocks under the heading it follows', () => {
+    const mixed = '## Layout\n\nintro\n\n<od-next-context kind="fact" name="grid">\n' + 'g'.repeat(300) + '\n</od-next-context>\n\n## Next\n\nn';
+    expect(namedPromptParts(mixed).map((p) => p.kind)).toEqual(['Layout', 'context: grid', 'Next']);
+  });
+
+  it('returns nothing for empty text', () => {
+    expect(namedPromptParts('')).toEqual([]);
   });
 });

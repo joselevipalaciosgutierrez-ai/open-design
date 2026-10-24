@@ -970,7 +970,7 @@ import {
   warmLaunchKey,
 } from './runtimes/warm-agents.js';
 import { RUN_CONTEXT_ENV, RUN_CONTEXT_FILE, writeRunContextFileSync } from './agent-access/run-context.js';
-import { buildRunBudget, recordRunBudgetTimings, writeRunBudget } from './run-budget.js';
+import { buildRunBudget, namedPromptParts, recordRunBudgetTimings, writeRunBudget } from './run-budget.js';
 import { registerSkillLibraryRoutes } from './routes/skill-library.js';
 import { createMcpScopesStore, mcpServersForAgent } from './agent-access/mcp-scopes.js';
 import { registerMcpScopeRoutes } from './routes/mcp-scopes.js';
@@ -13060,7 +13060,8 @@ export async function startServer({
         currentMessage: typeof currentPrompt === 'string' ? currentPrompt : null,
         skills: [runSkills?.indexPrompt, includeStableForPayload ? promptTelemetryParts?.skillPrompt : null],
         designSystem: includeStableForPayload ? promptTelemetryParts?.designSystemPrompt : null,
-        sections: promptTelemetry.sections,
+        // An OD Next prompt is one block to the telemetry; name its parts for the meter.
+        sections: strategyRunMapping ? namedPromptParts(composed) : promptTelemetry.sections,
       }),
     );
     // `OD_PROMPT_DUMP=1`: the exact prompt next to the meter, to see what a
