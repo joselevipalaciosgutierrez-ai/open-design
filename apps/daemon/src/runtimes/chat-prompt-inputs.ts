@@ -875,12 +875,12 @@ function formatDesignFilesEntryLine(entry: DesignFilesHintEntry | null | undefin
   return `- \`${entryPath}\` (${[kind, size].filter(Boolean).join(', ')})`;
 }
 
-export function formatDesignFilesWorkspaceHint(
+export function splitDesignFilesWorkspaceHint(
   cwd: string | null | undefined,
   files: DesignFilesHintEntry[] = [],
   folders: DesignFilesHintEntry[] = [],
 ) {
-  if (typeof cwd !== 'string' || cwd.trim().length === 0) return '';
+  if (typeof cwd !== 'string' || cwd.trim().length === 0) return { fixed: '', snapshot: '' };
   const safeFolders = Array.isArray(folders) ? folders : [];
   const safeFiles = Array.isArray(files) ? files : [];
   const folderLines = safeFolders
@@ -906,24 +906,39 @@ export function formatDesignFilesWorkspaceHint(
     'When the request refers to existing files, asks you to choose a file, says "current", "this design", "the deck", "the image", "the folder", or depends on project state, inspect/search/read this workspace before answering or editing. Prefer project-relative paths, use the active workspace context as the default target, and ask only if multiple plausible targets remain after inspection.',
     'For non-trivial inspection or edits, surface progress through visible planning/status/tool events instead of silently guessing.',
     '',
+  ];
+  const snapshotLines = [
     `Current Design Files snapshot: ${totalFolders} folder${totalFolders === 1 ? '' : 's'}, ${totalFiles} file${totalFiles === 1 ? '' : 's'}.`,
   ];
 
   if (folderLines.length > 0) {
-    lines.push('', 'Folders:', ...folderLines);
-    if (omittedFolders > 0) lines.push(`- ... ${omittedFolders} more folder${omittedFolders === 1 ? '' : 's'} omitted`);
+    snapshotLines.push('', 'Folders:', ...folderLines);
+    if (omittedFolders > 0) snapshotLines.push(`- ... ${omittedFolders} more folder${omittedFolders === 1 ? '' : 's'} omitted`);
   }
 
   if (fileLines.length > 0) {
-    lines.push('', 'Files:', ...fileLines);
-    if (omittedFiles > 0) lines.push(`- ... ${omittedFiles} more file${omittedFiles === 1 ? '' : 's'} omitted`);
+    snapshotLines.push('', 'Files:', ...fileLines);
+    if (omittedFiles > 0) snapshotLines.push(`- ... ${omittedFiles} more file${omittedFiles === 1 ? '' : 's'} omitted`);
   }
 
   if (folderLines.length === 0 && fileLines.length === 0) {
-    lines.push('', 'No user-visible Design Files exist yet. Create clear project-relative files when the task requires output.');
+    snapshotLines.push('', 'No user-visible Design Files exist yet. Create clear project-relative files when the task requires output.');
   }
 
-  return lines.join('\n');
+  return { fixed: lines.join('\n'), snapshot: snapshotLines.join('\n') };
+}
+
+/**
+ * The whole hint. `splitDesignFilesWorkspaceHint` lets a caller keep the fixed
+ * rules in the stable slice and resend only the file snapshot.
+ */
+export function formatDesignFilesWorkspaceHint(
+  cwd: string | null | undefined,
+  files: DesignFilesHintEntry[] = [],
+  folders: DesignFilesHintEntry[] = [],
+) {
+  const { fixed, snapshot } = splitDesignFilesWorkspaceHint(cwd, files, folders);
+  return fixed ? [fixed, snapshot].join('\n') : '';
 }
 
 export function resolveSafePromptImagePaths(

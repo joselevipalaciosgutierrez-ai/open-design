@@ -130,3 +130,37 @@ export function renderChatTurnHostProtocolInstructions(
 
   return { doneMarker, nextSteps, artifactFocus, text };
 }
+
+/**
+ * The key is the only part of the host protocols that changes per turn, yet it
+ * sits inside ~1,100 tokens of fixed text, so a resumed session re-read all of
+ * it every turn. Splitting them keeps the rules in the cached prefix and sends
+ * the key alone.
+ *
+ * The template is the keyed text rendered with this placeholder, so it cannot
+ * drift from `renderChatTurnHostProtocolInstructions`; a test puts a real key
+ * back and expects the old text word for word.
+ */
+export const HOST_PROTOCOL_KEY_PLACEHOLDER = 'TURN_KEY';
+
+const TEMPLATE_PREFACE = [
+  'Host protocols (keyed):',
+  `The three protocols below name a key. Each turn's message carries one line, "Turn key: <value>". Wherever a marker or sentence below shows ${HOST_PROTOCOL_KEY_PLACEHOLDER}, write that turn's value: copy it verbatim, never reuse an earlier turn's, never invent one. A marker with a wrong key is discarded.`,
+].join('\n');
+
+export function renderChatTurnHostProtocolTemplate(
+  locale?: string | undefined,
+): ChatTurnHostProtocolInstructions {
+  const body = renderChatTurnHostProtocolInstructions(
+    HOST_PROTOCOL_KEY_PLACEHOLDER,
+    'ordinary',
+    locale,
+  );
+  return { ...body, text: [TEMPLATE_PREFACE, body.text].join('\n\n---\n\n') };
+}
+
+/** The per-turn half: just the key the template refers to. */
+export function renderChatTurnKeyLine(key: string): string {
+  if (typeof key !== 'string' || !key) return '';
+  return `Turn key: ${key}`;
+}

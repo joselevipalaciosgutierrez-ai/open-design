@@ -101,8 +101,36 @@ isolated daemon: orchestrator turn after the delegation 1,609 tokens (cache hit)
 next one 1,658. Delegate prompt: `daemonSystemPrompt` 5,963 vs 6,747 (-784) for the
 delegated charter.
 
-Not covered: the OD Next path composes its orchestrator prompt separately and still
+Not covered (see 1c-quater for the resumed-turn part): the OD Next path composes its orchestrator prompt separately and still
 lacks the per-turn records; the sample sizes are one run each.
+
+## 1c-quater. Resumed turns: keyed protocol split from its key
+
+A resumed classic turn resent ~1,550 tokens that never changed: the keyed host
+protocols (done marker, follow-up suggestions, artifact focus, ~1,100) because the
+nonce sits inside the text, and the Design Files workspace rules (~340) next to a
+file list that does change. OD Next's resumed turn is 288 because it carries neither.
+
+Now (`host-protocol-delivery.ts`, `renderChatTurnHostProtocolTemplate`,
+`splitDesignFilesWorkspaceHint`): the rules ride the stable slice once and each turn
+sends `Turn key: <key>` plus the file snapshot. A test puts a real key back into the
+template and expects the old text word for word. Rollback: `OD_HOST_PROTOCOL=inline`.
+Classic route only; OD Next is untouched.
+
+Measured (Claude haiku, isolated daemon, 5 conversations x 3 turns per variant, counted
+from the daemon's parsed `done_key` / `next_steps` / `artifact_focus` events, which are
+only emitted for a correct key):
+
+| | split | inline |
+| --- | --- | --- |
+| done marker | 15/15 | 15/15 |
+| three follow-ups | 15/15 | 11/15 |
+| focus on build turns | 9/9 | 10/10 |
+| tokens, resumed turn | 253 | 1,554 |
+
+First turn is ~130 tokens larger (preface). Sample is small: it rules out a gross
+loss in key copying, not a small one. Sampled load during a run: one core busy and
+~1.5-2 GB across daemon, agent CLIs and anything else under the repo path.
 
 ## 1d. Verdict on the earlier proposals (evidence so far)
 

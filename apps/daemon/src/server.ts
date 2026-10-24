@@ -34,7 +34,6 @@ import {
   composeOdNextStrategyStableRequestContextV2,
   executionProfileFromStreamFormat,
   PLUGIN_SHARE_ACTION_PLUGIN_IDS,
-  renderChatTurnHostProtocolInstructions,
   resolveOdNextDeckFrameworkMode,
 } from '@open-design/contracts';
 
@@ -117,6 +116,7 @@ import {
   composeChatAgentTextPayload,
   composeLiveInstructionPrompt,
   formatDesignFilesWorkspaceHint,
+  splitDesignFilesWorkspaceHint,
   formatProjectAttachmentHint,
   normalizeCommentAttachments,
   renderCommentAttachmentHint,
@@ -183,6 +183,7 @@ export {
   composeChatAgentTextPayload,
   composeLiveInstructionPrompt,
   formatDesignFilesWorkspaceHint,
+  splitDesignFilesWorkspaceHint,
   formatProjectAttachmentHint,
   normalizeCommentAttachments,
   renderCommentAttachmentHint,
@@ -484,6 +485,7 @@ import {
   designCraftAvailableToRun,
   effectiveDesignCraftDelivery,
 } from './design-craft-delivery.js';
+import { hostProtocolDelivery, resolveHostProtocolMode } from './host-protocol-delivery.js';
 import { seedDefaultAgents } from './default-agents.js';
 import { attachAcpSession } from './agent-protocol/index.js';
 
@@ -11655,9 +11657,14 @@ export async function startServer({
       const v = validateLinkedDirs(projectRecord.metadata.linkedDirs);
       return v.dirs ?? [];
     })();
-    const cwdHint = cwd
-      ? formatDesignFilesWorkspaceHint(cwd, existingProjectFiles, existingProjectFolders)
-      : '';
+    const hostProtocolMode = resolveHostProtocolMode(process.env.OD_HOST_PROTOCOL);
+    // The workspace rules never change between turns; only the file list does.
+    // Rules ride the stable slice (a resumed session already holds them), the
+    // list rides every turn.
+    const cwdSplit = cwd
+      ? splitDesignFilesWorkspaceHint(cwd, existingProjectFiles, existingProjectFolders)
+      : { fixed: '', snapshot: '' };
+    const cwdHint = hostProtocolMode === 'split' ? cwdSplit.snapshot : [cwdSplit.fixed, cwdSplit.snapshot].join('\n');
     const linkedDirsHint = linkedDirs.length > 0
       ? `\n\nLinked code folders (read-only reference code the user wants you to see):\n${
           linkedDirs.map((d) => `- \`${d}\``).join('\n')
@@ -12705,9 +12712,17 @@ export async function startServer({
     // turns and changed-hash turns send the full block (byte-identical to the
     // previous behavior); non-resume agents have isResuming === false and so
     // always send the full block.
+    const hostProtocol = hostProtocolDelivery({
+      mode: hostProtocolMode,
+      key: typeof run.doneKey === 'string' ? run.doneKey : '',
+      locale: typeof locale === 'string' ? locale : undefined,
+    });
+    // Rules that moved into the stable slice must also move the hash, or an
+    // edit to them would never reach a resumed session.
+    const splitStableRules = hostProtocolMode === 'split' ? [hostProtocol.stable, cwdSplit.fixed] : [];
     const stableInstructionFingerprint = (strategyTaskAtStart
       ? [daemonSystemPrompt, odNextStableContextPrompt, runtimeToolPrompt, systemPrompt]
-      : [daemonSystemPrompt, runtimeToolPrompt, systemPrompt])
+      : [daemonSystemPrompt, runtimeToolPrompt, systemPrompt, ...splitStableRules])
       .map((part) => (typeof part === 'string' ? part.trim() : ''))
       .join('\n\n---\n\n');
     const currentStableHash = hashStableInstructions(stableInstructionFingerprint);
@@ -12775,11 +12790,7 @@ export async function startServer({
      * marker contract was arriving with no locale attached and the follow-up
      * suggestions came back in English on a zh-CN run.
      */
-    const hostProtocol = renderChatTurnHostProtocolInstructions(
-      typeof run.doneKey === 'string' ? run.doneKey : '',
-      'ordinary',
-      typeof locale === 'string' ? locale : undefined,
-    );
+    // `hostProtocol` is resolved above, next to the stable fingerprint.
     /*
      * This turn's follow-up suggestions.
      *
@@ -12913,9 +12924,7 @@ export async function startServer({
       // Each is keyed on this run's nonce, so they are unconditional while
       // `systemPrompt` stays gated on the stable-slice decision.
       clientSystemPrompt: [
-        hostProtocol.doneMarker,
-        hostProtocol.nextSteps,
-        hostProtocol.artifactFocus,
+        ...hostProtocol.perTurn,
         // Per turn on purpose: it changes with the message, so it must stay
         // out of the stable slice a resumed session skips.
         runSkills?.indexPrompt ?? '',
@@ -12925,6 +12934,7 @@ export async function startServer({
         agentRecordsPrompt,
         // And for lessons: they depend on the message.
         lessonsPrompt,
+        ...(includeStableForPayload ? splitStableRules : []),
         includeStableForPayload ? systemPrompt : '',
       ]
         .map((part) => (typeof part === 'string' ? part.trim() : ''))
