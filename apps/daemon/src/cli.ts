@@ -10464,12 +10464,15 @@ Common options:
         console.error('Usage: od config unset <key>');
         process.exit(2);
       }
-      const cfg = await fetchConfig();
-      const next = { ...cfg };
-      delete next[key];
-      const written = await writeConfig(next);
+      // The daemon removes the key itself: PUT /api/app-config only merges the keys
+      // it is sent, so resending the config without the key never removed it.
+      const resp = await fetch(`${base}/api/app-config/${encodeURIComponent(key)}`, { method: 'DELETE' });
+      if (!resp.ok) return structuredHttpFailure(resp);
+      const result = await resp.json();
       if (flags.json) {
-        process.stdout.write(JSON.stringify(written, null, 2) + '\n');
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } else if (result?.removed === false) {
+        console.log(`[config] ${key} was not set`);
       } else {
         console.log(`[config] unset ${key}`);
       }

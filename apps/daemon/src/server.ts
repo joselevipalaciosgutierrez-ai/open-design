@@ -724,7 +724,7 @@ import { createDiagnosticsExportHandler, buildAutomaticDiagnosticSources, resolv
 import { AutomaticDiagnostics } from './services/automatic-diagnostics.js';
 import { createDiagnosticRunObserver, diagnosticFaultFromApi, diagnosticFaultFromLifecycle } from './services/diagnostic-faults.js';
 import { diagnosticRelayUrl } from './integrations/diagnostic-relay.js';
-import { automaticDiagnosticsConsent, observeAppConfig } from './app-config.js';
+import { automaticDiagnosticsConsent, observeAppConfig, unsetAppConfigKey } from './app-config.js';
 import { observeApiFailures } from './http/api-failure-journal.js';
 import { configureDiagnosticsEvidence } from './services/diagnostics-evidence.js';
 import { beginDaemonHealthSession } from './services/daemon-health.js';
@@ -8796,6 +8796,7 @@ export async function startServer({
   const appConfigDeps = {
     readAppConfig,
     writeAppConfig,
+    unsetAppConfigKey,
     onAppConfigWritten: () => {
       // AMR credentials may be overridden through Settings. Observe every
       // completed write so even an A -> B -> A transition with no intervening

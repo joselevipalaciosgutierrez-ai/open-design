@@ -956,6 +956,69 @@ function assertWritableControlValues(partial: Record<string, unknown>): void {
   );
 }
 
+async function persistConfig(dataDir: string, prefs: AppConfigPrefs): Promise<void> {
+  const file = configFile(dataDir);
+  await mkdir(path.dirname(file), { recursive: true });
+  const tmp = file + '.' + randomBytes(4).toString('hex') + '.tmp';
+  await writeFile(tmp, JSON.stringify(prefs, null, 2), 'utf8');
+  await rename(tmp, file);
+  for (const observer of configObservers.get(dataDir) ?? []) {
+    try { observer(); } catch { /* preference persistence must not depend on background consumers */ }
+  }
+}
+
+/**
+ * Keys `unsetAppConfigKey` refuses. Removing them is not "back to a neutral
+ * default": it would flip consent (`telemetry`, `privacyDecisionAt`), regenerate
+ * the installation identity, or drop saved credentials. They stay writable with
+ * an explicit value, so nobody gets there by accident.
+ */
+const NOT_UNSETTABLE_KEYS: ReadonlySet<string> = new Set([
+  'telemetry',
+  'privacyDecisionAt',
+  'installationId',
+  'agentCliEnv',
+  'agentCliEnvIntent',
+]);
+
+async function doUnset(dataDir: string, key: string): Promise<{ config: AppConfigPrefs; removed: boolean }> {
+  const existing = await readAppConfig(dataDir);
+  if (!Object.prototype.hasOwnProperty.call(existing, key)) return { config: existing, removed: false };
+  const next: Record<string, unknown> = { ...existing };
+  delete next[key];
+  const normalized = normalizeRetiredAgentPrefs(normalizeAgentCliEnvPrefs(next as AppConfigPrefs));
+  await persistConfig(dataDir, normalized);
+  return { config: normalized, removed: true };
+}
+
+/**
+ * Removes one preference so the daemon's default applies again. `writeAppConfig`
+ * only merges the keys it is given, so leaving a key out of a write never removes
+ * it; this is the way to remove one. Queued with the writes so it cannot race them.
+ */
+export async function unsetAppConfigKey(
+  dataDir: string,
+  key: string,
+): Promise<{ config: AppConfigPrefs; removed: boolean }> {
+  if (!ALLOWED_KEYS.has(key as keyof AppConfigPrefs)) {
+    throw new InvalidAppConfigValueError(key, `${key} is not an app config key`);
+  }
+  if (NOT_UNSETTABLE_KEYS.has(key)) {
+    throw new InvalidAppConfigValueError(
+      key,
+      `${key} cannot be unset because removing it would change consent or credentials; set it to a value instead`,
+    );
+  }
+  const prev = writeLocks.get(dataDir) ?? Promise.resolve();
+  const task = prev.catch(() => {}).then(() => doUnset(dataDir, key));
+  writeLocks.set(dataDir, task);
+  try {
+    return await task;
+  } finally {
+    if (writeLocks.get(dataDir) === task) writeLocks.delete(dataDir);
+  }
+}
+
 async function doWrite(
   dataDir: string,
   partial: Record<string, unknown>,
@@ -972,14 +1035,7 @@ async function doWrite(
     : next as AppConfigPrefs;
   const normalizedNext = normalizeAgentCliEnvPrefs(nextWithInferredIntent);
   const normalizedNextWithoutRetiredAgents = normalizeRetiredAgentPrefs(normalizedNext);
-  const file = configFile(dataDir);
-  await mkdir(path.dirname(file), { recursive: true });
-  const tmp = file + '.' + randomBytes(4).toString('hex') + '.tmp';
-  await writeFile(tmp, JSON.stringify(normalizedNextWithoutRetiredAgents, null, 2), 'utf8');
-  await rename(tmp, file);
-  for (const observer of configObservers.get(dataDir) ?? []) {
-    try { observer(); } catch { /* preference persistence must not depend on background consumers */ }
-  }
+  await persistConfig(dataDir, normalizedNextWithoutRetiredAgents);
   const installationIdWasExplicitlyReset = Object.prototype.hasOwnProperty.call(partial, 'installationId')
     && (partial.installationId == null || (
       typeof existing.installationId === 'string'

@@ -13,7 +13,13 @@ import {
   it,
 } from 'vitest';
 
-import { agentCliEnvForAgent, readAppConfig, writeAppConfig } from '../src/app-config.js';
+import {
+  agentCliEnvForAgent,
+  observeAppConfig,
+  readAppConfig,
+  unsetAppConfigKey,
+  writeAppConfig,
+} from '../src/app-config.js';
 import { spawnEnvForAgent } from '../src/runtimes/env.js';
 import { readOdNextRolloutPolicy } from '../src/strategies/od-next/rollout.js';
 import { isLocalSameOrigin } from '../src/origin-validation.js';
@@ -1452,5 +1458,59 @@ describe('app-config · Antigravity parked-process settings', () => {
     const again = await readAppConfig(dataDir);
     expect(again.antigravityWarmMax).toBeUndefined();
     expect(again.antigravityWarmIdleSeconds).toBeUndefined();
+  });
+});
+
+describe('app-config · unsetAppConfigKey', () => {
+  let dataDir: string;
+  beforeEach(async () => {
+    dataDir = await mkdtemp(path.join(tmpdir(), 'od-appconfig-unset-'));
+  });
+  afterEach(async () => {
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  it('removes a set key from the stored config and leaves the others alone', async () => {
+    await writeAppConfig(dataDir, {
+      antigravityWarmMax: 3,
+      antigravityWarmIdleSeconds: 90,
+      customInstructions: 'keep me',
+    });
+    const result = await unsetAppConfigKey(dataDir, 'antigravityWarmMax');
+    expect(result.removed).toBe(true);
+    const cfg = await readAppConfig(dataDir);
+    expect(cfg.antigravityWarmMax).toBeUndefined();
+    expect(cfg.antigravityWarmIdleSeconds).toBe(90);
+    expect(cfg.customInstructions).toBe('keep me');
+    const onDisk = JSON.parse(await readFile(path.join(dataDir, 'app-config.json'), 'utf8'));
+    expect('antigravityWarmMax' in onDisk).toBe(false);
+  });
+
+  it('reports a key that was never set without failing', async () => {
+    const result = await unsetAppConfigKey(dataDir, 'antigravityWarmMax');
+    expect(result.removed).toBe(false);
+  });
+
+  it('tells the observers, so a running daemon picks the default up again', async () => {
+    await writeAppConfig(dataDir, { antigravityWarmMax: 3 });
+    let calls = 0;
+    const stop = observeAppConfig(dataDir, () => { calls += 1; });
+    await unsetAppConfigKey(dataDir, 'antigravityWarmMax');
+    stop();
+    expect(calls).toBe(1);
+  });
+
+  it('refuses a key that is not a preference, and keys whose removal would change consent or credentials', async () => {
+    await expect(unsetAppConfigKey(dataDir, 'notAKey')).rejects.toMatchObject({ code: 'INVALID_APP_CONFIG_VALUE' });
+    for (const key of ['telemetry', 'privacyDecisionAt', 'installationId', 'agentCliEnv', 'agentCliEnvIntent']) {
+      await expect(unsetAppConfigKey(dataDir, key)).rejects.toMatchObject({ code: 'INVALID_APP_CONFIG_VALUE' });
+    }
+  });
+
+  it('queues behind a write that is still running instead of losing it', async () => {
+    const write = writeAppConfig(dataDir, { antigravityWarmMax: 3 });
+    const unset = unsetAppConfigKey(dataDir, 'antigravityWarmMax');
+    await Promise.all([write, unset]);
+    expect((await readAppConfig(dataDir)).antigravityWarmMax).toBeUndefined();
   });
 });

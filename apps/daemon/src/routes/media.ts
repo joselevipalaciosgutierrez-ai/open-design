@@ -234,7 +234,7 @@ export function registerMediaRoutes(app: Express, ctx: RegisterMediaRoutesDeps) 
   const { authorizeToolRequest, optionalToolGrantFromRequest, requestProjectOverride } = ctx.auth;
   const { randomUUID } = ctx.ids;
   const { MEDIA_PROVIDERS, IMAGE_MODELS, VIDEO_MODELS, AUDIO_MODELS_BY_KIND, MEDIA_ASPECTS, VIDEO_LENGTHS_SEC, AUDIO_DURATIONS_SEC, readMaskedConfig, writeConfig, generateMedia, createMediaTask, persistMediaTask, appendTaskProgress, notifyTaskWaiters, getLiveMediaTask, mediaTaskSnapshot, listMediaTasksByProject, listElevenLabsVoiceOptions } = ctx.media;
-  const { readAppConfig, writeAppConfig } = ctx.appConfig;
+  const { readAppConfig, writeAppConfig, unsetAppConfigKey } = ctx.appConfig;
   const onAppConfigWritten =
     typeof ctx.appConfig.onAppConfigWritten === 'function'
       ? ctx.appConfig.onAppConfigWritten
@@ -868,6 +868,32 @@ export function registerMediaRoutes(app: Express, ctx: RegisterMediaRoutesDeps) 
           ...(err?.code ? { code: err.code } : {}),
           ...(err?.retryable ? { retryable: true } : {}),
         });
+    }
+  });
+
+  // Removes one preference so its default applies again. `PUT /api/app-config`
+  // only merges the keys it receives, so a key left out of a PUT is never removed.
+  app.delete('/api/app-config/:key', async (req, res) => {
+    if (!isLocalSameOrigin(req, getResolvedPort())) {
+      return res.status(403).json({ error: 'cross-origin request rejected' });
+    }
+    try {
+      const { config, removed } = await unsetAppConfigKey(RUNTIME_DATA_DIR, req.params.key);
+      if (removed) {
+        orbitService.configure(config.orbit);
+        onAppConfigWritten?.(config);
+      }
+      res.json({ config, removed });
+    } catch (err: any) {
+      if (err?.code === 'INVALID_APP_CONFIG_VALUE') {
+        // Same nested envelope as the PUT above, so `od` reads the reason.
+        return res.status(400).json({
+          error: { code: err.code, message: String(err.message) },
+        });
+      }
+      res
+        .status(500)
+        .json({ error: String(err && err.message ? err.message : err) });
     }
   });
 
