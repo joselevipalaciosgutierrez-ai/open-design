@@ -2403,6 +2403,32 @@ otherwise a minimal \`od mcp --daemon-url <url>\` command is used.`);
 // the user, retry with --grant-caps, etc.).
 function exitWithStructuredError({ code, message, data }) {
   const exit = RECOVERABLE_EXIT_CODES[code] ?? 1;
+// Workspace context from explicit `--workspace` / `--workspace-member` flags.
+// Shared by every subcommand that can run inside a team workspace.
+function workspaceHeadersFromExplicitFlags(flags, required = false) {
+  const workspaceId =
+    typeof flags?.workspace === 'string' ? flags.workspace.trim() : '';
+  const workspaceMemberId =
+    typeof flags?.['workspace-member'] === 'string'
+      ? flags['workspace-member'].trim()
+      : typeof flags?.member === 'string'
+        ? flags.member.trim()
+        : '';
+  if (workspaceId && workspaceMemberId) {
+    return {
+      'x-od-workspace-id': workspaceId,
+      'x-od-workspace-member-id': workspaceMemberId,
+    };
+  }
+  if (required || workspaceId || workspaceMemberId) {
+    exitWithStructuredError({
+      code: 'workspace-context-required',
+      message: 'pass --workspace <id> and --workspace-member <id>',
+    });
+  }
+  return null;
+}
+
   const envelope = { error: { code, message, data: data ?? {} } };
   process.stderr.write(JSON.stringify(envelope) + '\n');
   process.exit(exit);
