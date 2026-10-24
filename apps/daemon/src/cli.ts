@@ -17,6 +17,7 @@ import { runLiveArtifactsToolCli } from './tools-live-artifacts-cli.js';
 import { runDeliverableSyntaxToolCli } from './tools-deliverable-syntax-cli.js';
 import { splitResearchSubcommand } from './research/cli-args.js';
 import { resolveDaemonUrl } from './daemon-url.js';
+import { createRunFollowSummary } from './run-follow-summary.js';
 import { SidecarFactory } from '@open-design/sidecar';
 import { APP_KEYS, SIDECAR_MESSAGES } from '@open-design/sidecar-proto';
 import { EXPORT_FORMATS, EXPORT_IMAGE_FORMATS, mediaFailureNextStep } from '@open-design/contracts';
@@ -259,7 +260,7 @@ const PROJECT_RESOURCE_STRING_FLAGS = new Set([
   'workspace-member',
   'by',
 ]);
-const PROJECT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json', 'follow', 'thumbnail', 'skip-discovery']);
+const PROJECT_BOOLEAN_FLAGS = new Set(['help', 'h', 'json', 'follow', 'stream', 'thumbnail', 'skip-discovery']);
 const WORKSPACE_STRING_FLAGS = new Set([
   'model',
   'daemon-url', 'workspace', 'view', 'visibility', 'owner', 'project',
@@ -442,6 +443,7 @@ const SUBCOMMAND_MAP = {
   export: runExport,
   lint: runLint,
   status: runStatus,
+  context: runContext,
   version: runVersion,
   'whats-new': runWhatsNew,
   doctor: runDoctor,
@@ -2401,8 +2403,6 @@ otherwise a minimal \`od mcp --daemon-url <url>\` command is used.`);
 // code + a JSON envelope on stderr. Code agents read these to decide
 // whether the failure is recoverable (re-grant capabilities, prompt
 // the user, retry with --grant-caps, etc.).
-function exitWithStructuredError({ code, message, data }) {
-  const exit = RECOVERABLE_EXIT_CODES[code] ?? 1;
 // Workspace context from explicit `--workspace` / `--workspace-member` flags.
 // Shared by every subcommand that can run inside a team workspace.
 function workspaceHeadersFromExplicitFlags(flags, required = false) {
@@ -2429,6 +2429,8 @@ function workspaceHeadersFromExplicitFlags(flags, required = false) {
   return null;
 }
 
+function exitWithStructuredError({ code, message, data }) {
+  const exit = RECOVERABLE_EXIT_CODES[code] ?? 1;
   const envelope = { error: { code, message, data: data ?? {} } };
   process.stderr.write(JSON.stringify(envelope) + '\n');
   process.exit(exit);
@@ -7598,6 +7600,33 @@ Common options:
   }
 }
 
+// `od context`: the few facts a run needs about itself (its id, project, daemon,
+// and how to call `od`), so an agent never has to dump the environment (`env`
+// costs thousands of tokens and prints credentials). Reads only OD_* variables.
+async function runContext(args) {
+  const flags = parseFlags(args, { string: new Set(), boolean: new Set(['help', 'h', 'json']) });
+  if (flags.help || flags.h) {
+    console.log(`Usage:
+  od context [--json]   The run's own id, project, daemon URL and od binary.`);
+    return;
+  }
+  const env = process.env;
+  const facts = {
+    runId: env.OD_RUN_ID || null,
+    projectId: env.OD_PROJECT_ID || null,
+    projectDir: env.OD_PROJECT_DIR || null,
+    daemonUrl: env.OD_DAEMON_URL || null,
+    nodeBin: env.OD_NODE_BIN || null,
+    odBin: env.OD_BIN || null,
+    workspaceId: env.OD_WORKSPACE_ID || null,
+  };
+  if (flags.json) return process.stdout.write(JSON.stringify(facts, null, 2) + '\n');
+  if (!facts.runId) console.log('Not inside a run (OD_RUN_ID is not set).');
+  for (const [key, value] of Object.entries(facts)) {
+    if (value) console.log(`${key}: ${value}`);
+  }
+}
+
 async function runRun(args) {
   if (args.length === 0 || args[0] === 'help' || args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
@@ -7606,7 +7635,10 @@ async function runRun(args) {
                [--client-request-id <id>]
                [--skill <id>[,<id>]] [--plugin <id>] [--inputs <json>] [--grant-caps a,b]
                [--agent claude|codex|opencode] [--model <id>] [--service-tier <id>]
-               [--workspace <id> --workspace-member <id>] [--follow] [--json]
+               [--workspace <id> --workspace-member <id>] [--follow] [--stream] [--json]
+               With --follow from inside another run, prints the outcome (status,
+               final message, files, tokens) instead of every event; --stream
+               prints every event. 'od run watch <id>' replays the stream later.
                Run from inside another run (OD_RUN_ID set), this delegates: the
                daemon limits depth, total runs and runs at once, and refuses
                with DELEGATION_* when a limit is hit.
@@ -7977,7 +8009,14 @@ Common options:
         return process.stdout.write(JSON.stringify(data, null, 2) + '\n');
       }
       console.log(`[run] started ${data.runId}`);
-      if (flags.follow) await streamRunEvents(base, data.runId, workspaceHeaders);
+      // A run that delegates gets the outcome, not every event of the delegate
+      // (about two thirds of that stream is tool output it never needs).
+      // `--stream` asks for the whole thing; so does running outside a run.
+      if (flags.follow) {
+        await streamRunEvents(base, data.runId, workspaceHeaders, {
+          compact: Boolean(process.env.OD_RUN_ID) && flags.stream !== true,
+        });
+      }
       return;
     }
     default:
@@ -7989,8 +8028,9 @@ Common options:
 // Stream the SSE events at /api/runs/:id/events as ND-JSON on stdout.
 // Each line is one event: { event, data } so a code agent can parse it
 // without needing an SSE library.
-async function streamRunEvents(base, initialRunId, workspaceHeaders = {}) {
+async function streamRunEvents(base, initialRunId, workspaceHeaders = {}, options = {}) {
   let runId = initialRunId;
+  const summary = options.compact ? createRunFollowSummary(initialRunId) : null;
   const visited = new Set();
   while (true) {
     if (visited.has(runId)) {
@@ -8026,7 +8066,8 @@ async function streamRunEvents(base, initialRunId, workspaceHeaders = {}) {
         const dataRaw = dataLines.join('\n');
         let parsed;
         try { parsed = JSON.parse(dataRaw); } catch { parsed = dataRaw; }
-        process.stdout.write(JSON.stringify({ event, data: parsed }) + '\n');
+        if (summary) summary.add({ event, data: parsed });
+        else process.stdout.write(JSON.stringify({ event, data: parsed }) + '\n');
         if (event !== 'end') continue;
         const task = parsed?.strategyTask;
         if (task && task.terminal !== true) {
@@ -8041,7 +8082,10 @@ async function streamRunEvents(base, initialRunId, workspaceHeaders = {}) {
         break;
       }
     }
-    if (!nextRunId) return;
+    if (!nextRunId) {
+      if (summary) console.log(summary.render());
+      return;
+    }
     runId = nextRunId;
   }
 }

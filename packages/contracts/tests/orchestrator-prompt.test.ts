@@ -29,6 +29,16 @@ describe('renderOrchestratorDirective', () => {
     expect(text).toContain('- 🎨 Design (id: design) — Interfaces; runs on antigravity / Flash');
   });
 
+  it('tells the orchestrator what --follow returns and not to dump the environment', () => {
+    const text = renderOrchestratorDirective(context());
+    expect(text).toContain('prints how it went');
+    expect(text).toContain('`--stream`');
+    expect(text).toMatch(/Never dump the environment/);
+    expect(text).toContain('context` prints them');
+    // The old instruction made the agent read a whole event stream.
+    expect(text).not.toContain('read its last events');
+  });
+
   it('states the limits it was given, so it never promises more than the daemon allows', () => {
     const text = renderOrchestratorDirective(
       context({ limits: { maxDepth: 3, maxRunsPerTree: 5, maxConcurrentPerTree: 2, maxInstancesPerAgent: 1 } }),
