@@ -78,6 +78,48 @@ describe('acquireAntigravityModelLock', () => {
   });
 });
 
+describe('waitForAgyToReadModel with a renamed model', () => {
+  // agy resolves an alias before it propagates the model, and logs the RESOLVED
+  // label: `model alias "Gemini 3.5 Flash (Low)" resolved to "Gemini 3.8 Flash
+  // (High)"`, then `Propagating ... label="Gemini 3.8 Flash (High)"`. Matching only
+  // the requested label never fired, so the lock was held until the run ended and
+  // every concurrent Antigravity run with a concrete model queued behind the
+  // previous one (measured: the second of three runs waited 271 s to launch, the
+  // length of the first run).
+  const aliasLog =
+    'I1024 model_resolver.go:155] model alias "Gemini 3.5 Flash (Low)" resolved to '
+    + '"Gemini 3.8 Flash (High)"\n'
+    + 'I1024 model_config_manager.go:340] Propagating selected model override to '
+    + 'backend: label="Gemini 3.8 Flash (High)"\n';
+
+  it('releases when agy propagated the label the requested model resolved to', async () => {
+    let now = 0;
+    const result = await waitForAgyToReadModel('/fake', 'Gemini 3.5 Flash (Low)', {
+      timeoutMs: 1_000,
+      pollIntervalMs: 10,
+      now: () => now,
+      readFile: async () => aliasLog,
+    });
+    expect(result).toBe(true);
+  });
+
+  it('does not release for a propagation that belongs to another model', async () => {
+    let now = 0;
+    const result = await waitForAgyToReadModel('/fake', 'Gemini 3.5 Flash (Low)', {
+      timeoutMs: 100,
+      pollIntervalMs: 10,
+      now: () => {
+        now += 20;
+        return now;
+      },
+      readFile: async () =>
+        'I1024 model_config_manager.go:340] Propagating selected model override to '
+        + 'backend: label="Some Other Model"\n',
+    });
+    expect(result).toBe(false);
+  });
+});
+
 describe('waitForAgyToReadModel', () => {
   // The polling helper resolves true when agy's --log-file matches the
   // upstream `Propagating selected model override to backend:

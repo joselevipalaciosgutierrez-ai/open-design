@@ -169,15 +169,21 @@ export async function waitForAgyToReadModel(
   const abortSignal = options.abortSignal;
   if (abortSignal?.aborted) return false;
   const escaped = expectedModel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(
-    `Propagating selected model override to backend: label="${escaped}"`,
-  );
+  const propagating = (label: string) =>
+    new RegExp(
+      `Propagating selected model override to backend: label="${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`,
+    );
+  const pattern = propagating(expectedModel);
+  // agy resolves an alias before it propagates, and logs the label it resolved to.
+  const aliasPattern = new RegExp(`model alias "${escaped}" resolved to "([^"]+)"`);
   const deadline = now() + timeoutMs;
   while (now() < deadline) {
     if (abortSignal?.aborted) return false;
     try {
       const content = await readFile(logFilePath);
       if (pattern.test(content)) return true;
+      const resolved = aliasPattern.exec(content)?.[1];
+      if (resolved && propagating(resolved).test(content)) return true;
     } catch {
       // Log file may not have appeared yet; keep polling.
     }
