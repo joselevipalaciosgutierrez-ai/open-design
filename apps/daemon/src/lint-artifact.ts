@@ -19,6 +19,8 @@
 
 import type { ArtifactLintFinding, ArtifactLintSeverity } from '@open-design/contracts';
 
+import { lintUsabilityBasics } from './lint-usability-basics.js';
+
 // The shared wire contract in @open-design/contracts is the authority for
 // the finding shape; the legacy names alias it so existing importers keep
 // compiling while incompatible producer changes now fail compilation here
@@ -505,6 +507,8 @@ export function lintArtifact(rawHtml: unknown): LintFinding[] {
       }
     }
   }
+
+  out.push(...lintUsabilityBasics(html));
 
   return out;
 }
