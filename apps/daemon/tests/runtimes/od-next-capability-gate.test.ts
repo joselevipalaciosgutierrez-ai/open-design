@@ -12,6 +12,7 @@ import {
 } from '@open-design/contracts';
 import {
   CODEX_0_147_0_BEST_EFFORT_MANIFEST,
+  ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST,
   CLAUDE_2_1_233_BEST_EFFORT_MANIFEST,
   OD_NEXT_RUNTIME_CAPABILITY_REGISTRY,
   OD_NEXT_RUNTIME_CAPABILITY_FIXTURE_MANIFESTS,
@@ -37,6 +38,7 @@ const fixtureFiles = [
   'claude-code.contract.json',
   'native-opencode.contract.json',
   'vela-opencode.contract.json',
+  'antigravity-cli.contract.json',
 ] as const;
 
 function readFixture(name: typeof fixtureFiles[number]): RuntimeCapabilityFixtureManifestV1 {
@@ -123,12 +125,13 @@ describe('OD Next runtime capability gate', () => {
   });
 
   it('registers every reviewed tuple, Vela included', () => {
-    expect(OD_NEXT_RUNTIME_CAPABILITY_REGISTRY).toHaveLength(4);
+    expect(OD_NEXT_RUNTIME_CAPABILITY_REGISTRY).toHaveLength(5);
     expect(OD_NEXT_RUNTIME_CAPABILITY_FIXTURE_MANIFESTS).toEqual([
       CODEX_0_147_0_BEST_EFFORT_MANIFEST,
       CLAUDE_2_1_233_BEST_EFFORT_MANIFEST,
       OPENCODE_1_18_18_BEST_EFFORT_MANIFEST,
       VELA_OPENCODE_LOCAL_BEST_EFFORT_MANIFEST,
+      ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST,
     ]);
     const manifests = fixtureFiles.map(readFixture);
     expect(manifests.map((manifest) => manifest.runtimePath)).toEqual(
@@ -217,6 +220,54 @@ describe('OD Next runtime capability gate', () => {
         recordedAgentCliVersion: '2.1.233 (Claude Code)',
       },
     });
+  });
+
+  it('admits Antigravity from its recorded seven-case replay without pinning to one CLI version', () => {
+    const seed = JSON.parse(readFileSync(
+      join(fixtureDir, 'antigravity-1.4.7.sanitized-real-seed.json'),
+      'utf8',
+    )) as {
+      recordingDigest: string;
+      cases: Array<{ caseId: string; outcome: string }>;
+    };
+    const digest = `sha256:${createHash('sha256')
+      .update(JSON.stringify(seed.cases), 'utf8')
+      .digest('hex')}`;
+    expect(seed.recordingDigest).toBe(digest);
+    expect(seed.cases.map(({ caseId }) => caseId)).toEqual(
+      ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST.cases.map(({ id }) => id),
+    );
+    expect(seed.cases.every(({ outcome }) => outcome === 'passed')).toBe(true);
+    expect(ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST.provenance).toMatchObject({
+      kind: 'sanitized_real',
+      evidenceReview: 'open_design_best_effort',
+      recordingDigest: digest,
+    });
+    expect(JSON.stringify(seed)).not.toMatch(/\/Users\/|\/home\/|BEGIN [A-Z ]+PRIVATE KEY|sk-[A-Za-z0-9]/u);
+
+    for (const version of ['1.4.7', '1.5.0-beta.2']) {
+      expect(resolveBundledOdNextRuntimeCapability({ agentId: 'antigravity', agentCliVersion: version, capturedAt: 1 })).toMatchObject({
+        includedInInitialRollout: true,
+        tupleMatched: true,
+        reason: 'capability_resolved',
+        snapshot: {
+          runtimePath: 'antigravity-cli',
+          agentCliVersion: version,
+          recordedAgentCliVersion: '1.4.7',
+          nativeSessionContinuation: { support: 'verified' },
+          nativeSubagents: { support: 'verified', evidenceLevel: 'L2' },
+        },
+      });
+    }
+    const resolved = resolveBundledOdNextRuntimeCapability({ agentId: 'antigravity', agentCliVersion: '1.4.7', capturedAt: 1 });
+    expect(evaluateOdNextExecutionEligibility(resolved.snapshot!, 'complex')).toEqual({ eligible: true, reason: 'eligible' });
+  });
+
+  it('keeps Antigravity out of admission when the adapter version does not match the reviewed one', () => {
+    const wrong = RuntimeCapabilityFixtureManifestV1Schema.parse({ ...ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST, runtimeAdapterVersion: 'od-antigravity-stream-json/v0' });
+    expect(resolveOdNextRuntimeCapability({
+      agentId: 'antigravity', agentCliVersion: '1.4.7', fixtureVersion: wrong.fixtureVersion, fixtureManifest: wrong, capturedAt: 1,
+    }).tupleMatched).toBe(false);
   });
 
   it('admits Vela on the native OpenCode runtime it shares with the registered OpenCode tuple', () => {

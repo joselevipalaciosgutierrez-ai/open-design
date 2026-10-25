@@ -1,0 +1,117 @@
+{
+  "fixtureKind": "sanitized_real",
+  "runtime": "antigravity-cli",
+  "cliVersion": "1.4.7",
+  "adapterVersion": "od-antigravity-stream-json/v1",
+  "anonymizationVersion": "od-runtime-evidence/v1",
+  "evidenceReview": "open_design_best_effort",
+  "recordingDigest": "sha256:1ca49c63d38d35c3641c69a807b4752ba07a04ba30c16a53781bc1f1469d08f2",
+  "note": "Open Design local replay of the Antigravity 1.4.7 stream-json CLI driven through the daemon. Prompt bodies, outputs, paths, credentials and provider identifiers are omitted; ids are relabelled. Limits: the failing-child case is a parent-issued kill (an internal child failure could not be induced), and the daemon adapter does not yet parse subagent steps into child evidence, so child facts come from the CLI stream and the child transcript.",
+  "cases": [
+    {
+      "caseId": "main_run",
+      "minimumEvidence": "L0",
+      "outcome": "passed",
+      "evidence": {
+        "sessionId": "session-success",
+        "runtimeReportedVersion": "1.4.7",
+        "rootTerminal": "completed",
+        "rootStatus": "SUCCESS",
+        "rootError": false
+      }
+    },
+    {
+      "caseId": "tool",
+      "minimumEvidence": "L1",
+      "outcome": "passed",
+      "evidence": {
+        "sessionId": "session-success",
+        "toolName": "invoke_subagent",
+        "toolUseId": "subagent-success",
+        "subagentType": "self",
+        "childInputHash": "sha256:6c61d4d29cb649a75b6e7b306d2eed89340e78c95e4dde862f9b4583cdf53263",
+        "childInputBytes": 71
+      }
+    },
+    {
+      "caseId": "child_success",
+      "minimumEvidence": "L2",
+      "outcome": "passed",
+      "evidence": {
+        "sessionId": "session-success",
+        "toolUseId": "subagent-success",
+        "childAgentId": "child-success",
+        "terminalSource": "child_transcript",
+        "childTerminal": "completed",
+        "childSteps": 4,
+        "childStepsAllDone": true,
+        "childReportedToParent": true,
+        "usageSource": "child_transcript",
+        "usageComplete": true
+      }
+    },
+    {
+      "caseId": "child_failure_parent_recovers",
+      "minimumEvidence": "L2",
+      "outcome": "passed",
+      "evidence": {
+        "sessionId": "session-kill",
+        "toolUseId": "subagent-kill",
+        "childStartedOrder": 1,
+        "childTerminatedOrder": 2,
+        "parentCompletedOrder": 3,
+        "childTerminal": "killed",
+        "terminalSource": "manage_subagents.kill",
+        "parentTerminal": "completed",
+        "parentError": false,
+        "limitation": "child ended by an explicit kill from the parent; an internal child failure could not be induced"
+      }
+    },
+    {
+      "caseId": "cancel",
+      "minimumEvidence": "L0",
+      "outcome": "passed",
+      "nativeChildTerminal": "unavailable",
+      "evidence": {
+        "sessionId": "session-cancel",
+        "toolUseId": "subagent-cancel",
+        "childStarted": true,
+        "hostRunStatus": "canceled",
+        "hostCancelOrigin": "user_stop",
+        "collectorTerminal": "canceled"
+      }
+    },
+    {
+      "caseId": "timeout",
+      "minimumEvidence": "L0",
+      "outcome": "passed",
+      "nativeChildTerminal": "unavailable",
+      "evidence": {
+        "sessionId": "session-timeout",
+        "toolUseId": "subagent-timeout",
+        "childStarted": true,
+        "hostRunStatus": "failed",
+        "terminalTrigger": "inactivity_watchdog",
+        "failureCategory": "timeout",
+        "collectorTerminal": "failed",
+        "terminationReason": "timeout"
+      }
+    },
+    {
+      "caseId": "resume",
+      "minimumEvidence": "L0",
+      "outcome": "passed",
+      "evidence": {
+        "priorSessionId": "session-success",
+        "resumedSessionId": "session-success",
+        "sameSessionHandle": true,
+        "continuation": "native-resume-by-id",
+        "resumeState": "resumed",
+        "resumeToolUseId": "subagent-resume",
+        "resumeChildAgentId": "child-resume",
+        "resumeTerminal": "completed",
+        "resumedPromptTokens": 255
+      }
+    }
+  ]
+}

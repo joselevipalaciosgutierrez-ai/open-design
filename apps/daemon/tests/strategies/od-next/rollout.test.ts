@@ -279,6 +279,21 @@ describe('OD Next controlled rollout', () => {
     ]));
   });
 
+  it('admits Antigravity by default, as one of the agents OD Next runs natively', () => {
+    const policy = readOdNextRolloutPolicy({ OD_NEXT_STRATEGY_ROLLOUT: 'active' });
+    expect(policy.eligibleAgents).toEqual(expect.arrayContaining(['claude', 'codex', 'opencode', 'antigravity']));
+    const decision = evaluateOdNextRollout({
+      policy,
+      assignmentIdentity: 'same-id',
+      taskType: 'prototype',
+      agentId: 'antigravity',
+      agentVersion: '1.4.7',
+      sourceKind: 'bundled',
+    });
+    expect(decision.reasonCodes).not.toContain('od_next_rollout_agent_ineligible');
+    expect(readOdNextRolloutPolicy({ OD_NEXT_STRATEGY_ROLLOUT: 'active', OD_NEXT_STRATEGY_AGENTS: 'codex' }).eligibleAgents).toEqual(['codex']);
+  });
+
   it('reconstructs stable assignment across evaluations', () => {
     const bucket = stableOdNextAssignmentBucket('project:conversation', 'salt');
     expect(stableOdNextAssignmentBucket('project:conversation', 'salt')).toBe(bucket);

@@ -50,6 +50,11 @@ export const OD_NEXT_RUNTIME_PATH_DESCRIPTORS = [
     runtimeAdapterVersion: 'od-vela-opencode-acp/v1',
     requiredRuntimeCompanionName: 'opencode',
   },
+  {
+    runtimePath: 'antigravity-cli',
+    agentId: 'antigravity',
+    runtimeAdapterVersion: 'od-antigravity-stream-json/v1',
+  },
 ] as const satisfies readonly OdNextRuntimePathDescriptor[];
 
 const ALL_REQUIRED_CASES = [
@@ -179,12 +184,41 @@ export const VELA_OPENCODE_LOCAL_BEST_EFFORT_MANIFEST =
     cases: ALL_REQUIRED_CASES,
   });
 
+/**
+ * Open Design-owned best-effort replay of the Antigravity 1.4.7 stream-json CLI
+ * driven through the daemon: a subagent that completes, a subagent ended by a
+ * kill from its parent while the parent recovers, a host cancel and an inactivity
+ * timeout with a child running, and a native `--conversation` resume. The seed
+ * keeps structural identities only. Limits are stated in the seed: an internal
+ * child failure could not be induced, so the failing-child case is the parent's
+ * kill, and child facts come from the CLI stream and the child transcript.
+ */
+export const ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST =
+  RuntimeCapabilityFixtureManifestV1Schema.parse({
+    schema: OD_NEXT_RUNTIME_FIXTURE_MANIFEST_V1_SCHEMA,
+    fixtureVersion: 'antigravity-1.4.7-seven-path/v1',
+    runtimePath: 'antigravity-cli',
+    agentId: 'antigravity',
+    agentCliVersion: '1.4.7',
+    runtimeAdapterVersion: 'od-antigravity-stream-json/v1',
+    provenance: {
+      kind: 'sanitized_real',
+      recordingDigest:
+        'sha256:1ca49c63d38d35c3641c69a807b4752ba07a04ba30c16a53781bc1f1469d08f2',
+      anonymizationVersion: 'od-runtime-evidence/v1',
+      evidenceReview: 'open_design_best_effort',
+    },
+    containsSensitiveContent: false,
+    cases: ALL_REQUIRED_CASES,
+  });
+
 export const OD_NEXT_RUNTIME_CAPABILITY_FIXTURE_MANIFESTS:
   readonly RuntimeCapabilityFixtureManifestV1[] = [
     CODEX_0_147_0_BEST_EFFORT_MANIFEST,
     CLAUDE_2_1_233_BEST_EFFORT_MANIFEST,
     OPENCODE_1_18_18_BEST_EFFORT_MANIFEST,
     VELA_OPENCODE_LOCAL_BEST_EFFORT_MANIFEST,
+    ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST,
   ];
 
 export const OD_NEXT_RUNTIME_CAPABILITY_REGISTRY:
@@ -193,6 +227,7 @@ export const OD_NEXT_RUNTIME_CAPABILITY_REGISTRY:
     CLAUDE_2_1_233_BEST_EFFORT_MANIFEST,
     OPENCODE_1_18_18_BEST_EFFORT_MANIFEST,
     VELA_OPENCODE_LOCAL_BEST_EFFORT_MANIFEST,
+    ANTIGRAVITY_1_4_7_BEST_EFFORT_MANIFEST,
   ].map((manifest) => RuntimeCapabilityRegistryEntryV1Schema.parse({
     runtimePath: manifest.runtimePath,
     agentId: manifest.agentId,
